@@ -4,6 +4,8 @@ using UnityEngine;
 
 public static class KeyBinds {
 
+public static Action<string> Log = s => {};
+public static Action<string> Error = s => {};
 
 private static KeyCode[] _keys = new KeyCode [] {
     KeyCode.None, //Not assigned (never returned as the result of a keystroke).
@@ -94,10 +96,7 @@ private static KeyCode[] _keys = new KeyCode [] {
     KeyCode.RightBracket, //Right square bracket key ']'.
     KeyCode.Caret, //Caret key '^'.
     KeyCode.Underscore, //Underscore '_' key.
-
-    // Qonsole
-    // KeyCode.BackQuote, //Back quote key '`'.
-
+    KeyCode.BackQuote, //Back quote key '`'.
     KeyCode.A, //'a' key.
     KeyCode.B, //'b' key.
     KeyCode.C, //'c' key.
@@ -354,7 +353,7 @@ static KeyBinds() {
 
 public static void Bind_kmd( string [] argv ) {
     if ( argv.Length < 3 ) {
-        Qonsole.Log( "Usage: bind <KeyCode> <command> [context]" );
+        Log( "Usage: bind <KeyCode> <command> [context]" );
         foreach ( var kv in _bindContext ) {
             string context = kv.Key;
             string [] ctxCommands = kv.Value;
@@ -362,7 +361,7 @@ public static void Bind_kmd( string [] argv ) {
                 KeyCode key = _keys[i];
                 string cmd = ctxCommands[i];
                 if ( cmd.Length > 0 ) {
-                    Qonsole.Log( $"{key}: [ff9000]{cmd}[-] {context}" );
+                    Log( $"{key}: [ff9000]{cmd}[-] {context}" );
                 }
             }
         }
@@ -390,11 +389,11 @@ public static void Bind_kmd( string [] argv ) {
         if ( _keyToIndex.TryGetValue( code, out idx ) ) {
             ctxCommands[idx] = argv[2];
         } else {
-            Qonsole.Error( "Unsupported key code " + code );
+            Error( "Unsupported key code " + code );
         }
-        //Qonsole.Log( "Bound command " + argv[2] + " to key " + code );
+        //Log( "Bound command " + argv[2] + " to key " + code );
     } else {
-        Qonsole.Error( "Couldn't find " + argv[1] + " in valid keys." );
+        Error( "Couldn't find " + argv[1] + " in valid keys." );
     }
 
     }
@@ -426,12 +425,22 @@ public static string StoreConfig() {
     return cfg;
 }
 
-private static void Execute( KeyCode key, string cmd ) {
-    Qonsole.Log( "execute key binding: " + key + " " + cmd );
-    Qonsole.TryExecute( cmd );
+private static void Execute( KeyCode key, string cmdLine ) {
+    Log( "Execute key binding: " + key + " " + cmdLine );
+    string [] cmds;
+    if ( Cellophane.SplitCommands( cmdLine, out cmds ) ) {
+        string [] argv;
+        foreach ( var cmd in cmds ) {
+            if ( Cellophane.GetArgv( cmd, out argv ) ) {
+                Cellophane.TryExecute( argv );
+            }
+        }
+    }
 }
 
-public static void TryExecuteBinds( string context = "" ) {
+public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyUp = KeyCode.None,
+                                                                    KeyCode keyHold = KeyCode.None,
+                                                                    string context = "" ) {
 #if false // legacy input system
     string cmd;
     foreach ( var key in _keys ) {
@@ -448,6 +457,26 @@ public static void TryExecuteBinds( string context = "" ) {
         }
     }
 #endif
+
+    string cmd;
+
+    if ( GetCmd( keyDown, context, out cmd ) ) {
+        if ( cmd[0] != '-' && ( keyDown != keyHold || cmd[0] != '+' ) ) {
+            Execute( keyDown, cmd );
+        }
+    }
+
+    if ( GetCmd( keyHold, context, out cmd ) ) {
+        if ( cmd[0] == '+' ) {
+            Execute( keyHold, cmd.Substring( 1 ) );
+        }
+    }
+
+    if ( GetCmd( keyUp, context, out cmd ) ) {
+        if ( cmd[0] == '-' ) {
+            Execute( keyUp, cmd.Substring( 1 ) );
+        }
+    }
 }
 
 

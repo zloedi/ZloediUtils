@@ -1,8 +1,8 @@
 #if UNITY_EDITOR || UNITY_STANDALONE
 
-//#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
-//#define QONSOLE_BOOTSTRAP_EDITOR // if this is defined, the console will try to bootstrap itself in the editor
-//#define QUI_BOOTSTRAP // if this is defined, QUI gets properly setup in the bootstrap pump
+#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
+#define QONSOLE_BOOTSTRAP_EDITOR // if this is defined, the console will try to bootstrap itself in the editor
+#define QUI_BOOTSTRAP // if this is defined, QUI gets properly setup in the bootstrap pump
 
 using UnityEngine;
 using System.Collections.Generic;
@@ -33,15 +33,19 @@ public static class QonsoleEditorSetup {
 #endif
 
 #if QONSOLE_BOOTSTRAP
+
 public class QonsoleBootstrap : MonoBehaviour {
 #if QUI_BOOTSTRAP
     static bool DebugShowUIRects_kvar = false;
     static Vector2 _mousePosition;
 #endif
+
     void Start() {
-        Qonsole.OnStoreCfg_f = () => "echo put something to store in cfg";
+        Qonsole.OnStoreCfg_f = () => KeyBinds.StoreConfig();
         Qonsole.OnPreLoadCfg_f = () => "echo executed before loading the cfg";
         Qonsole.Init( configVersion: 0 );
+        KeyBinds.Log = s => Qonsole.Log( s );
+        KeyBinds.Error = s => Qonsole.Error( s );
 
 #if QUI_BOOTSTRAP
         QUI.DrawLineRect = (x,y,w,h) => QGL.LateDrawLineRect(x,y,w,h,color:Color.magenta);
@@ -61,8 +65,9 @@ public class QonsoleBootstrap : MonoBehaviour {
 #if QUI_BOOTSTRAP
         QUI.Begin( ( int )_mousePosition.x, ( int )_mousePosition.y );
         Qonsole.OnUpdate();
-        //Qonsole.Log( QUI.ClickRect( 100, 100, 100, 100 ) );
         QUI.End();
+#else
+        Qonsole.OnUpdate();
 #endif
     }
 
@@ -75,6 +80,7 @@ public class QonsoleBootstrap : MonoBehaviour {
             QUI.OnMouseButton( false );
         }
 #endif
+        Qonsole.OnGUIEvent();
         Qonsole.OnGUI();
     }
 
@@ -82,7 +88,8 @@ public class QonsoleBootstrap : MonoBehaviour {
         Qonsole.OnApplicationQuit();
     }
 }
-#endif
+
+#endif // QONSOLE_BOOTSTRAP
 
 
 public static class Qonsole {
@@ -113,8 +120,10 @@ public static Func<string> OnPreLoadCfg_f = () => "";
 public static Func<string> OnStoreCfg_f = () => "";
 // the Unity editor (QGL) repaint callback
 public static Action<Camera> OnEditorRepaint = c => {};
-// called inside the Update pump (optionally with QUI setup)
+// called inside the Update pump (optionally with QUI setup) if QONSOLE_BOOTSTRAP is defined
 public static Action OnUpdate = () => {};
+// called inside OnGUI if QONSOLE_BOOTSTRAP is defined
+public static Action OnGUIEvent = () => {};
 
 static float _totalTime, _prevTime;
 static string _historyPath;
@@ -470,7 +479,6 @@ static void Clear_kmd( string [] argv ) {
 
 static void Echo_kmd( string [] argv ) {
     if ( argv.Length == 1 ) {
-        Log( "Some error message" );
         return;
     }
     string text = "";
