@@ -57,14 +57,14 @@ public class QonsoleBootstrap : MonoBehaviour {
         //QUI.defaultFont = ...
 #endif
 
-        Qonsole.OnEditorRepaint = c => {};
+        Qonsole.OnEditorRepaint_f = c => {};
         Qonsole.Start();
     }
 
     void Update() {
 #if QUI_BOOTSTRAP
         QUI.Begin( ( int )_mousePosition.x, ( int )_mousePosition.y );
-        Qonsole.OnUpdate();
+        Qonsole.OnUpdate_f();
         QUI.End();
 #else
         Qonsole.OnUpdate();
@@ -80,7 +80,7 @@ public class QonsoleBootstrap : MonoBehaviour {
             QUI.OnMouseButton( false );
         }
 #endif
-        Qonsole.OnGUIEvent();
+        Qonsole.OnGUIEvent_f();
         Qonsole.OnGUI();
     }
 
@@ -116,14 +116,18 @@ public static readonly int ThreadID = System.Threading.Thread.CurrentThread.Mana
 
 // stuff to be executed before the .cfg file is loaded
 public static Func<string> OnPreLoadCfg_f = () => "";
+// stuff to be executed after the .cfg file is loaded
+public static Func<string> OnPostLoadCfg_f = () => "";
 // provide additional string to be appended to the .cfg file on flush/store
 public static Func<string> OnStoreCfg_f = () => "";
 // the Unity editor (QGL) repaint callback
-public static Action<Camera> OnEditorRepaint = c => {};
+public static Action<Camera> OnEditorRepaint_f = c => {};
 // called inside the Update pump (optionally with QUI setup) if QONSOLE_BOOTSTRAP is defined
-public static Action OnUpdate = () => {};
+public static Action OnUpdate_f = () => {};
+public static Action OnStart_f = () => {};
+public static Action OnDone_f = () => {};
 // called inside OnGUI if QONSOLE_BOOTSTRAP is defined
-public static Action OnGUIEvent = () => {};
+public static Action OnGUIEvent_f = () => {};
 
 static float _totalTime, _prevTime;
 static string _historyPath;
@@ -559,6 +563,7 @@ public static void Init( int configVersion = 0 ) {
     TryExecute( OnPreLoadCfg_f() );
     Cellophane.ReadHistory( history );
     Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
+    TryExecute( OnPostLoadCfg_f() );
     Help_kmd( null );
 }
 
@@ -616,6 +621,7 @@ public static void Start() {
         QGL.SetContext( null, invertedY: ! QonUseRP );
         Started = true;
         Log( "Qonsole Started." );
+        OnStart_f();
     } else {
         Started = false;
     }
@@ -627,6 +633,7 @@ public static void FlushConfig() {
 }
 
 public static void OnApplicationQuit() {
+    OnDone_f();
     FlushConfig();
 }
 

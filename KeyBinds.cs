@@ -15,10 +15,7 @@ private static KeyCode[] _keys = new KeyCode [] {
     KeyCode.Clear, //The Clear key.
     KeyCode.Return, //Return key.
     KeyCode.Pause, //Pause on PC machines.
-
-    // Don't assign the escape key
-    //KeyCode.Escape, //Escape key.
-
+    KeyCode.Escape, //Escape key.
     KeyCode.Space, //Space key.
     KeyCode.Keypad0, //Numeric keypad 0.
     KeyCode.Keypad1, //Numeric keypad 1.
