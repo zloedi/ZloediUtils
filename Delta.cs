@@ -110,7 +110,7 @@ public static string IntToHex( int num ) {
     return new string( octet );
 }
 
-static bool ParseInts( List<string> argv, ref int i, List<int> list ) {
+static bool ParseInts( IList<string> argv, ref int i, List<int> list ) {
     for (; i < argv.Count ; i++)
     {
         if (argv[i] == ":")
@@ -123,7 +123,7 @@ static bool ParseInts( List<string> argv, ref int i, List<int> list ) {
     return i < argv.Count;
 }
 
-static bool ParseShorts( List<string> argv, ref int i, List<ushort> list ) {
+static bool ParseShorts( IList<string> argv, ref int i, List<ushort> list ) {
     for ( ; i < argv.Count; i++ ) {
         if ( argv[i] == ":" ) {
             i++;
@@ -134,7 +134,7 @@ static bool ParseShorts( List<string> argv, ref int i, List<ushort> list ) {
     return i < argv.Count;
 }
 
-static bool ParseBytes( List<string> argv, ref int i, List<byte> list ) {
+static bool ParseBytes( IList<string> argv, ref int i, List<byte> list ) {
     for ( ; i < argv.Count; i++ ) {
         if ( argv[i] == ":" ) {
             i++;
@@ -147,21 +147,22 @@ static bool ParseBytes( List<string> argv, ref int i, List<byte> list ) {
 
 // == public API ==
 
-public static bool UndeltaByte( ref int idx, List<string> argv, List<byte> changes,
+public static bool UndeltaBytes( ref int idx, IList<string> argv, List<ushort> changes,
                                                         List<byte> values, out bool keepGoing ) {
     changes.Clear(); 
     values.Clear();
-    keepGoing = ParseBytes( argv, ref idx, changes );
+    keepGoing = ParseShorts( argv, ref idx, changes );
     keepGoing = ParseBytes( argv, ref idx, values );
     return changes.Count > 0 && changes.Count == values.Count;
 }
 
 public static bool DeltaBytes( byte [] input, byte [] shadow,
-                                                        out string changes, out string values ) {
+                                        out string changes, out string values, int maxInput = 0 ) {
     changes = "";
     values = "";
     int n = 0;
-    for ( int i = 0; i < input.Length; i++ ) {
+    maxInput = maxInput > 0 ? maxInput : input.Length;
+    for ( int i = 0; i < maxInput; i++ ) {
         if ( input[i] != shadow[i] ) {
             changes += " " + IntToHex( i );
             values += " " + IntToHex( input[i] );
@@ -172,21 +173,22 @@ public static bool DeltaBytes( byte [] input, byte [] shadow,
     return n > 0;
 }
 
-public static bool UndeltaShorts( ref int idx, List<string> argv, List<byte> changes,
+public static bool UndeltaShorts( ref int idx, IList<string> argv, List<ushort> changes,
                                                         List<ushort> values, out bool keepGoing ) {
     changes.Clear(); 
     values.Clear();
-    keepGoing = ParseBytes( argv, ref idx, changes );
+    keepGoing = ParseShorts( argv, ref idx, changes );
     keepGoing = ParseShorts( argv, ref idx, values );
     return changes.Count > 0 && changes.Count == values.Count;
 }
 
 public static bool DeltaShorts( ushort [] input, ushort [] shadow,
-                                                        out string changes, out string values ) {
+                                        out string changes, out string values, int maxInput = 0 ) {
     changes = "";
     values = "";
     int n = 0;
-    for ( int i = 0; i < input.Length; i++ ) {
+    maxInput = maxInput > 0 ? maxInput : input.Length;
+    for ( int i = 0; i < maxInput; i++ ) {
         if ( input[i] != shadow[i] ) {
             changes += " " + IntToHex( i );
             values += " " + IntToHex( input[i] );
@@ -197,20 +199,22 @@ public static bool DeltaShorts( ushort [] input, ushort [] shadow,
     return n > 0;
 }
 
-public static bool UndeltaInts( ref int idx, List<string> argv, List<byte> changes,
+public static bool Undelta( ref int idx, IList<string> argv, List<ushort> changes,
                                                         List<int> values, out bool keepGoing ) {
     changes.Clear();
     values.Clear();
-    keepGoing = ParseBytes( argv, ref idx, changes );
+    keepGoing = ParseShorts( argv, ref idx, changes );
     keepGoing = ParseInts( argv, ref idx, values );
     return changes.Count > 0 && changes.Count == values.Count;
 }
 
-public static bool DeltaInts( int[] input, int[] shadow, out string changes, out string values ) {
+public static bool DeltaInts( int[] input, int[] shadow, out string changes, out string values,
+                                                                                int maxInput = 0 ) {
     changes = "";
     values = "";
     int n = 0;
-    for ( int i = 0 ; i < input.Length ; i++ ) {
+    maxInput = maxInput > 0 ? maxInput : input.Length;
+    for ( int i = 0; i < maxInput; i++ ) {
         if ( input[i] != shadow[i] ) {
             changes += " " + IntToHex( i );
             values += " " + IntToHex( input[i] );

@@ -113,8 +113,21 @@ public static void DrawGLText( string logText, Vector2 screenPos, int x, int y, 
 #endif // HAS_QGL
 
 #if HAS_QONSOLE
+public static void PrintList( IList<ushort> list, int gridW, int gridH, string logText = null,
+                                        float hexSize = 0,
+                                        bool isOffset = false,
+                                        IList<Color> colors = null,
+                                        IList<string> texts = null,
+                                        Func<IList<Vector2Int>,int,string> hexListString = null ) {
+    var coords = new Vector2Int[list.Count];
+    for ( int i = 0; i < list.Count; i++ ) {
+        coords[i] = new Vector2Int( list[i] % gridW, list[i] / gridW );
+    }
+    PrintList( coords, logText, hexSize, gridW, gridH, isOffset, colors, texts, hexListString );
+}
+
 public static void PrintList( IList<Vector2Int> list, string logText = null, float hexSize = 0,
-                    int w = -1, int h = -1, bool isAxial = false,
+                    int gridW = -1, int gridH = -1, bool isOffset = false,
                     IList<Color> colors = null,
                     IList<string> texts = null,
                     Func<IList<Vector2Int>,int,string> hexListString = null ) {
@@ -136,39 +149,39 @@ public static void PrintList( IList<Vector2Int> list, string logText = null, flo
     var captureColors = colors != null ? new List<Color>( colors ) : null;
     var captureTexts = texts != null ? new List<string>( texts ) : null;
     
-    if ( w < 0 || h < 0 ) {
+    if ( gridW < 0 || gridH < 0 ) {
         int maxX = 0, maxY = 0;
         foreach ( var p in captureList ) {
             maxX = p.x > maxX ? p.x : maxX;
             maxY = p.y > maxY ? p.y : maxY;
         }
-        w = maxX + 1;
-        h = maxY + 1;
+        gridW = maxX + 1;
+        gridH = maxY + 1;
     }
 
     Qonsole.PrintAndAct( "\n", (screenPos,alpha) => {
         QGL.SetTexture( hexSprite );
         GL.Begin( GL.QUADS );
 #if false
-        for ( int y = 0; y < h; y++ ) {
-            for ( int x = 0; x < w; x++ ) {
-                DrawGLHex( screenPos, x, y, h, quadSize, alpha, 0.4f );
+        for ( int y = 0; y < gridH; y++ ) {
+            for ( int x = 0; x < gridW; x++ ) {
+                DrawGLHex( screenPos, x, y, gridH, quadSize, alpha, 0.4f );
             }
         }
 #endif
 
-        if ( isAxial ) {
+        if ( isOffset ) {
             for ( int i = 0; i < captureList.Count; i++ ) {
                 var p = captureList[i];
                 var c = captureColors != null ? captureColors[i] : new Color( 1, 0.65f, 0.1f );
                 Vector2Int q = OddRToAxial( p.x, p.y );
-                DrawGLHex( screenPos, q.x, q.y, h, quadSize, alpha, c );
+                DrawGLHex( screenPos, q.x, q.y, gridH, quadSize, alpha, c );
             }
         } else {
             for ( int i = 0; i < captureList.Count; i++ ) {
                 var p = captureList[i];
                 var c = captureColors != null ? captureColors[i] : new Color( 1, 0.65f, 0.1f );
-                DrawGLHex( screenPos, p.x, p.y, h, quadSize, alpha, c );
+                DrawGLHex( screenPos, p.x, p.y, gridH, quadSize, alpha, c );
             }
         }
 
@@ -177,24 +190,24 @@ public static void PrintList( IList<Vector2Int> list, string logText = null, flo
         // draw hex text
         QGL.SetFontTexture();
         GL.Begin( GL.QUADS );
-        if ( isAxial ) {
+        if ( isOffset ) {
             for ( int i = 0; i < captureList.Count; i++ ) {
                 Vector2Int p = captureList[i];
                 Vector2Int q = OddRToAxial( p.x, p.y );
                 string txt = captureTexts != null ? captureTexts[i] : hexListString( captureList, i );
-                DrawGLText( txt, screenPos, q.x, q.y, h, quadSize );
+                DrawGLText( txt, screenPos, q.x, q.y, gridH, quadSize );
             }
         } else {
             for ( int i = 0; i < captureList.Count; i++ ) {
                 Vector2Int p = captureList[i];
                 string txt = captureTexts != null ? captureTexts[i] : hexListString( captureList, i );
-                DrawGLText( hexListString( captureList, i ), screenPos, p.x, p.y, h, quadSize );
+                DrawGLText( hexListString( captureList, i ), screenPos, p.x, p.y, gridH, quadSize );
             }
         }
         GL.End();
     } );
     float hexH = ( int )( quadSize.y * 0.83f );
-    int numLines = ( int )( h * hexH / Qonsole.LineHeight() + 0.5f );
+    int numLines = ( int )( gridH * hexH / Qonsole.LineHeight() + 0.5f );
     for ( int i = 0; i < numLines; i++ ) {
         Qonsole.Print( "\n" );
     }
@@ -202,7 +215,7 @@ public static void PrintList( IList<Vector2Int> list, string logText = null, flo
 
 #if false // example usage
 static void PrintHexes_kmd( string [] argv ) {
-    PrintList( x_grid, isAxial: true, hexListString: (l,i) => $"{l[i].x},{l[i].y}", hexSize: 48 );
+    PrintList( x_grid, isOffset: true, hexListString: (l,i) => $"{l[i].x},{l[i].y}", hexSize: 48 );
 }
 #endif
 

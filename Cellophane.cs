@@ -773,7 +773,7 @@ public static bool ColorTagLead( string str, int i, out string tag ) {
     for ( int k = i; k < n; k++ ) {
         tag += str[k];
     }
-    if ( tag[tag.Length - 1] != ']' ) {
+    if ( tag.Length != tagLen || tag[tag.Length - 1] != ']' ) {
         return false;
     }
     for ( int k = 1; k < tag.Length - 1; k++ ) {

@@ -358,6 +358,8 @@ public class SvClient {
     // the rolling index in the deltas buffer from last ACK-ed to latest
     // used to resend any unACK-ed deltas
     public int deltaRoll;
+    // disconnect if this go below zero
+    public int timeout;
 
     // client reliable command sequence
     public int reliableSequence;
@@ -375,6 +377,8 @@ public class SvClient {
 public static class ZServer {
 
 
+public const int CLIENT_TIMEOUT = 9999;
+
 public static Net net = new Net();
 public static Action<string> Log = s => {};
 public static Action<string> Error = s => {};
@@ -387,8 +391,6 @@ public static Action<string> onClientReliableCommand_f = str=>{};
 public static Func<int,bool,string> onTick_f = (dt,needPacket)=>{ return ""; };
 
 public static bool Init() {
-    net.Log = Log;
-    net.Error = Error;
     if ( ! net.Init( 0 ) ) {
         return false;
     }
@@ -429,25 +431,25 @@ public static void SendDelta( SvClient c, int sequence ) {
     c.netChan.Transmit( net.message.buffer );
     net.Send( c.netChan.msg, c.endPoint );
 
-    Log( $"Sending out delta seq: {sequence}({c.deltaSequenceACK}) dest: {c.endPoint}" );
+    net.Log( $"Sending out delta seq: {sequence}({c.deltaSequenceACK}) dest: {c.endPoint} timeout: {c.timeout}" );
 }
 
-public static void DisconnectClient( int index ) {
+static void DisconnectClient( int index ) {
     var c = clients[index];
-    Log( "Server: Disconnected client:" );
-    Log( "  zport:" + c.netChan.zport );
-    Log( "  endPoint:" + c.endPoint );
+    Log( "Disconnected client:" );
+    Log( "  zport: " + c.netChan.zport );
+    Log( "  endPoint: " + c.endPoint );
     c.netChan.msg.OOBPrint( $"cl_disconnect_response {c.netChan.zport}" );
     net.Send( c.netChan.msg, c.endPoint );
     clients.RemoveAt( index );
     onClientDisconnect_f( index );
 }
 
-//public static void TryDisconnectClient( SvClient c ) {
-//  TryDisconnectClient( c.netChan.zport, c.endPoint );
-//}
+static void TryDisconnectClient( SvClient c ) {
+    TryDisconnectClient( c.netChan.zport, c.endPoint );
+}
 
-public static void TryDisconnectClient( int zport, IPEndPoint clientEndpoint ) {
+static void TryDisconnectClient( int zport, IPEndPoint clientEndpoint ) {
     for ( int i = clients.Count - 1; i >= 0; i-- ) {
         SvClient c = clients[i];
         if ( zport == c.netChan.zport && c.endPoint.Address.Equals( clientEndpoint.Address ) ) {
@@ -480,6 +482,7 @@ public static void TryConnectClient( int zport ) {
     var newCl = new SvClient {
         endPoint = net.remoteEndPoint as IPEndPoint,
         netChan = new NetChan( zport ),
+        timeout = CLIENT_TIMEOUT,
     };
 
     clients.Add( newCl );
@@ -487,11 +490,12 @@ public static void TryConnectClient( int zport ) {
     // send back the response
     respond( newCl );
 
-    Log( "Server: Connected client:" );
-    Log( "  zport:" + newCl.netChan.zport );
-    Log( "  endPoint:" + newCl.endPoint );
+    Log( "Connected client:" );
+    Log( "  zport: " + newCl.netChan.zport );
+    Log( "  endPoint: " + newCl.endPoint );
 }
 
+// returns true, if anything arrived at the socket
 public static bool Poll( out bool receivedClientCommand, int microseconds = 0 ) {
     void sendPending() {
         foreach ( var c in clients ) {
@@ -529,7 +533,7 @@ public static bool Poll( out bool receivedClientCommand, int microseconds = 0 ) 
 
     // sequence == 4, zport == 2, deltaACK == 4 : total 10 bytes
     else if ( numBytes >= 10 ) {
-        Log( $"Received {numBytes} bytes from {net.remoteEndPoint}" );
+        net.Log( $"Received {numBytes} bytes from {net.remoteEndPoint}" );
 
         net.message.BeginRead( net.socketBuffer, numBytes );
 
@@ -574,34 +578,59 @@ public static bool Poll( out bool receivedClientCommand, int microseconds = 0 ) 
                     receivedClientCommand = true;
                     onClientReliableCommand_f( cmd );
                 } else {
-                    Log( "Dropping old reliable command" );
-                    Log( " expected " + ( c.reliableSequence + 1 ) );
-                    Log( "      got " + relSeq );
+                    net.Log( "Dropping old reliable command" );
+                    net.Log( " expected " + ( c.reliableSequence + 1 ) );
+                    net.Log( "      got " + relSeq );
                 }
                 continue;
             }
             
             if ( deltaACK <= c.deltaSequenceACK ) {
-                Log( "Dropped old ACK: " + deltaACK );
+                net.Log( "Dropped old ACK: " + deltaACK );
                 continue;
             }
 
             if ( deltaACK > c.deltaSequence ) {
-                Log( "Dropped invalid ACK: " + deltaACK );
+                net.Log( "Dropped invalid ACK: " + deltaACK );
                 continue;
             }
 
             // delta acknowledged on the client
             c.deltaSequenceACK = deltaACK;
-            Log( $"{c.endPoint} acknowledged {deltaACK}" );
+            net.Log( $"{c.endPoint} acknowledged {deltaACK}" );
+
+            // refill the timer
+            c.timeout = CLIENT_TIMEOUT;
         }
     }
 
     sendPending();
-    return ! receivedClientCommand;
+    return true;
 }
 
 public static void Tick( int deltaTime, bool hadClientCommands ) {
+    if ( clients.Count == 0 ) {
+        return;
+    }
+
+    for ( int i = clients.Count - 1; i >= 0; i-- ) {
+        var c = clients[i];
+
+        if ( c.timeout < 0 ) {
+            Error( $"Client {i}({c.netChan.zport}) timedout, disconnecting." );
+            DisconnectClient( i );
+            continue;
+        }
+
+        if ( c.deltaSequence - c.deltaSequenceACK >= c.deltas.Length ) {
+            Error( "Out of deltas, abort sending." );
+            DisconnectClient( i );
+            continue;
+        }
+
+        c.timeout -= deltaTime;
+    }
+
     string delta = onTick_f( deltaTime, hadClientCommands );
 
     if ( string.IsNullOrEmpty( delta ) ) {
@@ -616,25 +645,19 @@ public static void Tick( int deltaTime, bool hadClientCommands ) {
 
     byte [] bytes = Encoding.ASCII.GetBytes( delta );
 
-    Log( $"delta sz: {bytes.Length} dt: {deltaTime} delta: {delta}" );
+    net.Log( $"delta sz: {bytes.Length} dt: {deltaTime} delta: {delta}" );
 
     for ( int i = clients.Count - 1; i >= 0; i-- ) {
         var c = clients[i];
-        int numUnsent = c.deltaSequence - c.deltaSequenceACK;
 
-        if ( numUnsent >= c.deltas.Length ) {
-            Error( "Out of deltas, abort sending." );
-            DisconnectClient( i );
-            //Break( "FATAL" );
-            continue;
-        }
+        int numUnsent = c.deltaSequence - c.deltaSequenceACK;
 
         // push this delta in the queue
         c.deltaSequence++;
         int sequence = c.deltaSequence & ( c.deltas.Length - 1 );
         c.deltas[sequence].Clear();
         c.deltas[sequence].AddRange( bytes );
-        Log( $"Pushing delta into queue; client: {c.endPoint} sz: {bytes.Length}; unsent deltas: {numUnsent}" );
+        net.Log( $"Pushing delta into queue; client: {c.endPoint} sz: {bytes.Length}; unsent deltas: {numUnsent}" );
 
         // if there are no pending packets, send out immediately
         if ( numUnsent == 0 && ! c.netChan.HasPendingFragments() ) {
@@ -678,9 +701,16 @@ public enum State {
     Connected,
 }
 
+const int LINK_TIMEOUT = 5555;
+const int RECONNECT_TIMEOUT = 5555;
+
 static int timer;
-static int connectRequestTimestamp = -99999;
-static int ackTimestamp;
+
+// try reconnect after this runs out
+static int reconnectTimeout = -1;
+
+// when this goes below zero, drop the connection
+static int linkTimeout = LINK_TIMEOUT;
 
 public static Net net = new Net();
 
@@ -762,6 +792,7 @@ public static void TryDisconnectResponse( int zport ) {
         return;
     }
     Log( "Disconnect response from " + net.remoteEndPoint );
+    linkTimeout = LINK_TIMEOUT;
     state = State.Disconnected;
     Log( "State: " + state );
 }
@@ -780,6 +811,7 @@ public static void TryConnectResponse( int zport ) {
     deltaSequence = 0;
     relSequenceACK = 0;
     relSequence = 0;
+    linkTimeout = LINK_TIMEOUT;
     relMsgs = new List<byte>[32];
     for ( int i = 0; i < relMsgs.Length; i++ ) {
         relMsgs[i] = new List<byte>();
@@ -836,21 +868,23 @@ public static void Tick( int clientDeltaTime, bool sleep = false ) {
     timer += clientDeltaTime;
 
     if ( state == State.Disconnected ) {
+        linkTimeout = LINK_TIMEOUT;
         deltaSequence = 0;
         relSequenceACK = 0;
         relSequence = 0;
         netChan.Reset();
-        if ( timer - connectRequestTimestamp >= 3000 ) {
+        if ( reconnectTimeout < 0 ) {
             SendConnectRequest();
-            connectRequestTimestamp = timer;
+            reconnectTimeout = RECONNECT_TIMEOUT;
         }
+        reconnectTimeout -= clientDeltaTime;
         int microseconds = sleep ? 3000 * 1000 : 0;
         if ( net.socket.Poll( microseconds, SelectMode.SelectRead ) ) {
             int numBytes = net.Receive();
             net.TryExecuteOOBCommand( net.socketBuffer, numBytes );
         }
     } else if ( state == State.Connected ) {
-        connectRequestTimestamp = timer - 99999;
+        reconnectTimeout = RECONNECT_TIMEOUT;
 
         // infinite sleep if standalone 'fake' client
         int microseconds = sleep ? -1 : 0;
@@ -865,7 +899,7 @@ public static void Tick( int clientDeltaTime, bool sleep = false ) {
             
             // sequence == 4, zport == 2, deltaACK == 4 : total 10 bytes
             else if ( numBytes >= 10 ) {
-                Log( "Received " + numBytes + " bytes." );
+                net.Log( $"Received {numBytes} bytes." );
                 if ( netChan.Receive( net.socketBuffer, numBytes ) ) {
                     // delta sequence
                     int seq = netChan.msg.ReadInt();
@@ -878,37 +912,37 @@ public static void Tick( int clientDeltaTime, bool sleep = false ) {
                         netChan.msg.ReadData( net.packet );
                         string delta = Encoding.ASCII.GetString( net.packet.ToArray(), 0,
                                                                                 net.packet.Count );
-                        Log( $"received delta seq: {seq} delta: {delta}" );
+                        net.Log( $"received delta seq: {seq} delta: {delta}" );
                         deltaSequence = seq;
-                        ackTimestamp = timer;
+                        linkTimeout = LINK_TIMEOUT;
                         onServerPacket_f( delta );
                     } else {
                         // don't ACK invalid deltas
-                        Log( "Dropping invalid delta:" );
-                        Log( " expected " + ( deltaSequence + 1 ) );
-                        Log( "      got " + seq );
+                        net.Log( "Dropping invalid delta:" );
+                        net.Log( " expected " + ( deltaSequence + 1 ) );
+                        net.Log( "      got " + seq );
                     }
 
                     // send last properly ACK-ed delta immediately
-                    Log( $"Sending out ACK {deltaSequence}" );
+                    net.Log( $"Sending out ACK {deltaSequence}" );
                     net.message.BeginWrite();
                     net.message.WriteInt( deltaSequence );
                     netChan.Transmit( net.message.buffer );
                     net.Send( netChan.msg, serverEndpoint );
 
                     if ( rel > relSequenceACK && rel <= relSequence ) {
-                        Log( "Received reliable ACK: " + rel );
+                        net.Log( "Received reliable ACK: " + rel );
                         relSequenceACK = rel;
                     }
                 }
             }
         }
 
-        int timeout = 60000;
-        if ( timer - ackTimestamp >= timeout ) {
-            Error( "Inactive for too long, dropping connection." );
+        linkTimeout -= clientDeltaTime;
+        if ( linkTimeout < 0 ) {
+            Error( "Inactive for too long, dropping connection..." );
             SendDisconnectRequest();
-            ackTimestamp = timer;
+            linkTimeout = LINK_TIMEOUT;
             state = State.Disconnected;
             Log( "State: " + state );
         }
