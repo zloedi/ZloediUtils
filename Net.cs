@@ -387,7 +387,6 @@ public static List<SvClient> clients = new List<SvClient>();
 
 public static Action<int> onClientDisconnect_f = i=>{};
 public static Action<int> onClientConnect_f = i=>{};
-public static Action<string> onClientReliableCommand_f = str=>{};
 public static Func<int,bool,string> onTick_f = (dt,needPacket)=>{ return ""; };
 
 public static bool Init() {
@@ -495,8 +494,8 @@ public static void TryConnectClient( int zport ) {
     Log( "  endPoint: " + newCl.endPoint );
 }
 
-// returns true, if anything arrived at the socket
-public static bool Poll( out bool receivedClientCommand, int microseconds = 0 ) {
+// returns true, if there is a client command to execute
+public static bool Poll( out string clientCommand, int microseconds = 0 ) {
     void sendPending() {
         foreach ( var c in clients ) {
 
@@ -518,7 +517,7 @@ public static bool Poll( out bool receivedClientCommand, int microseconds = 0 ) 
         }
     }
 
-    receivedClientCommand = false;
+    clientCommand = "";
 
     if ( ! net.socket.Poll( microseconds, SelectMode.SelectRead ) ) {
         // nothing to read, send out any pending packets
@@ -575,8 +574,7 @@ public static bool Poll( out bool receivedClientCommand, int microseconds = 0 ) 
                                                                 net.packet.Count );
                     Log( $"Reliable command {cmd}" );
                     c.reliableSequence = relSeq;
-                    receivedClientCommand = true;
-                    onClientReliableCommand_f( cmd );
+                    clientCommand = cmd;
                 } else {
                     net.Log( "Dropping old reliable command" );
                     net.Log( " expected " + ( c.reliableSequence + 1 ) );
@@ -605,7 +603,7 @@ public static bool Poll( out bool receivedClientCommand, int microseconds = 0 ) 
     }
 
     sendPending();
-    return true;
+    return clientCommand.Length > 0;
 }
 
 public static void Tick( int deltaTime, bool hadClientCommands ) {
