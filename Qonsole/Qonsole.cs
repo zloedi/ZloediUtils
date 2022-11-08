@@ -23,7 +23,7 @@ public static class QonsoleEditorSetup {
         void duringSceneGui( SceneView sv ) {
             Qonsole.OnEditorSceneGUI( sv.camera, EditorApplication.isPaused,
                                             EditorGUIUtility.pixelsPerPoint,
-                                            onRepaint: Qonsole.OnEditorRepaint );
+                                            onRepaint: Qonsole.OnEditorRepaint_f );
         }
         SceneView.duringSceneGui -= duringSceneGui;
         SceneView.duringSceneGui += duringSceneGui;
