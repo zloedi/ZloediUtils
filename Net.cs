@@ -85,12 +85,12 @@ public class NetMsg {
 }
 
 public class NetChan {
+    public const int FRAG_BIT = 1 << 31;
+
     public static Action<string> Log = s => {};
     public static Action<string> Error = s => {};
 
     static int MaxPacket_cvar = 1400;
-    
-    public const int FragBit = 1 << 31;
 
     public int zport = GetZPort();
 
@@ -143,8 +143,8 @@ public class NetChan {
         int sequence = msg.ReadInt();
         int zport = msg.ReadShort();
 
-        bool fragmented = ( sequence & FragBit ) != 0;
-        sequence = fragmented ? ( sequence & ~FragBit ) : sequence;
+        bool fragmented = ( sequence & FRAG_BIT ) != 0;
+        sequence = fragmented ? ( sequence & ~FRAG_BIT ) : sequence;
 
         if ( sequence <= _inSequence ) {
             Log( "Redundant sequence" );
@@ -223,7 +223,7 @@ public class NetChan {
             return false;
         }
         msg.BeginWrite();
-        msg.WriteInt( _outSequence | FragBit );
+        msg.WriteInt( _outSequence | FRAG_BIT );
         msg.WriteShort( zport );
         int fragLen = MaxFragment();
         if ( _unsentStart + fragLen > _outFragBuffer.Count ) {
@@ -245,6 +245,8 @@ public class NetChan {
 // == Common to both ZServer and ZClient ==
 
 public class Net {
+    public const int SERVER_PORT = 27960;
+
     [Description( "Randomly drop packets for tests." )]
     public static int TestDropPackets_cvar = 0;
 
@@ -252,7 +254,6 @@ public class Net {
     public Action<string> Error = s => {};
     public Action<string> TryExecute = s => {};
 
-    public const int serverPort = 27960;
     public Socket socket =
                     new Socket( AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp );
 
@@ -275,8 +276,8 @@ public class Net {
                     return 0;
                 }
             }
-        } catch {
-            Log( "socket failed to receive" );
+        } catch ( Exception e ) {
+            Log( $"Socket failed to receive from {remoteEndPoint}: {e.Message}"  );
         }
         return numBytes;
     }
@@ -284,8 +285,8 @@ public class Net {
     public void Send( NetMsg msg, IPEndPoint endPoint ) {
         try {
             socket.SendTo( msg.buffer.ToArray(), 0, msg.buffer.Count, SocketFlags.None, endPoint );
-        } catch {
-            Log( "socket failed to send to " + endPoint );
+        } catch ( Exception e ) {
+            Log( $"Socket failed to send to {endPoint}: {e.Message}" );
         }
     }
 
@@ -309,7 +310,7 @@ public class Net {
         int port;
         for ( port = 0; port < 10; port++ ) {
             try {
-                int realPort = serverPort + basePort + port;
+                int realPort = SERVER_PORT + basePort + port;
                 Log( "Trying port " + realPort );
                 IPEndPoint endpoint = new IPEndPoint( IPAddress.Any, realPort );
                 // FIXME: broadcast capable...?
@@ -344,7 +345,7 @@ public class Net {
 
 // server side client state
 public class SvClient {
-    const int MaxDelta = 32;
+    const int MAX_DELTA = 32;
 
     public NetChan netChan;
     public IPEndPoint endPoint;
@@ -699,10 +700,8 @@ public enum State {
     Connected,
 }
 
-const int LINK_TIMEOUT = 5555;
+const int LINK_TIMEOUT = 7777;
 const int RECONNECT_TIMEOUT = 5555;
-
-static int timer;
 
 // try reconnect after this runs out
 static int reconnectTimeout = -1;
@@ -719,7 +718,7 @@ public static NetChan netChan = new NetChan();
 public static State state;
 
 public static IPAddress serverIP = IPAddress.Parse( "127.0.0.1" );
-public static IPEndPoint serverEndpoint = new IPEndPoint( serverIP, Net.serverPort );
+public static IPEndPoint serverEndpoint = new IPEndPoint( serverIP, Net.SERVER_PORT );
 
 // last received delta sequence number
 public static int deltaSequence;
@@ -739,16 +738,25 @@ public static Action<int> onTick_f = dt=>{};
 public static Action onTickEnd_f = ()=>{};
 public static Action<string> onServerPacket_f = str=>{};
 
-public static bool Init( string svIP = "127.0.0.1" ) {
+public static void Reset( string svIP = null ) {
+    if ( svIP != null ) {
+        TrySetServerIP( svIP );
+    }
+    relSequenceACK = 0;
+    relSequence = 0;
+    relRoll = 0;
+    linkTimeout = LINK_TIMEOUT;
+    reconnectTimeout = -1;
+    state = State.Disconnected;
+}
+
+public static bool Init( string svIP = null ) {
+    svIP = svIP == null ? $"127.0.0.1:{Net.SERVER_PORT}" : svIP;
     if ( ! net.Init( 1 ) ) {
         return false;
     }
-    if ( IPAddress.TryParse( svIP, out IPAddress addr ) ) {
-        serverIP = addr;
-    }
-    serverEndpoint = new IPEndPoint( serverIP, Net.serverPort );
-    state = State.Disconnected;
-    Log( $"Client initialized; server IP: {addr}, zport: {netChan.zport}" );
+    Reset( svIP );
+    Log( $"Client initialized; server IP: {serverIP}, zport: {netChan.zport}" );
     return true;
 }
 
@@ -756,6 +764,16 @@ public static void Done() {
     Log( "Hasta la vista, Baby!" );
     SendDisconnectRequest();
     net.Done();
+}
+
+static bool TrySetServerIP( string svIP ) {
+    if ( IPAddress.TryParse( svIP, out IPAddress addr ) ) {
+        serverIP = addr;
+        serverEndpoint = new IPEndPoint( serverIP, Net.SERVER_PORT );
+        return true;
+    }
+    Error( $"Failed to set server IP {svIP}" );
+    return false;
 }
 
 public static void SendDisconnectRequest( int zport = 0 ) {
@@ -772,7 +790,7 @@ public static bool TrySendConnectRequest( string ip ) {
         return false;
     }
     serverIP = addr;
-    serverEndpoint = new IPEndPoint( serverIP, Net.serverPort );
+    serverEndpoint = new IPEndPoint( serverIP, Net.SERVER_PORT );
     SendConnectRequest();
     return true;
 }
@@ -862,8 +880,6 @@ public static void Tick( int clientDeltaTime, bool sleep = false ) {
     try { 
 
     onTickBegin_f();
-
-    timer += clientDeltaTime;
 
     if ( state == State.Disconnected ) {
         linkTimeout = LINK_TIMEOUT;
