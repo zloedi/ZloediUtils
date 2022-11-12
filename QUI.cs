@@ -1,11 +1,11 @@
 // define this to have Unity UI API support
-//#define USE_UNITY_UI
+//#define QUI_USE_UNITY_UI
 
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 
-#if USE_UNITY_UI
+#if QUI_USE_UNITY_UI
 using UnityEngine;
 using UnityEngine.UI;
 #endif
@@ -69,7 +69,7 @@ public static bool OnMouseButton( bool down ) {
 public static void Begin( float cursorX, float cursorY ) {
     _cursorX = cursorX;
     _cursorY = cursorY;
-#if USE_UNITY_UI
+#if QUI_USE_UNITY_UI
     BeginUnityUI();
 #endif
 }
@@ -156,7 +156,7 @@ public static void End( bool skipUnityUI = false ) {
     _oldCursorX = _cursorX;
     _oldCursorY = _cursorY;
 
-#if USE_UNITY_UI
+#if QUI_USE_UNITY_UI
     if ( ! skipUnityUI ) {
         EndUnityUI();
     }
@@ -238,7 +238,7 @@ public static void Scissor( float x, float y, float w, float h ) {
 
 
 
-#if USE_UNITY_UI
+#if QUI_USE_UNITY_UI
 
 struct TickItem {
 	public bool skipSort;
@@ -650,7 +650,7 @@ public static WidgetResult Panel( float x, float y, float w, float h,
     return r;
 }
 
-#endif // USE_UNITY_UI
+#endif // QUI_USE_UNITY_UI
 
 
 }

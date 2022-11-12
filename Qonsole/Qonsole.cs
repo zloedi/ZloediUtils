@@ -1,8 +1,8 @@
 #if UNITY_EDITOR || UNITY_STANDALONE
 
-#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
-#define QONSOLE_BOOTSTRAP_EDITOR // if this is defined, the console will try to bootstrap itself in the editor
-#define QUI_BOOTSTRAP // if this is defined, QUI gets properly setup in the bootstrap pump
+//#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
+//#define QONSOLE_BOOTSTRAP_EDITOR // if this is defined, the console will try to bootstrap itself in the editor
+//#define QUI_BOOTSTRAP // if this is defined, QUI gets properly setup in the bootstrap pump
 
 using UnityEngine;
 using System.Collections.Generic;
