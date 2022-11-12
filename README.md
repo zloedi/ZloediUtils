@@ -1,2 +1,2 @@
-# qonsole
-A game command line console for Unity
+# My Unity Utilities
+A collection of scripts for Unity
