@@ -5,6 +5,9 @@ using System.Globalization;
 public static class Delta {
 
 
+public static Action<string> Log = s => {};
+public static Action<string> Error = s => {};
+
 static char NibbleToChar( int n ) {
     switch( n & 15 ) {
         case 0x0 : return '0';
@@ -49,7 +52,7 @@ static int CharToNibble( int ch ) {
     return 0;
 }
 
-static int HexToInt( string s ) {
+public static int HexToInt( string s ) {
     int n = s.Length;
     if ( n == 1 ) {
         return CharToNibble( s[0] );
@@ -123,6 +126,28 @@ static bool ParseInts( IList<string> argv, ref int i, List<int> list ) {
     return i < argv.Count;
 }
 
+static bool ParseEnum( Type elemType, IList<string> argv, ref int i, List<int> list ) {
+    for ( ; i < argv.Count; i++ ) {
+        if ( argv[i] == ":" ) {
+            i++;
+            break;
+        }
+        Array vals = Enum.GetValues( elemType );
+        string [] input = argv[i].Split( '|' );
+        int output = 0;
+        foreach ( string s in input ) {
+            foreach ( object e in vals ) {
+                if ( e.ToString() == s ) {
+                    output |= ( int )e;
+                    break;
+                }
+            }
+        }
+        list.Add( output );
+    }
+    return i < argv.Count;
+}
+
 static bool ParseShorts( IList<string> argv, ref int i, List<ushort> list ) {
     for ( ; i < argv.Count; i++ ) {
         if ( argv[i] == ":" ) {
@@ -161,7 +186,7 @@ public static bool DeltaBytes( byte [] input, byte [] shadow,
     changes = "";
     values = "";
     int n = 0;
-    maxInput = maxInput > 0 ? maxInput : input.Length;
+    maxInput = maxInput > 0 ? Math.Min( input.Length, maxInput ) : input.Length;
     for ( int i = 0; i < maxInput; i++ ) {
         if ( input[i] != shadow[i] ) {
             changes += " " + IntToHex( i );
@@ -187,12 +212,43 @@ public static bool DeltaShorts( ushort [] input, ushort [] shadow,
     changes = "";
     values = "";
     int n = 0;
-    maxInput = maxInput > 0 ? maxInput : input.Length;
+    maxInput = maxInput > 0 ? Math.Min( input.Length, maxInput ) : input.Length;
     for ( int i = 0; i < maxInput; i++ ) {
         if ( input[i] != shadow[i] ) {
             changes += " " + IntToHex( i );
             values += " " + IntToHex( input[i] );
             shadow[i] = input[i];
+            n++;
+        }
+    }
+    return n > 0;
+}
+
+public static bool UndeltaEnum( Type elemType, ref int idx,
+                                                        IList<string> argv, List<ushort> changes,
+                                                        List<int> values, out bool keepGoing ) {
+    changes.Clear(); 
+    values.Clear();
+    keepGoing = ParseShorts( argv, ref idx, changes );
+    keepGoing = ParseEnum( elemType, argv, ref idx, values );
+    return changes.Count > 0 && changes.Count == values.Count;
+}
+
+public static bool DeltaEnum( Array input, Array shadow,
+                                        out string changes, out string values, int maxInput = 0 ) {
+    changes = "";
+    values = "";
+    int n = 0;
+    maxInput = maxInput > 0 ? Math.Min( input.Length, maxInput ) : input.Length;
+    for ( int i = 0; i < maxInput; i++ ) {
+        object inVal = input.GetValue( i );
+        object shVal = shadow.GetValue( i );
+        if ( inVal != null
+                && ( int )inVal != 0
+                && ( shVal == null || ( int )inVal != ( int )shVal ) ) {
+            changes += $" {IntToHex( i )}";
+            values += $" {inVal}".Replace( ", ", "|" );
+            shadow.SetValue( inVal, i );
             n++;
         }
     }
@@ -213,7 +269,7 @@ public static bool DeltaInts( int[] input, int[] shadow, out string changes, out
     changes = "";
     values = "";
     int n = 0;
-    maxInput = maxInput > 0 ? maxInput : input.Length;
+    maxInput = maxInput > 0 ? Math.Min( input.Length, maxInput ) : input.Length;
     for ( int i = 0; i < maxInput; i++ ) {
         if ( input[i] != shadow[i] ) {
             changes += " " + IntToHex( i );
@@ -225,6 +281,82 @@ public static bool DeltaInts( int[] input, int[] shadow, out string changes, out
     changes += " : ";
     values += " : ";
     return n > 0;
+}
+
+static List<ushort> changes = new List<ushort>();
+static List<int> values = new List<int>();
+public static bool UndeltaArray( int argvIdx, string [] argv, Array array ) {
+    bool keepGoing;
+    Type t = array.GetType();
+
+    Type elemType = t.GetElementType();
+    if ( elemType.IsEnum ) {
+        if ( ! UndeltaEnum( elemType, ref argvIdx, argv, changes, values, out keepGoing ) ) {
+            Error( "Failed to undelta array." );
+            return false;
+        }
+        for ( int i = 0; i < values.Count; i++ ) {
+            array.SetValue( values[i], changes[i] );
+        }
+        return true;
+    }
+
+    if ( ! Undelta( ref argvIdx, argv, changes, values, out keepGoing ) ) {
+        Error( "Failed to undelta array." );
+        return false;
+    }
+    
+    if ( t == typeof( byte[] ) ) {
+        for ( int i = 0; i < values.Count; i++ ) {
+            ( ( byte[] )array )[changes[i]] = ( byte )values[i];
+        }
+    } else if ( t == typeof( ushort[] ) ) {
+        for ( int i = 0; i < values.Count; i++ ) {
+            ( ( ushort[] )array )[changes[i]] = ( ushort )values[i];
+        }
+    } else if ( t == typeof( int[] ) ) {
+        for ( int i = 0; i < values.Count; i++ ) {
+            ( ( int[] )array )[changes[i]] = values[i];
+        }
+    } else {
+        Error( $"Unsupported array type {t}" );
+        return false;
+    }
+    
+    return true;
+}
+
+public static bool DeltaArray( Array array, out string changes, out string values,
+                                                        Array shadow = null, int maxInput = 0 ) {
+    Type t = array.GetType();
+
+    if ( t == typeof( byte[] ) ) {
+        return DeltaBytes( ( byte[] )array,
+                                        shadow != null ? ( byte[] )shadow : new byte[array.Length],
+                                                    out changes, out values, maxInput: maxInput );
+    }
+
+    if ( t == typeof( ushort[] ) ) {
+        return DeltaShorts( ( ushort[] )array,
+                                    shadow != null ? ( ushort [] )shadow : new ushort[array.Length],
+                                                    out changes, out values, maxInput: maxInput );
+    }
+
+    if ( t == typeof( int[] ) ) {
+        return DeltaInts( ( int[] )array,
+                                        shadow != null ? ( int [] )shadow : new int[array.Length],
+                                                    out changes, out values, maxInput: maxInput );
+    }
+
+    if ( t.GetElementType().IsEnum ) {
+        return DeltaEnum( array, shadow != null ? shadow : new Enum[array.Length],
+                                                    out changes, out values, maxInput: maxInput );
+    }
+
+    Error( $"Unsupported array type {t}" );
+    changes = "";
+    values = "";
+    return false;
 }
 
 
