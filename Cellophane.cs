@@ -537,6 +537,13 @@ public static void AddToHistory( string str ) {
     }
 }
 
+public static string StripJSONTags( string str ) {
+    if ( GetArgv( str, out string [] argv, keepJsonTags: false ) ) {
+        return argv[0];
+    }
+    return str;
+}
+
 public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = false ) {
     if ( string.IsNullOrEmpty( str ) ) {
         argv = new string[0];
@@ -613,6 +620,8 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
     return argv.Length > 0;
 }
 
+// doesn't care about <json></json> pairs, just splits along ';'
+// if a ';' ends up inside a json string, it will mess up the commands
 public static bool SplitCommands( string str, out string [] cmds ) {
     cmds = str.Split( new []{';'}, StringSplitOptions.RemoveEmptyEntries ); 
     return cmds.Length > 0;
