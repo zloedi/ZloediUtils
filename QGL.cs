@@ -318,7 +318,7 @@ public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, f
 }
 
 public static void LateBlit( Texture2D tex, Vector2 xy, float w, float h, Color? color = null ) {
-    LateBlit( tex, xy.x, xy.y, w, h );
+    LateBlit( tex, xy.x, xy.y, w, h, color );
 }
 
 public static void LateBlit( float x, float y, float w, float h, Color? color = null ) {
