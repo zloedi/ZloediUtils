@@ -17,11 +17,68 @@ using GalliumMath;
 public static class Hexes {
 
 
+public const float SQRT_3 = 1.73205080757f;
+
 // we really hope this goes on the main thread
 static Hexes() {
 #if UNITY_STANDALONE
     CreateHexTexture();
 #endif
+}
+
+public static Vector3 AxialToCube( float q, float r ) {
+    return new Vector3( q, -q - r, r ); 
+}
+
+public static Vector3 AxialToCube( Vector2 axial ) {
+    return AxialToCube( axial.x, axial.y );
+}
+
+public static Vector2Int CubeToAxial( Vector3 cube ) {
+    return new Vector2Int( ( int )cube.x, ( int )cube.z );
+}
+
+public static Vector3 CubeRound( Vector3 cube ) {
+    float rx = ( float )Math.Round( cube.x );
+    float ry = ( float )Math.Round( cube.y );
+    float rz = ( float )Math.Round( cube.z );
+
+    float x_diff = ( float )Math.Abs( rx - cube.x );
+    float y_diff = ( float )Math.Abs( ry - cube.y );
+    float z_diff = ( float )Math.Abs( rz - cube.z );
+
+    if ( x_diff > y_diff && x_diff > z_diff )
+        rx = -ry-rz;
+    else if ( y_diff > z_diff )
+        ry = -rx-rz;
+    else
+        rz = -rx-ry;
+
+    return new Vector3( rx, ry, rz );
+}
+
+public static Vector2Int AxialRound( Vector2 hex ) {
+    return CubeToAxial( CubeRound( AxialToCube( hex ) ) );
+}
+
+// actually from square grid
+public static Vector2Int ScreenToHex( Vector2 screenPos ) {
+    screenPos *= SQRT_3;
+    var q = SQRT_3/3f * screenPos.x  -  1f/3f * screenPos.y;
+    var r =                            2f/3f * screenPos.y;
+    return AxialRound( new Vector2( q, r ) );
+}
+
+// actually to square grid
+public static Vector2 HexToScreen( int q, int r ) {
+    float x = SQRT_3 * q + SQRT_3/2f * r;
+    float y =                3f/2f * r;
+    return new Vector2( x / SQRT_3, y / SQRT_3 );
+}
+
+// actually to square grid
+public static Vector2 HexToScreen( Vector2Int hex ) {
+    return HexToScreen( hex.x, hex.y );
 }
 
 public static Vector2Int OddRToAxial( int col, int row ) {
