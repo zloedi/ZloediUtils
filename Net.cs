@@ -337,6 +337,19 @@ public class Net {
             socket = null;
         }
     }
+
+    public bool GetLocalIPAddress( out string result ) {
+        var host = Dns.GetHostEntry( Dns.GetHostName() );
+        foreach ( var ip in host.AddressList ) {
+            if ( ip.AddressFamily == AddressFamily.InterNetwork ) {
+                result = ip.ToString();
+                return true;
+            }
+        }
+        result = "";
+        Error( "No network adapters with an IPv4 address in the system!" );
+        return false;
+    }
 }
 
 
