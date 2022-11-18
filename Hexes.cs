@@ -71,9 +71,15 @@ public static Vector2Int ScreenToHex( Vector2 screenPos ) {
 
 // actually to square grid
 public static Vector2 HexToScreen( int q, int r ) {
+#if false
     float x = SQRT_3 * q + SQRT_3/2f * r;
     float y =                3f/2f * r;
     return new Vector2( x / SQRT_3, y / SQRT_3 );
+#else
+    float x = q + 1/2f * r;
+    float y =    3f/2f * r;
+    return new Vector2( x, y / SQRT_3 );
+#endif
 }
 
 // actually to square grid
