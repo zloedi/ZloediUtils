@@ -66,7 +66,7 @@ public static int HexToInt( string s ) {
                 | ( CharToNibble( s[2] ) << 0 );
     }
     if ( n == 4 ) {
-        return ( CharToNibble( s[0] ) << 16 )
+        return ( CharToNibble( s[0] ) << 12 )
                 | ( CharToNibble( s[1] ) << 8 )
                 | ( CharToNibble( s[2] ) << 4 )
                 | ( CharToNibble( s[3] ) << 0 );
@@ -101,14 +101,14 @@ public static string IntToHex( int num ) {
         return new string( triple );
     } 
     if ( ( num & ~0xffff ) == 0 ) {
-        quad[0] = NibbleToChar( ( num & 0xf000 ) >> 16 );
+        quad[0] = NibbleToChar( ( num & 0xf000 ) >> 12 );
         quad[1] = NibbleToChar( ( num & 0x0f00 ) >> 8 );
         quad[2] = NibbleToChar( ( num & 0x00f0 ) >> 4 );
         quad[3] = NibbleToChar( ( num & 0x000f ) >> 0 );
         return new string( quad );
     }
     for ( int i = 7; i >= 0; i-- ) {
-        octet[i] = NibbleToChar( ( num >> i * 4 ) & 0xf );
+        octet[7 - i] = NibbleToChar( ( num >> i * 4 ) & 0xf );
     }
     return new string( octet );
 }
@@ -278,8 +278,6 @@ public static bool DeltaInts( int[] input, int[] shadow, out string changes, out
             n++;
         }
     }
-    changes += " : ";
-    values += " : ";
     return n > 0;
 }
 
