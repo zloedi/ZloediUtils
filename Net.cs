@@ -87,8 +87,7 @@ public class NetMsg {
 public class NetChan {
     public const int FRAG_BIT = 1 << 31;
 
-    public static Action<string> Log = s => {};
-    public static Action<string> Error = s => {};
+    public Action<string> Log = s => {};
 
     static int MaxPacket_cvar = 1400;
 
@@ -252,7 +251,7 @@ public class Net {
 
     public Action<string> Log = s => {};
     public Action<string> Error = s => {};
-    public Action<string> TryExecute = s => {};
+    public Action<string> TryExecuteOOB = s => {};
 
     public Socket socket =
                     new Socket( AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp );
@@ -301,7 +300,7 @@ public class Net {
         // FIXME: just catenate into string as chars?
         string command = Encoding.ASCII.GetString( packet.ToArray(), 0, packet.Count );
         Log( $"Received '{command}' from {remoteEndPoint}" );
-        TryExecute( command );
+        TryExecuteOOB( command );
         return true;
     }
 
@@ -394,13 +393,17 @@ public static class ZServer {
 public const int CLIENT_TIMEOUT = 9999;
 
 public static Net net = new Net();
+
+public static Action<string> LogChan = s => {};
+
 public static Action<string> Log = s => {};
 public static Action<string> Error = s => {};
 
 public static List<SvClient> clients = new List<SvClient>();
 
-public static Action<int> onClientDisconnect_f = i=>{};
-public static Action<int> onClientConnect_f = i=>{};
+public static Action<int> onClientDisconnect_f = zport=>{};
+public static Action<int> onClientConnect_f = zport=>{};
+public static Action<int,string> onClientCommand_f = (zport,str) => {};
 public static Func<int,bool,string> onTick_f = (dt,needPacket)=>{ return ""; };
 
 public static bool Init() {
@@ -455,7 +458,7 @@ static void DisconnectClient( int index ) {
     c.netChan.msg.OOBPrint( $"cl_disconnect_response {c.netChan.zport}" );
     net.Send( c.netChan.msg, c.endPoint );
     clients.RemoveAt( index );
-    onClientDisconnect_f( index );
+    onClientDisconnect_f( c.netChan.zport );
 }
 
 static void TryDisconnectClient( SvClient c ) {
@@ -471,7 +474,7 @@ static void TryDisconnectClient( int zport, IPEndPoint clientEndpoint ) {
     }
 }
 
-public static void TryConnectClient( int zport ) {
+static void TryConnectClient( int zport ) {
     void respond( SvClient cl ) {
         cl.netChan.msg.OOBPrint( $"cl_connect_response {cl.netChan.zport}" );
         net.Send( cl.netChan.msg, cl.endPoint );
@@ -489,8 +492,6 @@ public static void TryConnectClient( int zport ) {
         }
     }
 
-    onClientConnect_f( clients.Count );
-
     // add to clients
     var newCl = new SvClient {
         endPoint = net.remoteEndPoint as IPEndPoint,
@@ -498,7 +499,10 @@ public static void TryConnectClient( int zport ) {
         timeout = CLIENT_TIMEOUT,
     };
 
+    newCl.netChan.Log = LogChan;
     clients.Add( newCl );
+
+    onClientConnect_f( zport );
 
     // send back the response
     respond( newCl );
@@ -508,8 +512,10 @@ public static void TryConnectClient( int zport ) {
     Log( "  endPoint: " + newCl.endPoint );
 }
 
-// returns true, if there is a client command to execute
-public static bool Poll( out string clientCommand, int microseconds = 0 ) {
+// returns true, if read something from the socket
+public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
+    hadCommands = false;
+
     void sendPending() {
         foreach ( var c in clients ) {
 
@@ -530,8 +536,6 @@ public static bool Poll( out string clientCommand, int microseconds = 0 ) {
             }
         }
     }
-
-    clientCommand = "";
 
     if ( ! net.socket.Poll( microseconds, SelectMode.SelectRead ) ) {
         // nothing to read, send out any pending packets
@@ -585,15 +589,17 @@ public static bool Poll( out string clientCommand, int microseconds = 0 ) {
                 if ( relSeq - c.reliableSequence == 1 ) {
                     c.netChan.msg.ReadData( net.packet );
                     string cmd = Encoding.ASCII.GetString( net.packet.ToArray(), 0,
-                                                                net.packet.Count );
+                                                                                net.packet.Count );
                     Log( $"Reliable command {cmd}" );
                     c.reliableSequence = relSeq;
-                    clientCommand = cmd;
+                    hadCommands = true;
+                    onClientCommand_f( c.netChan.zport, cmd );
                 } else {
                     net.Log( "Dropping old reliable command" );
                     net.Log( " expected " + ( c.reliableSequence + 1 ) );
                     net.Log( "      got " + relSeq );
                 }
+
                 continue;
             }
             
@@ -617,10 +623,10 @@ public static bool Poll( out string clientCommand, int microseconds = 0 ) {
     }
 
     sendPending();
-    return clientCommand.Length > 0;
+    return true;
 }
 
-public static void Tick( int deltaTime, bool hadClientCommands ) {
+public static void Tick( int deltaTime, bool forceSendPacket ) {
     if ( clients.Count == 0 ) {
         return;
     }
@@ -643,15 +649,16 @@ public static void Tick( int deltaTime, bool hadClientCommands ) {
         c.timeout -= deltaTime;
     }
 
-    string delta = onTick_f( deltaTime, hadClientCommands );
+    string delta = onTick_f( deltaTime, forceSendPacket );
 
     if ( string.IsNullOrEmpty( delta ) ) {
 
-        if ( ! hadClientCommands ) {
-            // nothing to process
+        if ( ! forceSendPacket ) {
+            // nothing to send
             return;
         }
 
+        // send empty packet if forced
         delta = "";
     }
 
@@ -713,11 +720,15 @@ public enum State {
     Connected,
 }
 
+const int RELIABLE_COMMANDS_QUEUE = 32;
 const int LINK_TIMEOUT = 7777;
 const int RECONNECT_TIMEOUT = 5555;
+const int RESEND_RELIABLE_TIMEOUT = 66;
 
-// try reconnect after this runs out
+// try reconnect after this period
 static int reconnectTimeout = -1;
+// try to resend next reliable command in the queue after this period
+static int resendReliableTimeout = RESEND_RELIABLE_TIMEOUT;
 
 // when this goes below zero, drop the connection
 static int linkTimeout = LINK_TIMEOUT;
@@ -841,7 +852,7 @@ public static void TryConnectResponse( int zport ) {
     relSequenceACK = 0;
     relSequence = 0;
     linkTimeout = LINK_TIMEOUT;
-    relMsgs = new List<byte>[32];
+    relMsgs = new List<byte>[RELIABLE_COMMANDS_QUEUE];
     for ( int i = 0; i < relMsgs.Length; i++ ) {
         relMsgs[i] = new List<byte>();
     }
@@ -849,36 +860,56 @@ public static void TryConnectResponse( int zport ) {
     Log( "State: " + state );
 }
 
-static void SendNextReliable() {
-    int start = relSequenceACK + 1;
-    int end = relSequence;
-    int n = end - start;
-    if ( n < 0 ) {
+static void TrySendNextReliable() {
+    int numUnsent = relSequence - relSequenceACK;
+
+    if ( numUnsent == 0 ) {
         // nothing to send
         return;
     }
 
-    int pending = relSequence;
-    if ( n > 0 ) {
-        pending = start + ( relRoll % n );
-        relRoll++;
+    if ( resendReliableTimeout > 0 ) {
+        // don't go too fast
+        return;
     }
 
-    Log( $"Sending out reliable cmd, sequence: {pending}" );
+    int next = relSequenceACK + 1;
+
+    net.Log( $"Sending out reliable cmd, sequence: {next}" );
     net.message.BeginWrite();
-    net.message.WriteInt( -pending );
-    net.message.WriteData( relMsgs[pending & ( relMsgs.Length - 1 )] );
+    net.message.WriteInt( -next );
+    net.message.WriteData( relMsgs[next & ( relMsgs.Length - 1 )] );
     netChan.Transmit( net.message.buffer );
     net.Send( netChan.msg, serverEndpoint );
+    resendReliableTimeout = RESEND_RELIABLE_TIMEOUT;
+}
+
+public static bool HasUnsentReliableCommands() {
+    return relSequence - relSequenceACK > 0;
 }
 
 public static void RegisterReliableCmd( string cmd ) {
-    byte [] bytes = Encoding.ASCII.GetBytes( cmd );
-    int numUnsent = relSequence - relSequenceACK;
-    if ( numUnsent >= relMsgs.Length ) {
-        Error( "Out of reliable commands in the buffer." );
+    if ( state != State.Connected ) {
         return;
     }
+
+    int numUnsent = relSequence - relSequenceACK;
+
+    if ( numUnsent < 0 ) {
+        Error( "Broken reliable command sequence." );
+        return;
+    }
+
+    if ( numUnsent >= relMsgs.Length ) {
+        Error( "Out of reliable commands in the buffer" );
+        Error( $"  reliable sequence: {relSequence}" );
+        Error( $"  acked reliable sequence: {relSequenceACK}" );
+        Error( $"  num unsent commands: {numUnsent}" );
+        return;
+    }
+
+    byte [] bytes = Encoding.ASCII.GetBytes( cmd );
+
     relSequence++;
     int sequence = relSequence & ( relMsgs.Length - 1 );
     relMsgs[sequence].Clear();
@@ -886,7 +917,11 @@ public static void RegisterReliableCmd( string cmd ) {
     Log( $"Pushing reliable cmd into queue; sz: {bytes.Length}; unsent cmds: {numUnsent} {cmd}" );
     Log( $"   acked: {relSequenceACK}" );
     Log( $" current: {relSequence}" );
-    SendNextReliable();
+
+    // if no command is pending, send immediately
+    if ( numUnsent == 0 ) {
+        TrySendNextReliable();
+    }
 }
 
 public static void Tick( int clientDeltaTime, bool sleep = false ) {
@@ -913,10 +948,10 @@ public static void Tick( int clientDeltaTime, bool sleep = false ) {
     } else if ( state == State.Connected ) {
         reconnectTimeout = RECONNECT_TIMEOUT;
 
+        TrySendNextReliable();
+
         // infinite sleep if standalone 'fake' client
         int microseconds = sleep ? -1 : 0;
-        // FIXME: better put some limit on this one?
-        SendNextReliable();
         while ( net.socket.Poll( microseconds, SelectMode.SelectRead ) ) {
             int numBytes = net.Receive();
 
@@ -928,14 +963,17 @@ public static void Tick( int clientDeltaTime, bool sleep = false ) {
             else if ( numBytes >= 10 ) {
                 net.Log( $"Received {numBytes} bytes." );
                 if ( netChan.Receive( net.socketBuffer, numBytes ) ) {
+
+                    // read the header first
+
                     // delta sequence
                     int seq = netChan.msg.ReadInt();
 
                     // reliable cmd ack
-                    int rel = netChan.msg.ReadInt();
+                    int reliable = netChan.msg.ReadInt();
 
                     if ( seq - deltaSequence == 1 ) {
-                        // sequential delta
+                        // received nice sequential delta packet, read it
                         netChan.msg.ReadData( net.packet );
                         string delta = Encoding.ASCII.GetString( net.packet.ToArray(), 0,
                                                                                 net.packet.Count );
@@ -950,16 +988,18 @@ public static void Tick( int clientDeltaTime, bool sleep = false ) {
                         net.Log( "      got " + seq );
                     }
 
-                    // send last properly ACK-ed delta immediately
+                    // ACK last received delta immediately
+
                     net.Log( $"Sending out ACK {deltaSequence}" );
                     net.message.BeginWrite();
                     net.message.WriteInt( deltaSequence );
                     netChan.Transmit( net.message.buffer );
                     net.Send( netChan.msg, serverEndpoint );
 
-                    if ( rel > relSequenceACK && rel <= relSequence ) {
-                        net.Log( "Received reliable ACK: " + rel );
-                        relSequenceACK = rel;
+                    if ( reliable > relSequenceACK ) {
+                        net.Log( "Received reliable command ACK: " + reliable );
+                        relSequenceACK = reliable;
+                        resendReliableTimeout = 0;
                     }
                 }
             }
@@ -973,6 +1013,7 @@ public static void Tick( int clientDeltaTime, bool sleep = false ) {
             state = State.Disconnected;
             Log( "State: " + state );
         }
+        resendReliableTimeout -= clientDeltaTime;
     }
 
     onTick_f( clientDeltaTime );
