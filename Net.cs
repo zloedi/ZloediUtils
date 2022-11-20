@@ -418,7 +418,8 @@ public static bool Init() {
     AppDomain.CurrentDomain.ProcessExit += new EventHandler( onProcessExit ); 
     Console.CancelKeyPress += new ConsoleCancelEventHandler( onProcessExit );
 
-    Log( "Server initialized." );
+    var ep = ( IPEndPoint )net.socket.LocalEndPoint;
+    Log( $"Server initialized; Listening on port {ep.Port}" );
     return true;
 }
 
