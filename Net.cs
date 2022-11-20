@@ -565,13 +565,13 @@ public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
         foreach ( var c in clients ) {
             // not my zport
             if ( c.netChan.zport != zport ) {
-                //Log( "Not my zport: " + c.netChan.zport );
+                //c.netChan.Log( "Not my zport: " + c.netChan.zport );
                 continue;
             }
 
             // not my address
             if ( ! c.endPoint.Address.Equals( rep.Address ) ) {
-                //Log( "Not my address: " + c.endPoint.Address );
+                //c.netChan.Log( "Not my address: " + c.endPoint.Address );
                 continue;
             }
 
@@ -590,7 +590,7 @@ public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
                     c.netChan.msg.ReadData( net.packet );
                     string cmd = Encoding.ASCII.GetString( net.packet.ToArray(), 0,
                                                                                 net.packet.Count );
-                    Log( $"Reliable command {cmd}" );
+                    net.Log( $"Reliable command {cmd}" );
                     c.reliableSequence = relSeq;
                     hadCommands = true;
                     onClientCommand_f( c.netChan.zport, cmd );
@@ -761,6 +761,7 @@ public static Action onTickBegin_f = ()=>{};
 public static Action<int> onTick_f = dt=>{};
 public static Action onTickEnd_f = ()=>{};
 public static Action<string> onServerPacket_f = str=>{};
+public static Action onConnected_f = ()=>{};
 
 public static void Reset( string svIP = null ) {
     if ( svIP != null ) {
@@ -857,6 +858,7 @@ public static void TryConnectResponse( int zport ) {
         relMsgs[i] = new List<byte>();
     }
     state = State.Connected;
+    onConnected_f();
     Log( "State: " + state );
 }
 
@@ -914,9 +916,9 @@ public static void RegisterReliableCmd( string cmd ) {
     int sequence = relSequence & ( relMsgs.Length - 1 );
     relMsgs[sequence].Clear();
     relMsgs[sequence].AddRange( bytes );
-    Log( $"Pushing reliable cmd into queue; sz: {bytes.Length}; unsent cmds: {numUnsent} {cmd}" );
-    Log( $"   acked: {relSequenceACK}" );
-    Log( $" current: {relSequence}" );
+    net.Log( $"Pushing reliable cmd into queue; sz: {bytes.Length}; unsent cmds: {numUnsent} {cmd}" );
+    net.Log( $"   acked: {relSequenceACK}" );
+    net.Log( $" current: {relSequence}" );
 
     // if no command is pending, send immediately
     if ( numUnsent == 0 ) {
@@ -1041,7 +1043,6 @@ static void ClDisconnectResponse_kmd( string [] argv ) {
     }
     TryDisconnectResponse( zport );
 }
-
 
 
 }

@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
+
 #if UNITY_EDITOR || UNITY_STANDALONE
 
 //#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
@@ -5,10 +10,6 @@
 //#define QUI_BOOTSTRAP // if this is defined, QUI gets properly setup in the bootstrap pump
 
 using UnityEngine;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
-using System;
 
 using static Qonche;
 
@@ -851,11 +852,62 @@ static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
 
 public static class Qonsole {
 
+static string _configPath = "";
+
 static Qonsole() {
+}
+
+public static void Init( int configVersion = 0 ) {
+    string fnameCfg = null;
+
+    string[] args = System.Environment.GetCommandLineArgs ();
+    bool customConfig = false;
+    foreach ( var a in args ) {
+        if ( a.StartsWith( "--cfg" ) ) {
+            string [] cfgArg = a.Split( new []{' ','='}, StringSplitOptions.RemoveEmptyEntries ); 
+            if ( cfgArg.Length > 1 ) {
+                fnameCfg = cfgArg[1].Replace("\"", "");
+                Log( "Supplied cfg by command line: " + fnameCfg );
+                customConfig = true;
+            }
+            break;
+        }
+    }
+
+    if ( string.IsNullOrEmpty( fnameCfg ) ) {
+        fnameCfg = "qon_default.cfg";
+    }
+
+    string config = string.Empty;
+    string dir = System.IO.Path.GetDirectoryName(
+                    System.Reflection.Assembly.GetEntryAssembly().Location
+                );
+    Qonsole.Log( dir );
+    Qonsole.Log( System.Reflection.Assembly.GetEntryAssembly().Location );
+    _configPath = Path.Combine( dir, fnameCfg );
+    Log( $"Qonsole config storage: '{_configPath}'" );
+    try {
+        config = File.ReadAllText( _configPath );
+    } catch ( Exception e ) {
+        Log( "Didn't read config files." );
+        Log( e.Message );
+    }
+    Cellophane.ConfigVersion_kvar = configVersion;
     Cellophane.UseColor = false;
     Cellophane.Log = (s) => { Log( s ); };
     Cellophane.Error = (s) => { Error( s ); };
     Cellophane.ScanVarsAndCommands();
+    Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
+    FlushConfig();
+}
+
+public static void FlushConfig() {
+    try {
+        File.WriteAllText( _configPath, Cellophane.StoreConfig() );
+        Log( "Stored config." );
+    } catch ( Exception e ) {
+        Log( e.Message );
+    }
 }
 
 public static void TryExecute( string cmdLine, object context = null ) {
