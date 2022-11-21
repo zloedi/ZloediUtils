@@ -405,6 +405,7 @@ public static Action<int> onClientDisconnect_f = zport=>{};
 public static Action<int> onClientConnect_f = zport=>{};
 public static Action<int,string> onClientCommand_f = (zport,str) => {};
 public static Func<int,bool,string> onTick_f = (dt,needPacket)=>{ return ""; };
+public static Action onExit_f = ()=>{};
 
 public static bool Init() {
     if ( ! net.Init( 0 ) ) {
@@ -412,6 +413,7 @@ public static bool Init() {
     }
 
     void onProcessExit( object sender, EventArgs e ) {
+        onExit_f();
         Done();
     }
 

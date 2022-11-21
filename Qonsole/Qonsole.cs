@@ -904,7 +904,7 @@ public static void Init( int configVersion = 0 ) {
 public static void FlushConfig() {
     try {
         File.WriteAllText( _configPath, Cellophane.StoreConfig() );
-        Log( "Stored config." );
+        Log( $"Stored qonsole config '{_configPath}'" );
     } catch ( Exception e ) {
         Log( e.Message );
     }
