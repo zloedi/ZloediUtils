@@ -719,8 +719,7 @@ public static void ReadConfig( string val, bool skipVersionCheck = false ) {
             string [] argv;
             if ( GetArgv( v, out argv) && argv[0] == "config_version" ) {
                 TryExecute( argv );
-                Log( "Config Version in cfg file: " + ConfigVersion_kvar + " hardcoded: "
-                                                                                    + srcVersion );
+                Log( $"Config Version in cfg file: {ConfigVersion_kvar} hardcoded: {srcVersion}" );
                 break;
             }
         }

@@ -44,7 +44,7 @@ public class QonsoleBootstrap : MonoBehaviour {
     void Start() {
         Qonsole.OnStoreCfg_f = () => KeyBinds.StoreConfig();
         Qonsole.OnPreLoadCfg_f = () => "echo executed before loading the cfg";
-        Qonsole.Init( configVersion: 0 );
+        Qonsole.Init();
         KeyBinds.Log = s => Qonsole.Log( s );
         KeyBinds.Error = s => Qonsole.Error( s );
 
@@ -510,7 +510,7 @@ static void Help_kmd( string [] argv ) {
 }
 
 // some stuff need to be initialized before the Start() Unity callback
-public static void Init( int configVersion = 0 ) {
+public static void Init( int configVersion = -1 ) {
     string fnameCfg = null, fnameHistory;
 
     string[] args = System.Environment.GetCommandLineArgs ();
@@ -556,7 +556,9 @@ public static void Init( int configVersion = 0 ) {
     } catch ( Exception ) {
         Log( "Didn't read config files." );
     }
-    Cellophane.ConfigVersion_kvar = configVersion;
+    if ( configVersion >= 0 ) {
+        Cellophane.ConfigVersion_kvar = configVersion;
+    }
     Cellophane.UseColor = true;
     Cellophane.Log = (s) => { Log( s ); };
     Cellophane.Error = (s) => { Error( s ); };
@@ -882,8 +884,6 @@ public static void Init( int configVersion = 0 ) {
     string dir = System.IO.Path.GetDirectoryName(
                     System.Reflection.Assembly.GetEntryAssembly().Location
                 );
-    Qonsole.Log( dir );
-    Qonsole.Log( System.Reflection.Assembly.GetEntryAssembly().Location );
     _configPath = Path.Combine( dir, fnameCfg );
     Log( $"Qonsole config storage: '{_configPath}'" );
     try {
@@ -894,8 +894,8 @@ public static void Init( int configVersion = 0 ) {
     }
     Cellophane.ConfigVersion_kvar = configVersion;
     Cellophane.UseColor = false;
-    Cellophane.Log = (s) => { Log( s ); };
-    Cellophane.Error = (s) => { Error( s ); };
+    Cellophane.Log = s => Log( s );
+    Cellophane.Error = s => Error( s );
     Cellophane.ScanVarsAndCommands();
     Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
     FlushConfig();

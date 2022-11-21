@@ -578,7 +578,6 @@ public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
 
             // check messed up packet
             if ( ! c.netChan.Receive( net.socketBuffer, numBytes ) ) {
-                Log( "Broken packet." );
                 continue;
             }
 
