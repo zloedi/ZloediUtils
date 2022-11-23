@@ -368,7 +368,7 @@ public class SvClient {
     public int deltaSequenceACK;
     // deltas counter
     public int deltaSequence;
-    // the rolling index in the deltas buffer from last ACK-ed to latest
+    // a rolling index in the deltas buffer
     // used to resend any unACK-ed deltas
     public int deltaRoll;
     // disconnect if this go below zero
@@ -392,6 +392,8 @@ public static class ZServer {
 
 public const int CLIENT_TIMEOUT = 9999;
 
+public static readonly List<byte> emptyPacket = new List<byte>();
+
 public static Net net = new Net();
 
 public static Action<string> LogChan = s => {};
@@ -404,7 +406,7 @@ public static List<SvClient> clients = new List<SvClient>();
 public static Action<int> onClientDisconnect_f = zport=>{};
 public static Action<int> onClientConnect_f = zport=>{};
 public static Action<int,string> onClientCommand_f = (zport,str) => {};
-public static Func<int,bool,string> onTick_f = (dt,needPacket)=>{ return ""; };
+public static Func<int,bool,List<byte>> onTick_f = (dt,needPacket)=>{ return emptyPacket; };
 public static Action onExit_f = ()=>{};
 
 public static bool Init() {
@@ -533,6 +535,7 @@ public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
                 if ( n == 0 ) {
                     SendDelta( c, c.deltaSequence );
                 } else if ( n > 0 ) {
+                    // FIXME: no need to be start +
                     SendDelta( c, start + c.deltaRoll % n );
                     c.deltaRoll++;
                 }
@@ -586,15 +589,19 @@ public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
             int deltaACK = c.netChan.msg.ReadInt();
 
             if ( deltaACK < 0 ) {
-                // actually client reliable command, not ACK
+
+                // == actually client reliable command, not ACK ==
+
+
                 int relSeq = -deltaACK;
+                // make sure we get every reliable command, not just the last one
                 if ( relSeq - c.reliableSequence == 1 ) {
                     c.netChan.msg.ReadData( net.packet );
                     string cmd = Encoding.ASCII.GetString( net.packet.ToArray(), 0,
                                                                                 net.packet.Count );
+                    hadCommands = true;
                     net.Log( $"Reliable command {cmd}" );
                     c.reliableSequence = relSeq;
-                    hadCommands = true;
                     onClientCommand_f( c.netChan.zport, cmd );
                 } else {
                     net.Log( "Dropping old reliable command" );
@@ -651,9 +658,9 @@ public static void Tick( int deltaTime, bool forceSendPacket ) {
         c.timeout -= deltaTime;
     }
 
-    string delta = onTick_f( deltaTime, forceSendPacket );
+    List<byte> delta = onTick_f( deltaTime, forceSendPacket );
 
-    if ( string.IsNullOrEmpty( delta ) ) {
+    if ( delta.Count == 0 ) {
 
         if ( ! forceSendPacket ) {
             // nothing to send
@@ -661,12 +668,10 @@ public static void Tick( int deltaTime, bool forceSendPacket ) {
         }
 
         // send empty packet if forced
-        delta = "";
+        delta = emptyPacket;
     }
 
-    byte [] bytes = Encoding.ASCII.GetBytes( delta );
-
-    net.Log( $"delta sz: {bytes.Length} dt: {deltaTime} delta: {delta}" );
+    net.Log( $"delta sz: {delta.Count} dt: {deltaTime}" );
 
     for ( int i = clients.Count - 1; i >= 0; i-- ) {
         var c = clients[i];
@@ -677,8 +682,8 @@ public static void Tick( int deltaTime, bool forceSendPacket ) {
         c.deltaSequence++;
         int sequence = c.deltaSequence & ( c.deltas.Length - 1 );
         c.deltas[sequence].Clear();
-        c.deltas[sequence].AddRange( bytes );
-        net.Log( $"Pushing delta into queue; client: {c.endPoint} sz: {bytes.Length}; unsent deltas: {numUnsent}" );
+        c.deltas[sequence].AddRange( delta );
+        net.Log( $"Pushing delta into queue; client: {c.endPoint} sz: {delta.Count}; unsent deltas: {numUnsent}" );
 
         // if there are no pending packets, send out immediately
         if ( numUnsent == 0 && ! c.netChan.HasPendingFragments() ) {
@@ -762,7 +767,7 @@ public static int relRoll;
 public static Action onTickBegin_f = ()=>{};
 public static Action<int> onTick_f = dt=>{};
 public static Action onTickEnd_f = ()=>{};
-public static Action<string> onServerPacket_f = str=>{};
+public static Action<List<byte>> onServerPacket_f = packet=>{};
 public static Action onConnected_f = ()=>{};
 
 public static void Reset( string svIP = null ) {
@@ -979,12 +984,10 @@ public static void Tick( int clientDeltaTime, bool sleep = false ) {
                     if ( seq - deltaSequence == 1 ) {
                         // received nice sequential delta packet, read it
                         netChan.msg.ReadData( net.packet );
-                        string delta = Encoding.ASCII.GetString( net.packet.ToArray(), 0,
-                                                                                net.packet.Count );
-                        net.Log( $"received delta seq: {seq} delta: {delta}" );
+                        net.Log( $"received delta seq: {seq} delta sz: {net.packet.Count}" );
                         deltaSequence = seq;
                         linkTimeout = LINK_TIMEOUT;
-                        onServerPacket_f( delta );
+                        onServerPacket_f( net.packet );
                     } else {
                         // don't ACK invalid deltas
                         net.Log( "Dropping invalid delta:" );
