@@ -246,6 +246,8 @@ public class NetChan {
 public class Net {
     public const int SERVER_PORT = 27960;
 
+    public static readonly List<byte> EMPTY_PACKET = new List<byte>();
+
     [Description( "Randomly drop packets for tests." )]
     public static int TestDropPackets_cvar = 0;
 
@@ -392,8 +394,6 @@ public static class ZServer {
 
 public const int CLIENT_TIMEOUT = 9999;
 
-public static readonly List<byte> emptyPacket = new List<byte>();
-
 public static Net net = new Net();
 
 public static Action<string> LogChan = s => {};
@@ -406,7 +406,7 @@ public static List<SvClient> clients = new List<SvClient>();
 public static Action<int> onClientDisconnect_f = zport=>{};
 public static Action<int> onClientConnect_f = zport=>{};
 public static Action<int,string> onClientCommand_f = (zport,str) => {};
-public static Func<int,bool,List<byte>> onTick_f = (dt,needPacket)=>{ return emptyPacket; };
+public static Func<int,bool,List<byte>> onTick_f = (dt,needPacket)=>{ return Net.EMPTY_PACKET; };
 public static Action onExit_f = ()=>{};
 
 public static bool Init() {
@@ -535,9 +535,7 @@ public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
                 if ( n == 0 ) {
                     SendDelta( c, c.deltaSequence );
                 } else if ( n > 0 ) {
-                    // FIXME: no need to be start +
-                    SendDelta( c, start + c.deltaRoll % n );
-                    c.deltaRoll++;
+                    SendDelta( c, c.deltaRoll % n );
                 }
             }
         }
@@ -667,8 +665,7 @@ public static void Tick( int deltaTime, bool forceSendPacket ) {
             return;
         }
 
-        // send empty packet if forced
-        delta = emptyPacket;
+        // will send empty packet if forced
     }
 
     net.Log( $"delta sz: {delta.Count} dt: {deltaTime}" );
