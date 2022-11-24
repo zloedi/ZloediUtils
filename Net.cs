@@ -805,10 +805,16 @@ static bool TrySetServerIP( string svIP ) {
     return false;
 }
 
-public static void SendDisconnectRequest( int zport = 0 ) {
+static void SendDisconnectRequest( int zport = 0 ) {
     zport = zport == 0 ? netChan.zport : zport;
     Log( $"Sending out disconnect request to {serverEndpoint}" );
     net.message.OOBPrint( $"sv_disconnect_client {zport}" );
+    net.Send( net.message, serverEndpoint );
+}
+
+static void SendConnectRequest() {
+    Log( $"Sending out connect request to {serverEndpoint}; zport: {netChan.zport}" );
+    net.message.OOBPrint( $"sv_connect_client {netChan.zport}" );
     net.Send( net.message, serverEndpoint );
 }
 
@@ -822,12 +828,6 @@ public static bool TrySendConnectRequest( string ip ) {
     serverEndpoint = new IPEndPoint( serverIP, Net.SERVER_PORT );
     SendConnectRequest();
     return true;
-}
-
-public static void SendConnectRequest() {
-    Log( $"Sending out connect request to {serverEndpoint}; zport: {netChan.zport}" );
-    net.message.OOBPrint( $"sv_connect_client {netChan.zport}" );
-    net.Send( net.message, serverEndpoint );
 }
 
 // may arrive unrequested
