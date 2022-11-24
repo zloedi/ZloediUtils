@@ -535,7 +535,9 @@ public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
                 if ( n == 0 ) {
                     SendDelta( c, c.deltaSequence );
                 } else if ( n > 0 ) {
-                    SendDelta( c, c.deltaRoll % n );
+                    // resend deltas starting from last ack in somewhat random order
+                    SendDelta( c, start + c.deltaRoll % n );
+                    c.deltaRoll++;
                 }
             }
         }
