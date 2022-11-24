@@ -770,21 +770,20 @@ public static void ScanVarsAndCommands() {
     CollectItems();
 }
 
+static readonly int tagLen = "[000000]".Length;
 public static bool ColorTagLead( string str, int i, out string tag ) {
     tag = string.Empty;
     if ( str[i] != '[' ) {
         return false;
     }
-    int strLen = str.Length;
-    int tagLen = "[000000]".Length;
-    int n = Math.Min( strLen, i + tagLen );
+    int n = Math.Min( str.Length, i + tagLen );
     for ( int k = i; k < n; k++ ) {
         tag += str[k];
     }
-    if ( tag.Length != tagLen || tag[tag.Length - 1] != ']' ) {
+    if ( tag.Length != tagLen || tag[tagLen - 1] != ']' ) {
         return false;
     }
-    for ( int k = 1; k < tag.Length - 1; k++ ) {
+    for ( int k = 1; k < tagLen - 1; k++ ) {
         if ( ! Uri.IsHexDigit( tag[k] ) ) {
             return false;
         }
@@ -794,26 +793,26 @@ public static bool ColorTagLead( string str, int i, out string tag ) {
 
 public static bool ColorTagClose( string str, int i, out string tag ) {
     tag = "[-]";
-    return i + tag.Length < str.Length 
-        && str[i + 0] == '['
-        && str[i + 1] == '-' 
-        && str[i + 2] == ']';
+
+    if ( str.Length - i < 3 ) {
+        return false;
+    }
+
+    return str[i + 0] == '[' && str[i + 1] == '-' && str[i + 2] == ']';
 }
 
 public static string ColorTagStripAll( string s ) {
     string result = "";
-    for ( int i = 0; i < s.Length; i++ ) {
+    for ( int i = 0; i < s.Length; ) {
         string tag;
-        while ( true ) {
-            if ( ColorTagLead( s, i, out tag ) ) {
-                i += tag.Length;
-            } else if ( ColorTagClose( s, i, out tag ) ) {
-                i += tag.Length;
-            } else {
-                break;
-            }
+        if ( ColorTagLead( s, i, out tag ) ) {
+            i += tag.Length;
+        } else if ( ColorTagClose( s, i, out tag ) ) {
+            i += tag.Length;
+        } else {
+            result += s[i];
+            i++;
         }
-        result += s[i];
     }
     return result;
 }
