@@ -922,6 +922,10 @@ public static void TryExecute( string cmdLine, object context = null ) {
     }
 }
 
+public static void Print( string s ) {
+    System.Console.Write( Cellophane.ColorTagStripAll( s ) );
+}
+
 public static void Log( string s ) {
     System.Console.WriteLine( Cellophane.ColorTagStripAll( s ) );
 }
