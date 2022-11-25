@@ -1,7 +1,6 @@
 // A library of routines to calculate and debug hex grids
 
 //#define HEXES_QONSOLE
-//#define HEXES_QGL
 
 using System;
 using System.Globalization;
@@ -157,7 +156,7 @@ static Vector2 ShearAndScale( int x, int y, int gridHeight, Vector2 sz ) {
     return pos;
 }
 
-#if HEXES_QGL
+#if HEXES_QONSOLE
 public static void DrawGLHex( Vector2 screenPos, int x, int y, int gridHeight, Vector2 sz,
                                                                             float consoleAlpha,
                                                                             Color? color = null ) {
@@ -175,9 +174,7 @@ public static void DrawGLText( string logText, Vector2 screenPos, int x, int y, 
     pos += ( sz - strSz ) * 0.5f;
     QGL.DrawTextWithOutline( logText, ( int )pos.x, ( int )pos.y, Color.white );
 }
-#endif // HEXES_QGL
 
-#if HEXES_QONSOLE
 public static void PrintList( IList<ushort> list, int gridW, int gridH, string logText = null,
                                         float hexSize = 0,
                                         bool isOffset = false,

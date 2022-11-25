@@ -15,17 +15,20 @@ using static Qonche;
 
 // you need to import the Qonsole source files inside the Unity editor for the Qonsole to work inside the Scene window
 // OR do setup the Editor parts in a script inside Unity
-#if UNITY_EDITOR && QONSOLE_BOOTSTRAP_EDITOR
+#if UNITY_EDITOR && QONSOLE_BOOTSTRAP && QONSOLE_BOOTSTRAP_EDITOR
 using UnityEditor;
 
 [InitializeOnLoad]
 public static class QonsoleEditorSetup {
     static QonsoleEditorSetup() {
+        QonsoleBootstrap.TrySetupQonsole();
+
         void duringSceneGui( SceneView sv ) {
             Qonsole.OnEditorSceneGUI( sv.camera, EditorApplication.isPaused,
                                             EditorGUIUtility.pixelsPerPoint,
                                             onRepaint: Qonsole.OnEditorRepaint_f );
         }
+
         SceneView.duringSceneGui -= duringSceneGui;
         SceneView.duringSceneGui += duringSceneGui;
         Qonsole.Log( "Qonsole setup to work in the editor." );
@@ -41,10 +44,18 @@ public class QonsoleBootstrap : MonoBehaviour {
     static Vector2 _mousePosition;
 #endif
 
-    void Start() {
+    public static void TrySetupQonsole() {
+		if ( Qonsole.Started ) {
+			return;
+		}
+
         Qonsole.OnStoreCfg_f = () => KeyBinds.StoreConfig();
         Qonsole.OnPreLoadCfg_f = () => "echo executed before loading the cfg";
+
+        Qonsole.OnEditorRepaint_f = c => {};
         Qonsole.Init();
+        Qonsole.Start();
+
         KeyBinds.Log = s => Qonsole.Log( s );
         KeyBinds.Error = s => Qonsole.Error( s );
 
@@ -57,9 +68,10 @@ public class QonsoleBootstrap : MonoBehaviour {
         //QUI.whiteTexture = ...
         //QUI.defaultFont = ...
 #endif
+    }
 
-        Qonsole.OnEditorRepaint_f = c => {};
-        Qonsole.Start();
+    void Start() {
+        TrySetupQonsole();
     }
 
     void Update() {
@@ -68,7 +80,7 @@ public class QonsoleBootstrap : MonoBehaviour {
         Qonsole.OnUpdate_f();
         QUI.End();
 #else
-        Qonsole.OnUpdate();
+        Qonsole.OnUpdate_f();
 #endif
     }
 
@@ -98,7 +110,7 @@ public static class Qonsole {
 
 #if QONSOLE_BOOTSTRAP
 [RuntimeInitializeOnLoadMethod]
-static void Bootstrap() {
+static void CreateBootstrapObject() {
     QonsoleBootstrap[] components = GameObject.FindObjectsOfType<QonsoleBootstrap>();
     if ( components.Length == 0 ) {
         GameObject go = new GameObject( "QonsoleBootstrap" );
