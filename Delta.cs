@@ -8,7 +8,66 @@ public static class Delta {
 public static Action<string> Log = s => {};
 public static Action<string> Error = s => {};
 
-static char NibbleToChar( int n ) {
+static bool ParseInts( IList<string> argv, ref int i, List<int> list ) {
+    for (; i < argv.Count ; i++)
+    {
+        if (argv[i] == ":")
+        {
+            i++;
+            break;
+        }
+        list.Add( HexToInt( argv[i] ) );
+    }
+    return i < argv.Count;
+}
+
+static bool ParseEnum( Type elemType, IList<string> argv, ref int i, List<int> list ) {
+    for ( ; i < argv.Count; i++ ) {
+        if ( argv[i] == ":" ) {
+            i++;
+            break;
+        }
+        Array vals = Enum.GetValues( elemType );
+        string [] input = argv[i].Split( '|' );
+        int output = 0;
+        foreach ( string s in input ) {
+            foreach ( object e in vals ) {
+                if ( e.ToString() == s ) {
+                    output |= ( int )e;
+                    break;
+                }
+            }
+        }
+        list.Add( output );
+    }
+    return i < argv.Count;
+}
+
+static bool ParseShorts( IList<string> argv, ref int i, List<ushort> list ) {
+    for ( ; i < argv.Count; i++ ) {
+        if ( argv[i] == ":" ) {
+            i++;
+            break;
+        }
+        list.Add( ( ushort )HexToInt( argv[i] ) );
+    }
+    return i < argv.Count;
+}
+
+static bool ParseBytes( IList<string> argv, ref int i, List<byte> list ) {
+    for ( ; i < argv.Count; i++ ) {
+        if ( argv[i] == ":" ) {
+            i++;
+            break;
+        }
+        list.Add( ( byte )HexToInt( argv[i] ) );
+    }
+    return i < argv.Count;
+}
+
+// == public API ==
+
+public static char NibbleToChar( int n ) {
     switch( n & 15 ) {
         case 0x0 : return '0';
         case 0x1 : return '1';
@@ -30,7 +89,7 @@ static char NibbleToChar( int n ) {
     return '0';
 }
 
-static int CharToNibble( int ch ) {
+public static int CharToNibble( int ch ) {
     switch( ch ) {
         case '0': return 0x0;
         case '1': return 0x1;
@@ -112,65 +171,6 @@ public static string IntToHex( int num ) {
     }
     return new string( octet );
 }
-
-static bool ParseInts( IList<string> argv, ref int i, List<int> list ) {
-    for (; i < argv.Count ; i++)
-    {
-        if (argv[i] == ":")
-        {
-            i++;
-            break;
-        }
-        list.Add( HexToInt( argv[i] ) );
-    }
-    return i < argv.Count;
-}
-
-static bool ParseEnum( Type elemType, IList<string> argv, ref int i, List<int> list ) {
-    for ( ; i < argv.Count; i++ ) {
-        if ( argv[i] == ":" ) {
-            i++;
-            break;
-        }
-        Array vals = Enum.GetValues( elemType );
-        string [] input = argv[i].Split( '|' );
-        int output = 0;
-        foreach ( string s in input ) {
-            foreach ( object e in vals ) {
-                if ( e.ToString() == s ) {
-                    output |= ( int )e;
-                    break;
-                }
-            }
-        }
-        list.Add( output );
-    }
-    return i < argv.Count;
-}
-
-static bool ParseShorts( IList<string> argv, ref int i, List<ushort> list ) {
-    for ( ; i < argv.Count; i++ ) {
-        if ( argv[i] == ":" ) {
-            i++;
-            break;
-        }
-        list.Add( ( ushort )HexToInt( argv[i] ) );
-    }
-    return i < argv.Count;
-}
-
-static bool ParseBytes( IList<string> argv, ref int i, List<byte> list ) {
-    for ( ; i < argv.Count; i++ ) {
-        if ( argv[i] == ":" ) {
-            i++;
-            break;
-        }
-        list.Add( ( byte )HexToInt( argv[i] ) );
-    }
-    return i < argv.Count;
-}
-
-// == public API ==
 
 public static bool UndeltaBytes( ref int idx, IList<string> argv, List<ushort> changes,
                                                         List<byte> values, out bool keepGoing ) {
