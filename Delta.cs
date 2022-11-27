@@ -101,6 +101,12 @@ public static int CharToNibble( int ch ) {
         case '7': return 0x7;
         case '8': return 0x8;
         case '9': return 0x9;
+        case 'a': return 0xA;
+        case 'b': return 0xB;
+        case 'c': return 0xC;
+        case 'd': return 0xD;
+        case 'e': return 0xE;
+        case 'f': return 0xF;
         case 'A': return 0xA;
         case 'B': return 0xB;
         case 'C': return 0xC;
@@ -255,7 +261,7 @@ public static bool DeltaEnum( Array input, Array shadow,
     return n > 0;
 }
 
-public static bool Undelta( ref int idx, IList<string> argv, List<ushort> changes,
+public static bool UndeltaNum( ref int idx, IList<string> argv, List<ushort> changes,
                                                         List<int> values, out bool keepGoing ) {
     changes.Clear();
     values.Clear();
@@ -281,30 +287,38 @@ public static bool DeltaInts( int[] input, int[] shadow, out string changes, out
     return n > 0;
 }
 
-static List<ushort> changes = new List<ushort>();
-static List<int> values = new List<int>();
-public static bool UndeltaArray( int argvIdx, string [] argv, Array array ) {
+public static List<ushort> changes = new List<ushort>();
+public static List<int> values = new List<int>();
+
+public static bool Parse( int argvIdx, string [] argv, Array array ) {
     bool keepGoing;
     Type t = array.GetType();
-
     Type elemType = t.GetElementType();
     if ( elemType.IsEnum ) {
         if ( ! UndeltaEnum( elemType, ref argvIdx, argv, changes, values, out keepGoing ) ) {
-            Error( "Failed to undelta array." );
+            Error( "Failed to parse array delta." );
             return false;
-        }
-        for ( int i = 0; i < values.Count; i++ ) {
-            array.SetValue( values[i], changes[i] );
         }
         return true;
     }
 
-    if ( ! Undelta( ref argvIdx, argv, changes, values, out keepGoing ) ) {
-        Error( "Failed to undelta array." );
+    if ( ! UndeltaNum( ref argvIdx, argv, changes, values, out keepGoing ) ) {
+        Error( "Failed to parse array delta." );
         return false;
     }
-    
-    if ( t == typeof( byte[] ) ) {
+
+    return true;
+}
+
+public static bool Apply( Array array ) {
+    Type t = array.GetType();
+    Type elemType = t.GetElementType();
+
+    if ( elemType.IsEnum ) {
+        for ( int i = 0; i < values.Count; i++ ) {
+            array.SetValue( values[i], changes[i] );
+        }
+    } else if ( t == typeof( byte[] ) ) {
         for ( int i = 0; i < values.Count; i++ ) {
             ( ( byte[] )array )[changes[i]] = ( byte )values[i];
         }
@@ -320,8 +334,15 @@ public static bool UndeltaArray( int argvIdx, string [] argv, Array array ) {
         Error( $"Unsupported array type {t}" );
         return false;
     }
-    
+
     return true;
+}
+
+public static bool UndeltaArray( int argvIdx, string [] argv, Array array ) {
+    if ( ! Parse( argvIdx, argv, array ) ) {
+        return false;
+    }
+    return Apply( array );
 }
 
 public static bool DeltaArray( Array array, out string changes, out string values,
