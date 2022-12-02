@@ -372,7 +372,7 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     }
 
     if ( isCursor ) {
-        c = ( ( int )( Time.realtimeSinceStartup * 1000.0f ) & 256 ) != 0 ? c : 0xdb;
+        c = ( ( int )( Time.realtimeSinceStartup * 1000.0f ) & 256 ) != 0 ? c : QGL.GetCursorChar();
     }
 
     if ( c == ' ' ) {
@@ -395,98 +395,109 @@ static List<int> urpTris = new List<int>();
 static int [] urpQuadBase = new int[6] { 0, 1, 2, 2, 3, 0 };
 static int [] urpQuad = new int[6];
 
-static void RenderURPMesh( bool skip = false ) {
-
-    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
-        if ( ! DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
-            return;
-        }
-        int idx = c & ( CodePage437.FontSz * CodePage437.FontSz - 1 );
-        float csz = ( float )CodePage437.CharSz;
-        float n = csz / CodePage437.FontTexSide;
-        Vector3 vertOff = new Vector3( screenPos.x, screenPos.y );
-        Vector3 uvOff = new Vector3( idx % CodePage437.FontSz * n, idx / CodePage437.FontSz * n );
-
-        int numVerts = urpVerts.Count;
-
-        urpUV.Add( CodePage437.CharUVs[0] + uvOff );
-        urpVerts.Add( CodePage437.CharVerts[0] * QonScale + vertOff );
-        urpUV.Add( CodePage437.CharUVs[1] + uvOff );
-        urpVerts.Add( CodePage437.CharVerts[1] * QonScale + vertOff );
-        urpUV.Add( CodePage437.CharUVs[2] + uvOff );
-        urpVerts.Add( CodePage437.CharVerts[2] * QonScale + vertOff );
-        urpUV.Add( CodePage437.CharUVs[3] + uvOff );
-        urpVerts.Add( CodePage437.CharVerts[3] * QonScale + vertOff );
-
-        for ( int i = 0; i < 6; i++ ) {
-            urpQuad[i] = urpQuadBase[i] + numVerts;
-        }
-
-        urpTris.AddRange( urpQuad );
-
-        for ( int i = 0; i < 4; i++ ) {
-            urpColors.Add( color );
-        }
-    }
-
-    RenderBegin();
-
-    if ( ! skip ) {
-        int maxH = ( int )QGL.ScreenHeight();
-        int cW = ( int )( QGL.TextDx * QonScale );
-        int cH = ( int )( QGL.TextDy * QonScale );
-        int conW = Screen.width / cW;
-        int conH = maxH / cH;
-
-        if ( Active ) {
-            // draw background
-        } else {
-            conH = conH * Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 ) / 100;
-        }
-
-        QON_DrawChar = drawChar;
-        QON_DrawEx( conW, conH, ! Active, 0 );
-
-        if ( urpVerts.Count > 0 ) {
-            urpMesh.vertices = urpVerts.ToArray();
-            urpMesh.triangles = urpTris.ToArray();
-            urpMesh.colors = urpColors.ToArray();
-            urpMesh.uv = urpUV.ToArray();
-
-            Vector2 [] outline = new Vector2 [] {
-                new Vector3( QonScale, 0 ),
-                new Vector3( 0, QonScale ),
-                new Vector3( QonScale, QonScale ),
-                new Vector3( -QonScale, QonScale ),
-            };
-
-            QGL.SetMaterialColor( Color.black );
-            QGL.SetFontTexture();
-            for ( int i = 0; i < outline.Length; i++ ) {
-                Graphics.DrawMeshNow( urpMesh, Camera.current.transform.position
-                                        + Camera.current.transform.TransformVector( outline[i] ),
-                                        Camera.current.transform.rotation );
-                Graphics.DrawMeshNow( urpMesh, Camera.current.transform.position
-                                        + Camera.current.transform.TransformVector( -outline[i] ),
-                                        Camera.current.transform.rotation );
-            }
-
-            QGL.SetMaterialColor( Color.white );
-            QGL.SetFontTexture();
-            Graphics.DrawMeshNow( urpMesh, Camera.current.transform.position,
-                                                                Camera.current.transform.rotation );
-
-            urpVerts.Clear();
-            urpUV.Clear();
-            urpTris.Clear();
-            urpColors.Clear();
-
-            urpMesh.Clear();
-        }
-    }
-
-    RenderEnd();
-}
+#if false
+//static void RenderURPMesh( bool skip = false ) {
+//
+//    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
+//        if ( ! DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
+//            return;
+//        }
+//        int idx = c & ( CodePage437.FontSz * CodePage437.FontSz - 1 );
+//        float csz = ( float )CodePage437.CharSz;
+//        float n = csz / CodePage437.FontTexSide;
+//        Vector3 vertOff = new Vector3( screenPos.x, screenPos.y );
+//        Vector3 uvOff = new Vector3( idx % CodePage437.FontSz * n, idx / CodePage437.FontSz * n );
+//
+//        int numVerts = urpVerts.Count;
+//
+//        float charU = ( FontTexWidth / FontSz ) / ( float )FontTexWidth;
+//        float charV = ( FontTexHeight / FontSz ) / ( float )FontTexHeight;
+//        Vector3 [] charUVs = new Vector3[4] {
+//            new Vector3( 0, 0, 0 ),
+//            new Vector3( charU, 0, 0 ),
+//            new Vector3( charU, charV, 0 ),
+//            new Vector3( 0, charV, 0 ),
+//        };
+//
+//        urpUV.Add( CodePage437.charUVs[0] + uvOff );
+//        urpVerts.Add( CodePage437.CharVerts[0] * QonScale + vertOff );
+//        urpUV.Add( CodePage437.charUVs[1] + uvOff );
+//        urpVerts.Add( CodePage437.CharVerts[1] * QonScale + vertOff );
+//        urpUV.Add( CodePage437.charUVs[2] + uvOff );
+//        urpVerts.Add( CodePage437.CharVerts[2] * QonScale + vertOff );
+//        urpUV.Add( CodePage437.charUVs[3] + uvOff );
+//        urpVerts.Add( CodePage437.CharVerts[3] * QonScale + vertOff );
+//
+//        for ( int i = 0; i < 6; i++ ) {
+//            urpQuad[i] = urpQuadBase[i] + numVerts;
+//        }
+//
+//        urpTris.AddRange( urpQuad );
+//
+//        for ( int i = 0; i < 4; i++ ) {
+//            urpColors.Add( color );
+//        }
+//    }
+//
+//    RenderBegin();
+//
+//    if ( ! skip ) {
+//        int maxH = ( int )QGL.ScreenHeight();
+//        int cW = ( int )( QGL.TextDx * QonScale );
+//        int cH = ( int )( QGL.TextDy * QonScale );
+//        int conW = Screen.width / cW;
+//        int conH = maxH / cH;
+//
+//        if ( Active ) {
+//            // draw background
+//        } else {
+//            conH = conH * Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 ) / 100;
+//        }
+//
+//        QON_DrawChar = drawChar;
+//        QON_DrawEx( conW, conH, ! Active, 0 );
+//
+//        if ( urpVerts.Count > 0 ) {
+//            urpMesh.vertices = urpVerts.ToArray();
+//            urpMesh.triangles = urpTris.ToArray();
+//            urpMesh.colors = urpColors.ToArray();
+//            urpMesh.uv = urpUV.ToArray();
+//
+//            Vector2 [] outline = new Vector2 [] {
+//                new Vector3( QonScale, 0 ),
+//                new Vector3( 0, QonScale ),
+//                new Vector3( QonScale, QonScale ),
+//                new Vector3( -QonScale, QonScale ),
+//            };
+//
+//            QGL.SetMaterialColor( Color.black );
+//            QGL.SetFontTexture();
+//            for ( int i = 0; i < outline.Length; i++ ) {
+//                Graphics.DrawMeshNow( urpMesh, Camera.current.transform.position
+//                                        + Camera.current.transform.TransformVector( outline[i] ),
+//                                        Camera.current.transform.rotation );
+//                Graphics.DrawMeshNow( urpMesh, Camera.current.transform.position
+//                                        + Camera.current.transform.TransformVector( -outline[i] ),
+//                                        Camera.current.transform.rotation );
+//            }
+//
+//            QGL.SetMaterialColor( Color.white );
+//            QGL.SetFontTexture();
+//            Graphics.DrawMeshNow( urpMesh, Camera.current.transform.position,
+//                                                                Camera.current.transform.rotation );
+//
+//            urpVerts.Clear();
+//            urpUV.Clear();
+//            urpTris.Clear();
+//            urpColors.Clear();
+//
+//            urpMesh.Clear();
+//        }
+//    }
+//
+//    RenderEnd();
+//}
+#endif
 
 static void Clear_kmd( string [] argv ) {
     for ( int i = 0; i < 50; i++ ) {

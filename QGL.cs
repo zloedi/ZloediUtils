@@ -11,18 +11,11 @@ public static class QGL {
 
 
 static Texture2D _texWhite = Texture2D.whiteTexture;
-static Texture2D _texFont;
 static Material _material;
 
 static int _context;
 static Camera _camera;
 static bool _invertedY;
-
-public const int CharSpacingX = -3;
-public const int CharSpacingY = 3;
-public const float TextDx = CodePage437.CharSz + CharSpacingX;
-public const float TextDy = CodePage437.CharSz + CharSpacingY;
-public static float pixelsPerPoint = 1;
 
 struct LateLine {
     public int context;
@@ -52,22 +45,6 @@ static List<LateImage> _images = new List<LateImage>();
 static List<LateLine> _lines = new List<LateLine>();
 
 static QGL() {
-}
-
-public static float ScreenWidth() {
-    Camera cam = _camera ? _camera : Camera.main;
-    if ( cam ) {
-        return cam.pixelWidth;
-    }
-    return Screen.width;
-}
-
-public static float ScreenHeight() {
-    Camera cam = _camera ? _camera : Camera.main;
-    if ( cam ) {
-        return cam.pixelHeight;
-    }
-    return Screen.height;
 }
 
 static void BlitSlow( Texture2D texture, Vector2 srcPos, Vector2 srcSize, Vector3 dstPos,
@@ -123,7 +100,46 @@ static Color TagToCol( string tag ) {
                       ( ( rgb[4] << 4 ) | rgb[5] ) / 255.999f );
 }
 
+static int _font => Font_cvar % _fonts.Length;
+static int _fontNumColumns => _font == 0 ? CodePage437.FontSz : AppleFont.APPLEIIF_CLMS;
+static int _fontNumRows => _font == 0 ? CodePage437.FontSz : AppleFont.APPLEIIF_ROWS;
+static int _fontCharWidth => _font == 0 ? CodePage437.CharSz : AppleFont.APPLEIIF_CW;
+static int _fontCharHeight => _font == 0 ? CodePage437.CharSz : AppleFont.APPLEIIF_CH;
+
+static int GetCharInFont( int c ) {
+    return c % ( _fontNumColumns * _fontNumRows );
+}
+
 // == Public API ==
+
+static int CharSpacingX_cvar = -3;
+static int CharSpacingY_cvar = 3;
+static int Font_cvar = 0;
+
+public static float pixelsPerPoint = 1;
+
+public static float TextDx => Mathf.Max( AppleFont.APPLEIIF_CW + 1, _fontCharWidth + CharSpacingX_cvar );
+public static float TextDy => _fontCharHeight + CharSpacingY_cvar;
+
+public static int GetCursorChar() {
+    return _font == 0 ? 0xdb : 127;
+}
+
+public static float ScreenWidth() {
+    Camera cam = _camera ? _camera : Camera.main;
+    if ( cam ) {
+        return cam.pixelWidth;
+    }
+    return Screen.width;
+}
+
+public static float ScreenHeight() {
+    Camera cam = _camera ? _camera : Camera.main;
+    if ( cam ) {
+        return cam.pixelHeight;
+    }
+    return Screen.height;
+}
 
 public static bool Start() {
     Shader shader = Shader.Find( "GLSprites" );
@@ -150,8 +166,7 @@ public static Vector2 MeasureString( string s, float scale = 1 ) {
     return new Vector2( max, y );
 }
 
-public static void DrawTextWithOutline( string s, float x, float y, Color color,
-                                                                                float scale = 1 ) {
+public static void DrawTextWithOutline( string s, float x, float y, Color color, float scale = 1 ) {
     for ( int i = 0, j = 0; i < s.Length; i++ ) {
         if ( s[i] == '\n' ) {
             j = 0;
@@ -184,9 +199,19 @@ public static void DrawScreenCharWithOutline( int c, float screenX, float screen
     DrawScreenChar( c, screenX, screenY, scale );
 }
 
+static Texture2D _texFont;
+static Texture2D [] _fonts;
+
 public static void SetFontTexture() {
     // make sure we work when going back to edit mode
-    _texFont = _texFont ? _texFont : CodePage437.GetTexture();
+    _texFont = _fonts == null ? null : _fonts[_font];
+    if ( ! _texFont ) {
+        _fonts = new Texture2D [] {
+            CodePage437.GetTexture(),
+            AppleFont.GetTexture(),
+        };
+        _texFont = _fonts[_font];
+    }
     SetTexture( _texFont );
 }
 
@@ -232,21 +257,43 @@ public static void DrawSolidQuad( Vector2 pos, Vector2 size ) {
 }
 
 public static void DrawScreenChar( int c, float screenX, float screenY, float scale ) { 
-    int idx = c & ( CodePage437.FontSz * CodePage437.FontSz - 1 );
-    float csz = ( float )CodePage437.CharSz;
-    float n = csz / CodePage437.FontTexSide;
+    int idx = GetCharInFont( c );
     float y = _invertedY ? ScreenHeight() - screenY : screenY;
     Vector3 vertOff = new Vector3( screenX, y );
-    Vector3 uvOff = new Vector3( idx % CodePage437.FontSz * n, idx / CodePage437.FontSz * n );
+
+    float tw = ( float )_fontCharWidth / _texFont.width;
+    float th = ( float )_fontCharHeight / _texFont.height;
+    Vector3 uvOff = new Vector3( ( idx % _fontNumColumns ) * tw, ( idx / _fontNumColumns ) * th );
+
+    float charU = ( float )_texFont.width / _fontNumColumns / _texFont.width;
+    float charV = ( float )_texFont.height / _fontNumRows / _texFont.height;
+    Vector3 [] charUVs = new Vector3[4] {
+        new Vector3( 0, 0, 0 ),
+        new Vector3( charU, 0, 0 ),
+        new Vector3( charU, charV, 0 ),
+        new Vector3( 0, charV, 0 ),
+    };
     if ( _invertedY ) {
+        Vector3 [] verts = new Vector3[4] {
+            new Vector3( 0, 0, 0 ),
+            new Vector3( _fontCharWidth, 0, 0 ),
+            new Vector3( _fontCharWidth, -_fontCharHeight, 0 ),
+            new Vector3( 0, -_fontCharHeight, 0 ),
+        };
         for ( int i = 0; i < 4; i++ ) {
-            GL.TexCoord( CodePage437.CharUVs[i] + uvOff );
-            GL.Vertex( CodePage437.CharVertsInv[i] * scale + vertOff );
+            GL.TexCoord( charUVs[i] + uvOff );
+            GL.Vertex( verts[i] * scale + vertOff );
         }
     } else {
+        Vector3 [] verts = new Vector3[4] {
+            new Vector3( 0, 0, 0 ),
+            new Vector3( _fontCharWidth, 0, 0 ),
+            new Vector3( _fontCharWidth, _fontCharHeight, 0 ),
+            new Vector3( 0, _fontCharHeight, 0 ),
+        };
         for ( int i = 0; i < 4; i++ ) {
-            GL.TexCoord( CodePage437.CharUVs[i] + uvOff );
-            GL.Vertex( CodePage437.CharVerts[i] * scale + vertOff );
+            GL.TexCoord( charUVs[i] + uvOff );
+            GL.Vertex( verts[i] * scale + vertOff );
         }
     }
 }
