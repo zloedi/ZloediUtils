@@ -100,7 +100,7 @@ static Color TagToCol( string tag ) {
                       ( ( rgb[4] << 4 ) | rgb[5] ) / 255.999f );
 }
 
-static int _font => Font_cvar % _fonts.Length;
+static int _font => _fonts == null ? 0 : Font_cvar % _fonts.Length;
 static int _fontNumColumns => _font == 0 ? CodePage437.FontSz : AppleFont.APPLEIIF_CLMS;
 static int _fontNumRows => _font == 0 ? CodePage437.FontSz : AppleFont.APPLEIIF_ROWS;
 static int _fontCharWidth => _font == 0 ? CodePage437.CharSz : AppleFont.APPLEIIF_CW;
