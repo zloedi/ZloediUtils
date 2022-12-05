@@ -267,7 +267,7 @@ public static void DrawScreenChar( int c, float screenX, float screenY, float sc
     float y = _invertedY ? ScreenHeight() - screenY : screenY;
     Vector3 vertOff = new Vector3( screenX, y );
 
-    int a = _font;
+    int a = _font | ( ( _invertedY ? 1 : 0 ) << 8 );
     int b = idx;
     int hash = ( a + b ) * ( ( a + b + 1 ) >> 1 ) + a;
     if ( ! _charsMap.TryGetValue( hash, out CharInfo ci ) ) {
@@ -295,7 +295,6 @@ public static void DrawScreenChar( int c, float screenX, float screenY, float sc
                 new Vector3( _fontCharWidth, -_fontCharHeight, 0 ),
                 new Vector3( 0, -_fontCharHeight, 0 ),
             };
-
         } else {
             ci.verts = new Vector3[4] {
                 new Vector3( 0, 0, 0 ),
@@ -305,16 +304,12 @@ public static void DrawScreenChar( int c, float screenX, float screenY, float sc
             };
         }
 
-        for ( int i = 0; i < 4; i++ ) {
-            ci.verts[i] = ci.verts[i] * scale;
-        }
-
         _charsMap[hash] = ci;
     }
 
     for ( int i = 0; i < 4; i++ ) {
         GL.TexCoord( ci.uv[i] );
-        GL.Vertex( ci.verts[i] + vertOff );
+        GL.Vertex( ci.verts[i] * scale + vertOff );
     }
 }
 
