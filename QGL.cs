@@ -256,45 +256,65 @@ public static void DrawSolidQuad( Vector2 pos, Vector2 size ) {
     GL.Vertex( new Vector3( pos.x, dy, 0 ) );
 }
 
+struct CharInfo {
+    public Vector3 [] uv;
+    public Vector3 [] verts;
+}
+static Dictionary<int,CharInfo> _charsMap = new Dictionary<int,CharInfo>();
 public static void DrawScreenChar( int c, float screenX, float screenY, float scale ) { 
     int idx = GetCharInFont( c );
+
     float y = _invertedY ? ScreenHeight() - screenY : screenY;
     Vector3 vertOff = new Vector3( screenX, y );
 
-    float tw = ( float )_fontCharWidth / _texFont.width;
-    float th = ( float )_fontCharHeight / _texFont.height;
-    Vector3 uvOff = new Vector3( ( idx % _fontNumColumns ) * tw, ( idx / _fontNumColumns ) * th );
+    int a = _font;
+    int b = idx;
+    int hash = ( a + b ) * ( ( a + b + 1 ) >> 1 ) + a;
+    if ( ! _charsMap.TryGetValue( hash, out CharInfo ci ) ) {
+        float tw = ( float )_fontCharWidth / _texFont.width;
+        float th = ( float )_fontCharHeight / _texFont.height;
+        Vector3 uvOff = new Vector3( ( idx % _fontNumColumns ) * tw, ( idx / _fontNumColumns ) * th );
 
-    float charU = ( float )_texFont.width / _fontNumColumns / _texFont.width;
-    float charV = ( float )_texFont.height / _fontNumRows / _texFont.height;
-    Vector3 [] charUVs = new Vector3[4] {
-        new Vector3( 0, 0, 0 ),
-        new Vector3( charU, 0, 0 ),
-        new Vector3( charU, charV, 0 ),
-        new Vector3( 0, charV, 0 ),
-    };
-    if ( _invertedY ) {
-        Vector3 [] verts = new Vector3[4] {
+        float charU = ( float )_texFont.width / _fontNumColumns / _texFont.width;
+        float charV = ( float )_texFont.height / _fontNumRows / _texFont.height;
+        ci.uv = new Vector3[4] {
             new Vector3( 0, 0, 0 ),
-            new Vector3( _fontCharWidth, 0, 0 ),
-            new Vector3( _fontCharWidth, -_fontCharHeight, 0 ),
-            new Vector3( 0, -_fontCharHeight, 0 ),
+            new Vector3( charU, 0, 0 ),
+            new Vector3( charU, charV, 0 ),
+            new Vector3( 0, charV, 0 ),
         };
+
         for ( int i = 0; i < 4; i++ ) {
-            GL.TexCoord( charUVs[i] + uvOff );
-            GL.Vertex( verts[i] * scale + vertOff );
+            ci.uv[i] += uvOff;
         }
-    } else {
-        Vector3 [] verts = new Vector3[4] {
-            new Vector3( 0, 0, 0 ),
-            new Vector3( _fontCharWidth, 0, 0 ),
-            new Vector3( _fontCharWidth, _fontCharHeight, 0 ),
-            new Vector3( 0, _fontCharHeight, 0 ),
-        };
+
+        if ( _invertedY ) {
+            ci.verts = new Vector3[4] {
+                new Vector3( 0, 0, 0 ),
+                new Vector3( _fontCharWidth, 0, 0 ),
+                new Vector3( _fontCharWidth, -_fontCharHeight, 0 ),
+                new Vector3( 0, -_fontCharHeight, 0 ),
+            };
+
+        } else {
+            ci.verts = new Vector3[4] {
+                new Vector3( 0, 0, 0 ),
+                new Vector3( _fontCharWidth, 0, 0 ),
+                new Vector3( _fontCharWidth, _fontCharHeight, 0 ),
+                new Vector3( 0, _fontCharHeight, 0 ),
+            };
+        }
+
         for ( int i = 0; i < 4; i++ ) {
-            GL.TexCoord( charUVs[i] + uvOff );
-            GL.Vertex( verts[i] * scale + vertOff );
+            ci.verts[i] = ci.verts[i] * scale;
         }
+
+        _charsMap[hash] = ci;
+    }
+
+    for ( int i = 0; i < 4; i++ ) {
+        GL.TexCoord( ci.uv[i] );
+        GL.Vertex( ci.verts[i] + vertOff );
     }
 }
 

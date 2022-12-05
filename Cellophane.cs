@@ -833,7 +833,7 @@ public static bool VarChanged( string name ) {
             _changeStash[name] = v;
         } else {
             Error( "Can't find variable '" + normName + "'" );
-            v.Changed_f = () => false;
+            //v.Changed_f = () => false;
             result = false;
         }
     }
