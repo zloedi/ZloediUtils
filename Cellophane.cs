@@ -380,6 +380,8 @@ static void CollectItems() {
         }
 
         MethodInfo [] methods = type.GetMethods( BFS );
+        var objs1 = new object[1];
+        var objs2 = new object[2];
         foreach ( MethodInfo mi in methods ) {
             if ( ! ValidSuffixCmd( mi.Name ) ) {
                 continue;
@@ -401,12 +403,17 @@ static void CollectItems() {
                 rawName = type.Name + "." + mi.Name,
             };
             if ( parameters.Length == 1 ) {
-                cmd.ActionArgv = (a,context) => mi.Invoke( mi, new object [] { a } );
+                cmd.ActionArgv = (a,context) => {
+                    objs1[0] = a;
+                    mi.Invoke( mi, objs1 );
+                };
             } else {
                 cmd.ActionArgv = (a,context) => {
                     if ( context != null ) {
                         if ( context.GetType() == parameters[1].ParameterType ) {
-                            mi.Invoke( mi, new object [] { a, context } );
+                            objs2[0] = a;
+                            objs2[1] = context;
+                            mi.Invoke( mi, objs2 );
                         } else {
                             Error( cmd.name
                                     + " requires '"
