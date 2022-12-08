@@ -554,7 +554,8 @@ public static string StripJSONTags( string str ) {
 public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = false ) {
     if ( string.IsNullOrEmpty( str ) ) {
         argv = new string[0];
-        Log( "GetArgv: Empty string to split." );
+        // spams on the console too
+        //Log( "GetArgv: Empty string to split." );
         return false;
     }
 
