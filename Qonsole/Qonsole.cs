@@ -49,8 +49,8 @@ public class QonsoleBootstrap : MonoBehaviour {
 			return;
 		}
 
-        Qonsole.OnStoreCfg_f = () => KeyBinds.StoreConfig();
-        Qonsole.OnPreLoadCfg_f = () => "echo executed before loading the cfg";
+        //Qonsole.OnStoreCfg_f = () => KeyBinds.StoreConfig();
+        //Qonsole.OnPreLoadCfg_f = () => "echo executed before loading the cfg";
 
         Qonsole.OnEditorRepaint_f = c => {};
         Qonsole.Init();
