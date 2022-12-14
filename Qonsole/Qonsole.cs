@@ -821,7 +821,7 @@ public static void Print( string s, UnityEngine.Object o = null ) {
 
 public static void Break( string str ) {
     Log( str );
-    Debug.Break();
+    UnityEngine.Debug.Break();
 }
 
 public static void OneShotCmd( string fillCommandLine, Action<string> a ) {
