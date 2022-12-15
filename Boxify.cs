@@ -50,7 +50,7 @@ public static class Boxify
         }
     }
 
-#if true
+#if UNITY_EDITOR
     private static bool _enableUpdateCallbacks;
     private class Future {
         public float TriggerTime;
@@ -87,7 +87,6 @@ public static class Boxify
             _futures.Add( new Future { TriggerTime = Time.time + delay, Action = a } );
         }
     }   
-
 #endif
 
     public static float atof( string s )

@@ -26,7 +26,7 @@ public static class QonsoleEditorSetup {
         void duringSceneGui( SceneView sv ) {
             Qonsole.OnEditorSceneGUI( sv.camera, EditorApplication.isPaused,
                                             EditorGUIUtility.pixelsPerPoint,
-                                            onRepaint: Qonsole.OnEditorRepaint_f );
+                                            onRepaint: Qonsole.onEditorRepaint_f );
         }
 
         SceneView.duringSceneGui -= duringSceneGui;
@@ -49,10 +49,10 @@ public class QonsoleBootstrap : MonoBehaviour {
 			return;
 		}
 
-        //Qonsole.OnStoreCfg_f = () => KeyBinds.StoreConfig();
-        //Qonsole.OnPreLoadCfg_f = () => "echo executed before loading the cfg";
+        //Qonsole.onStoreCfg_f = () => KeyBinds.StoreConfig();
+        //Qonsole.onPreLoadCfg_f = () => "echo executed before loading the cfg";
 
-        Qonsole.OnEditorRepaint_f = c => {};
+        Qonsole.onEditorRepaint_f = c => {};
         Qonsole.Init();
         Qonsole.Start();
 
@@ -77,10 +77,10 @@ public class QonsoleBootstrap : MonoBehaviour {
     void Update() {
 #if QUI_BOOTSTRAP
         QUI.Begin( ( int )_mousePosition.x, ( int )_mousePosition.y );
-        Qonsole.OnUpdate_f();
+        Qonsole.tick_f();
         QUI.End();
 #else
-        Qonsole.OnUpdate_f();
+        Qonsole.tick_f();
 #endif
     }
 
@@ -93,7 +93,7 @@ public class QonsoleBootstrap : MonoBehaviour {
             QUI.OnMouseButton( false );
         }
 #endif
-        Qonsole.OnGUIEvent_f();
+        Qonsole.onGUI_f();
         Qonsole.OnGUI();
     }
 
@@ -128,19 +128,19 @@ public static bool Started;
 public static readonly int ThreadID = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
 // stuff to be executed before the .cfg file is loaded
-public static Func<string> OnPreLoadCfg_f = () => "";
+public static Func<string> onPreLoadCfg_f = () => "";
 // stuff to be executed after the .cfg file is loaded
-public static Func<string> OnPostLoadCfg_f = () => "";
+public static Func<string> onPostLoadCfg_f = () => "";
 // provide additional string to be appended to the .cfg file on flush/store
-public static Func<string> OnStoreCfg_f = () => "";
+public static Func<string> onStoreCfg_f = () => "";
 // the Unity editor (QGL) repaint callback
-public static Action<Camera> OnEditorRepaint_f = c => {};
+public static Action<Camera> onEditorRepaint_f = c => {};
 // called inside the Update pump (optionally with QUI setup) if QONSOLE_BOOTSTRAP is defined
-public static Action OnUpdate_f = () => {};
-public static Action OnStart_f = () => {};
-public static Action OnDone_f = () => {};
+public static Action tick_f = () => {};
+public static Action onStart_f = () => {};
+public static Action onDone_f = () => {};
 // called inside OnGUI if QONSOLE_BOOTSTRAP is defined
-public static Action OnGUIEvent_f = () => {};
+public static Action onGUI_f = () => {};
 
 static float _totalTime, _prevTime;
 static string _historyPath;
@@ -586,10 +586,10 @@ public static void Init( int configVersion = -1 ) {
     Cellophane.Log = (s) => { Log( s ); };
     Cellophane.Error = (s) => { Error( s ); };
     Cellophane.ScanVarsAndCommands();
-    TryExecute( OnPreLoadCfg_f() );
+    TryExecute( onPreLoadCfg_f() );
     Cellophane.ReadHistory( history );
     Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
-    TryExecute( OnPostLoadCfg_f() );
+    TryExecute( onPostLoadCfg_f() );
     Help_kmd( null );
 }
 
@@ -647,7 +647,7 @@ public static void Start() {
         QGL.SetContext( null, invertedY: ! QonUseRP );
         Started = true;
         Log( "Qonsole Started." );
-        OnStart_f();
+        onStart_f();
     } else {
         Started = false;
     }
@@ -655,11 +655,11 @@ public static void Start() {
 
 public static void FlushConfig() {
     File.WriteAllText( _historyPath, Cellophane.StoreHistory() );
-    File.WriteAllText( _configPath, Cellophane.StoreConfig() + OnStoreCfg_f() );
+    File.WriteAllText( _configPath, Cellophane.StoreConfig() + onStoreCfg_f() );
 }
 
 public static void OnApplicationQuit() {
-    OnDone_f();
+    onDone_f();
     FlushConfig();
 }
 
