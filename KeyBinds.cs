@@ -438,7 +438,7 @@ private static void Execute( KeyCode key, string cmdLine ) {
 public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyUp = KeyCode.None,
                                                                     KeyCode keyHold = KeyCode.None,
                                                                     string context = "" ) {
-#if false // legacy input system
+#if KEYBINDS_LEGACY
     string cmd;
     foreach ( var key in _keys ) {
         if ( Input.GetKeyDown( key ) && GetCmd( key, context, out cmd ) ) {
@@ -453,8 +453,7 @@ public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyU
             }
         }
     }
-#endif
-
+#else
     string cmd;
 
     if ( GetCmd( keyDown, context, out cmd ) ) {
@@ -474,6 +473,7 @@ public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyU
             Execute( keyUp, cmd.Substring( 1 ) );
         }
     }
+#endif
 }
 
 

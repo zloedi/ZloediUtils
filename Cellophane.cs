@@ -594,7 +594,7 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
         } else {
             if ( comment >= 2 ) {
                 token = "";
-                if ( c == '\n' ) {
+                if ( c == '\n' || c == '\r' ) {
                     comment = 0;
                 }
             } else if ( c == '"' ) {
@@ -603,7 +603,7 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
                     AddToken();
                     quoted = 0;
                 }
-            } else if ( quoted == 0 && ( c == '\n' || c == ' ' || c == '\t' ) ) {
+            } else if ( quoted == 0 && ( c == '\n' || c == '\r' || c == ' ' || c == '\t' ) ) {
                 AddToken();
             } else if ( quoted == 0 && c == '=' ) {
                 AddToken();
