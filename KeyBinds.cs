@@ -457,7 +457,7 @@ public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyU
     string cmd;
 
     if ( GetCmd( keyDown, context, out cmd ) ) {
-        if ( cmd[0] != '-' && ( keyDown != keyHold || cmd[0] != '+' ) ) {
+        if ( cmd[0] != '-' && cmd[0] != '+' ) {
             Execute( keyDown, cmd );
         }
     }

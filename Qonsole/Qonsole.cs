@@ -7,7 +7,8 @@ using System.IO;
 
 //#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
 //#define QONSOLE_BOOTSTRAP_EDITOR // if this is defined, the console will try to bootstrap itself in the editor
-//#define QUI_BOOTSTRAP // if this is defined, QUI gets properly setup in the bootstrap pump
+//#define QONSOLE_QUI // if this is defined, QUI gets properly setup in the bootstrap pump
+//#define QONSOLE_KEYBINDS // if this is defined, use the KeyBinds inside the Qonsole loop
 
 using UnityEngine;
 
@@ -39,18 +40,10 @@ public static class QonsoleEditorSetup {
 #if QONSOLE_BOOTSTRAP
 
 public class QonsoleBootstrap : MonoBehaviour {
-#if QUI_BOOTSTRAP
-    static bool DebugShowUIRects_kvar = false;
-    static Vector2 _mousePosition;
-#endif
-
     public static void TrySetupQonsole() {
 		if ( Qonsole.Started ) {
 			return;
 		}
-
-        //Qonsole.onStoreCfg_f = () => KeyBinds.StoreConfig();
-        //Qonsole.onPreLoadCfg_f = () => "echo executed before loading the cfg";
 
         Qonsole.onEditorRepaint_f = c => {};
         Qonsole.Init();
@@ -58,16 +51,6 @@ public class QonsoleBootstrap : MonoBehaviour {
 
         KeyBinds.Log = s => Qonsole.Log( s );
         KeyBinds.Error = s => Qonsole.Error( s );
-
-#if QUI_BOOTSTRAP
-        QUI.DrawLineRect = (x,y,w,h) => QGL.LateDrawLineRect(x,y,w,h,color:Color.magenta);
-        QUI.Log = s => Qonsole.Log( s );
-        QUI.Error = s => Qonsole.Error( s );
-        QUI.showRects = DebugShowUIRects_kvar;
-        //QUI.canvas = ...
-        //QUI.whiteTexture = ...
-        //QUI.defaultFont = ...
-#endif
     }
 
     void Start() {
@@ -75,25 +58,10 @@ public class QonsoleBootstrap : MonoBehaviour {
     }
 
     void Update() {
-#if QUI_BOOTSTRAP
-        QUI.Begin( ( int )_mousePosition.x, ( int )_mousePosition.y );
-        Qonsole.tick_f();
-        QUI.End();
-#else
-        Qonsole.tick_f();
-#endif
+        Qonsole.Update();
     }
 
     void OnGUI() {
-#if QUI_BOOTSTRAP
-        _mousePosition = Event.current.mousePosition;
-        if ( Event.current.type == EventType.MouseDown ) {
-            QUI.OnMouseButton( true );
-        } else if ( Event.current.type == EventType.MouseUp ) {
-            QUI.OnMouseButton( false );
-        }
-#endif
-        Qonsole.onGUI_f();
         Qonsole.OnGUI();
     }
 
@@ -128,11 +96,11 @@ public static bool Started;
 public static readonly int ThreadID = System.Threading.Thread.CurrentThread.ManagedThreadId;
 
 // stuff to be executed before the .cfg file is loaded
-public static Func<string> onPreLoadCfg_f = () => "";
+public static Func<string> onPreLoadCfg_f = () => "echo executed before loading the cfg";
 // stuff to be executed after the .cfg file is loaded
 public static Func<string> onPostLoadCfg_f = () => "";
 // provide additional string to be appended to the .cfg file on flush/store
-public static Func<string> onStoreCfg_f = () => "";
+public static Func<string> onStoreCfg_f;
 // the Unity editor (QGL) repaint callback
 public static Action<Camera> onEditorRepaint_f = c => {};
 // called inside the Update pump (optionally with QUI setup) if QONSOLE_BOOTSTRAP is defined
@@ -151,6 +119,17 @@ static float _overlayAlpha = 1;
 // the colorization stack for nested tags
 static List<Color> _drawCharColorStack = new List<Color>(){ Color.white };
 static Action<string> _oneShotCmd_f;
+static string [] _history;
+static int _historyItem;
+
+#if QONSOLE_QUI
+static bool DebugShowUIRects_kvar = false;
+static Vector2 _mousePosition;
+#endif
+
+#if QONSOLE_KEYBINDS
+static HashSet<KeyCode> _holdKeys = new HashSet<KeyCode>();
+#endif
 
 static Color TagToCol( string tag ) {
     int [] rgb = new int[3 * 2];
@@ -193,116 +172,8 @@ static Action OverlayGetFade() {
     };
 }
 
-static string [] _history;
-static int _historyItem;
-static void GUIEvent() {
-    // Handling arrows in IsKeyDown/Up on Update doesn't respect
-    // the OS repeat delay, thus this
-    // Also can't see a way to acquire string better than OnGUI
-    // As a bonus -- no dependency on the legacy Input system
-    if ( Event.current.type == EventType.KeyDown ) {
-        if ( _oneShotCmd_f != null ) {
-            if ( Event.current.keyCode == KeyCode.LeftArrow ) {
-                QON_MoveLeft( 1 );
-            } else if ( Event.current.keyCode == KeyCode.RightArrow ) {
-                QON_MoveRight( 1 );
-            } else if ( Event.current.keyCode == KeyCode.Home ) {
-                QON_MoveLeft( 99999 );
-            } else if ( Event.current.keyCode == KeyCode.End ) {
-                QON_MoveRight( 99999 );
-            } else if ( Event.current.keyCode == KeyCode.Delete ) {
-                QON_Delete( 1 );
-            } else if ( Event.current.keyCode == KeyCode.Backspace ) {
-                QON_Backspace( 1 );
-            } else if ( Event.current.keyCode == KeyCode.Escape ) {
-                Log( "Canceled..." );
-                QON_EraseCommand();
-                Active = false;
-                _oneShotCmd_f = null;
-            } else {
-                char c = Event.current.character;
-                if ( c == '`' ) {
-                } else if ( c == '\t' ) {
-                } else if ( c == '\b' ) {
-                } else if ( c == '\n' || c == '\r' ) {
-                    string cmd = QON_GetCommand();
-                    QON_EraseCommand();
-                    Action<string> a = _oneShotCmd_f;
-                    _oneShotCmd_f( cmd );
-                    _oneShotCmd_f = null;
-                    Active = false;
-                } else {
-                    QON_InsertCommand( c.ToString() );
-                }
-            }
-        } else if ( Event.current.keyCode == KeyCode.BackQuote ) {
-            Toggle();
-        } else if ( Event.current.keyCode == KeyCode.LeftArrow ) {
-            QON_MoveLeft( 1 );
-        } else if ( Event.current.keyCode == KeyCode.Home ) {
-            QON_MoveLeft( 99999 );
-        } else if ( Event.current.keyCode == KeyCode.RightArrow ) {
-            QON_MoveRight( 1 );
-        } else if ( Event.current.keyCode == KeyCode.End ) {
-            QON_MoveRight( 99999 );
-        } else if ( Event.current.keyCode == KeyCode.Delete ) {
-            _history = null;
-            QON_Delete( 1 );
-        } else if ( Event.current.keyCode == KeyCode.Backspace ) {
-            _history = null;
-            QON_Backspace( 1 );
-        } else if ( Event.current.keyCode == KeyCode.PageUp ) {
-            QON_PageUp();
-        } else if ( Event.current.keyCode == KeyCode.PageDown ) {
-            QON_PageDown();
-        } else if ( Event.current.keyCode == KeyCode.Escape ) {
-            if ( _history != null ) {
-                // cancel history, store last typed-in command
-                QON_SetCommand( _history[0] );
-                _history = null;
-            } else {
-                // cancel something else?
-            }
-        } else if ( Event.current.keyCode == KeyCode.DownArrow
-                    || Event.current.keyCode == KeyCode.UpArrow ) {
-            string cmd = QON_GetCommand();
-            if ( _history == null ) {
-                _history = Cellophane.GetHistory( cmd );
-                _historyItem = _history.Length * 100;
-            }
-            _historyItem += Event.current.keyCode == KeyCode.DownArrow
-                                ? 1 : -1;
-            if ( _historyItem >= 0 ) {
-                QON_SetCommand( _history[_historyItem % _history.Length] );
-            }
-        } else {
-            char c = Event.current.character;
-            if ( c == '`' ) {
-            } else if ( c == '\t' ) {
-                string cmd = QON_GetCommand();
-                string autocomplete = Cellophane.Autocomplete( cmd );
-                QON_SetCommand( autocomplete );
-            } else if ( c == '\b' ) {
-            } else if ( c == '\n' || c == '\r' ) {
-                _history = null;
-                string cmdClean, cmdRaw;
-                QON_GetCommandEx( out cmdClean, out cmdRaw );
-                QON_EraseCommand();
-                Log( cmdRaw );
-                Cellophane.AddToHistory( cmdClean );
-                TryExecute( cmdClean );
-                FlushConfig();
-            } else {
-                _history = null;
-                QON_InsertCommand( c.ToString() );
-            }
-        }
-    }
-}
-
 static void RenderBegin() {
-    float timeNow = Time.realtimeSinceStartup;
-    _totalTime += Mathf.Min( timeNow - _prevTime, 0.033f );
+    float timeNow = Time.realtimeSinceStartup; _totalTime += Mathf.Min( timeNow - _prevTime, 0.033f );
     _prevTime = timeNow;
 }
 
@@ -591,6 +462,24 @@ public static void Init( int configVersion = -1 ) {
     Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
     TryExecute( onPostLoadCfg_f() );
     Help_kmd( null );
+
+    if ( onStoreCfg_f == null ) {
+#if QONSOLE_KEYBINDS
+        onStoreCfg_f = () => KeyBinds.StoreConfig();
+#else
+        onStoreCfg_f = () => {};
+#endif
+    }
+
+#if QONSOLE_QUI
+    QUI.DrawLineRect = (x,y,w,h) => QGL.LateDrawLineRect(x,y,w,h,color:Color.magenta);
+    QUI.Log = s => Qonsole.Log( s );
+    QUI.Error = s => Qonsole.Error( s );
+    QUI.showRects = DebugShowUIRects_kvar;
+    //QUI.canvas = ...
+    //QUI.whiteTexture = ...
+    //QUI.defaultFont = ...
+#endif
 }
 
 public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPerPoint = 1,
@@ -672,7 +561,107 @@ public static void OnGUIInternal( bool skipRender = false ) {
         RenderGL( skipRender );
     } else if ( Active ) {
         if ( Event.current.type != EventType.Repaint ) {
-            GUIEvent();
+            // Handling arrows in IsKeyDown/Up on Update doesn't respect
+            // the OS repeat delay, thus this
+            // Also can't see a way to acquire a string better than OnGUI
+            // As a bonus -- no dependency on the legacy Input system
+            if ( Event.current.type == EventType.KeyDown ) {
+                if ( _oneShotCmd_f != null ) {
+                    if ( Event.current.keyCode == KeyCode.LeftArrow ) {
+                        QON_MoveLeft( 1 );
+                    } else if ( Event.current.keyCode == KeyCode.RightArrow ) {
+                        QON_MoveRight( 1 );
+                    } else if ( Event.current.keyCode == KeyCode.Home ) {
+                        QON_MoveLeft( 99999 );
+                    } else if ( Event.current.keyCode == KeyCode.End ) {
+                        QON_MoveRight( 99999 );
+                    } else if ( Event.current.keyCode == KeyCode.Delete ) {
+                        QON_Delete( 1 );
+                    } else if ( Event.current.keyCode == KeyCode.Backspace ) {
+                        QON_Backspace( 1 );
+                    } else if ( Event.current.keyCode == KeyCode.Escape ) {
+                        Log( "Canceled..." );
+                        QON_EraseCommand();
+                        Active = false;
+                        _oneShotCmd_f = null;
+                    } else {
+                        char c = Event.current.character;
+                        if ( c == '`' ) {
+                        } else if ( c == '\t' ) {
+                        } else if ( c == '\b' ) {
+                        } else if ( c == '\n' || c == '\r' ) {
+                            string cmd = QON_GetCommand();
+                            QON_EraseCommand();
+                            Action<string> a = _oneShotCmd_f;
+                            _oneShotCmd_f( cmd );
+                            _oneShotCmd_f = null;
+                            Active = false;
+                        } else {
+                            QON_InsertCommand( c.ToString() );
+                        }
+                    }
+                } else if ( Event.current.keyCode == KeyCode.BackQuote ) {
+                    Toggle();
+                } else if ( Event.current.keyCode == KeyCode.LeftArrow ) {
+                    QON_MoveLeft( 1 );
+                } else if ( Event.current.keyCode == KeyCode.Home ) {
+                    QON_MoveLeft( 99999 );
+                } else if ( Event.current.keyCode == KeyCode.RightArrow ) {
+                    QON_MoveRight( 1 );
+                } else if ( Event.current.keyCode == KeyCode.End ) {
+                    QON_MoveRight( 99999 );
+                } else if ( Event.current.keyCode == KeyCode.Delete ) {
+                    _history = null;
+                    QON_Delete( 1 );
+                } else if ( Event.current.keyCode == KeyCode.Backspace ) {
+                    _history = null;
+                    QON_Backspace( 1 );
+                } else if ( Event.current.keyCode == KeyCode.PageUp ) {
+                    QON_PageUp();
+                } else if ( Event.current.keyCode == KeyCode.PageDown ) {
+                    QON_PageDown();
+                } else if ( Event.current.keyCode == KeyCode.Escape ) {
+                    if ( _history != null ) {
+                        // cancel history, store last typed-in command
+                        QON_SetCommand( _history[0] );
+                        _history = null;
+                    } else {
+                        // cancel something else?
+                    }
+                } else if ( Event.current.keyCode == KeyCode.DownArrow
+                            || Event.current.keyCode == KeyCode.UpArrow ) {
+                    string cmd = QON_GetCommand();
+                    if ( _history == null ) {
+                        _history = Cellophane.GetHistory( cmd );
+                        _historyItem = _history.Length * 100;
+                    }
+                    _historyItem += Event.current.keyCode == KeyCode.DownArrow ? 1 : -1;
+                    if ( _historyItem >= 0 ) {
+                        QON_SetCommand( _history[_historyItem % _history.Length] );
+                    }
+                } else {
+                    char c = Event.current.character;
+                    if ( c == '`' ) {
+                    } else if ( c == '\t' ) {
+                        string cmd = QON_GetCommand();
+                        string autocomplete = Cellophane.Autocomplete( cmd );
+                        QON_SetCommand( autocomplete );
+                    } else if ( c == '\b' ) {
+                    } else if ( c == '\n' || c == '\r' ) {
+                        _history = null;
+                        string cmdClean, cmdRaw;
+                        QON_GetCommandEx( out cmdClean, out cmdRaw );
+                        QON_EraseCommand();
+                        Log( cmdRaw );
+                        Cellophane.AddToHistory( cmdClean );
+                        TryExecute( cmdClean );
+                        FlushConfig();
+                    } else {
+                        _history = null;
+                        QON_InsertCommand( c.ToString() );
+                    }
+                }
+            }
         }
     } else if ( Event.current.type == EventType.KeyDown
                 && Event.current.keyCode == KeyCode.BackQuote ) {
@@ -680,7 +669,43 @@ public static void OnGUIInternal( bool skipRender = false ) {
     }
 }
 
+public static void Update() {
+#if QONSOLE_KEYBINDS
+    foreach ( var k in _holdKeys ) {
+        KeyBinds.TryExecuteBinds( keyHold: k );
+    }
+#endif
+
+#if QONSOLE_QUI
+    QUI.Begin( ( int )_mousePosition.x, ( int )_mousePosition.y );
+    Qonsole.tick_f();
+    QUI.End();
+#else
+    Qonsole.tick_f();
+#endif
+}
+
 public static void OnGUI() {
+#if QONSOLE_QUI
+    _mousePosition = Event.current.mousePosition;
+    if ( Event.current.type == EventType.MouseDown ) {
+        QUI.OnMouseButton( true );
+    } else if ( Event.current.type == EventType.MouseUp ) {
+        QUI.OnMouseButton( false );
+    }
+#endif
+#if QONSOLE_KEYBINDS
+    if ( ! Active ) {
+        if ( Event.current.type == EventType.KeyDown ) {
+            KeyBinds.TryExecuteBinds( keyDown: Event.current.keyCode );
+            _holdKeys.Add( Event.current.keyCode );
+        } else if ( Event.current.type == EventType.KeyUp ) {
+            KeyBinds.TryExecuteBinds( keyUp: Event.current.keyCode );
+            _holdKeys.Remove( Event.current.keyCode );
+        }
+    }
+#endif
+    onGUI_f();
     OnGUIInternal( skipRender: Application.isEditor && QonShowInEditor_kvar == 2 );
 }
 
