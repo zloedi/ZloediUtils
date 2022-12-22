@@ -467,7 +467,7 @@ public static void Init( int configVersion = -1 ) {
 #if QONSOLE_KEYBINDS
         onStoreCfg_f = () => KeyBinds.StoreConfig();
 #else
-        onStoreCfg_f = () => {};
+        onStoreCfg_f = () => "";
 #endif
     }
 
