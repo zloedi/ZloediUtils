@@ -329,7 +329,7 @@ static void SpriteInternal( float x, float y, float w, float h, int handle, Text
     }
     Image img = RegisterGraphic<Image>( x, y, w, h, handle, color, initImage, scissor );
     if ( ! img.sprite || img.sprite.texture != tex ) {
-        if ( img.sprite ) {
+        if ( img.sprite && img.sprite.texture && img.sprite.texture != Texture2D.whiteTexture ) {
             UnityEngine.Object.Destroy( img.sprite.texture );
         }
         UnityEngine.Object.Destroy( img.sprite );
