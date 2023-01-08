@@ -345,6 +345,7 @@ public static bool UndeltaArray( int argvIdx, string [] argv, Array array ) {
     return Apply( array );
 }
 
+// will copy the changed values into 'shadow'
 public static bool DeltaArray( Array array, out string changes, out string values,
                                                         Array shadow = null, int maxInput = 0 ) {
     Type t = array.GetType();
