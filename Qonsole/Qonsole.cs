@@ -173,7 +173,8 @@ static Action OverlayGetFade() {
 }
 
 static void RenderBegin() {
-    float timeNow = Time.realtimeSinceStartup; _totalTime += Mathf.Min( timeNow - _prevTime, 0.033f );
+    float timeNow = Time.realtimeSinceStartup;
+    _totalTime += Mathf.Min( timeNow - _prevTime, 0.033f );
     _prevTime = timeNow;
 }
 
