@@ -19,10 +19,10 @@ class Named : IComparable {
     public string name;
 
     public int CompareTo(object obj) {
-        if (obj == null) 
+        if ( obj == null ) 
             return 1;
         string other = obj as string;
-        return this.name.CompareTo(other);
+        return this.name.CompareTo( other );
     }
 }
 
@@ -826,7 +826,15 @@ public static string ColorTagStripAll( string s ) {
 }
 
 static Dictionary<string,Variable> _changeStash = new Dictionary<string,Variable>();
-public static bool VarChanged( string name ) {
+public static bool VarChanged( string name, Type type = null ) {
+    if ( name.EndsWith( "_cvar" ) ) {
+        if ( type == null ) {
+            Error( "Need to supply type for VarChanged for '_cvar'" );
+            return false;
+        }
+        name = type.Name + "_" + name;
+    }
+
     bool result;
     Variable v;
     if ( _changeStash.TryGetValue( name, out v ) ) {

@@ -530,18 +530,7 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
     }
 }
 
-// == INTERNAL API ==
-
-public static void Start() {
-    if ( QGL.Start() ) {
-        QGL.SetContext( null, invertedY: ! QonUseRP );
-        Started = true;
-        Log( "Qonsole Started." );
-        onStart_f();
-    } else {
-        Started = false;
-    }
-}
+// == internal API ==
 
 public static void FlushConfig() {
     File.WriteAllText( _historyPath, Cellophane.StoreHistory() );
@@ -710,7 +699,18 @@ public static void OnGUI() {
     OnGUIInternal( skipRender: Application.isEditor && QonShowInEditor_kvar == 2 );
 }
 
-// == Public API ==
+// == public API ==
+
+public static void Start() {
+    if ( QGL.Start() ) {
+        QGL.SetContext( null, invertedY: ! QonUseRP );
+        Started = true;
+        Log( "Qonsole Started." );
+        onStart_f();
+    } else {
+        Started = false;
+    }
+}
 
 public static void TryExecute( string cmdLine, object context = null ) {
     string [] cmds;

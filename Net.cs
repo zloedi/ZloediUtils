@@ -1042,7 +1042,7 @@ static void ClConnectResponse_kmd( string [] argv ) {
 
 static void ClDisconnectResponse_kmd( string [] argv ) {
     if ( argv.Length < 2 || ! int.TryParse( argv[1], out int zport ) ) {
-        Qonsole.Log( "usage: cl_disconnect_response <zport>" );
+        Log( "usage: cl_disconnect_response <zport>" );
         return;
     }
     TryDisconnectResponse( zport );

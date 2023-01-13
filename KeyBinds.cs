@@ -423,7 +423,7 @@ public static string StoreConfig() {
 }
 
 private static void Execute( KeyCode key, string cmdLine ) {
-    Log( "Execute key binding: " + key + " " + cmdLine );
+    //Log( "Execute key binding: " + key + " " + cmdLine );
     string [] cmds;
     if ( Cellophane.SplitCommands( cmdLine, out cmds ) ) {
         string [] argv;

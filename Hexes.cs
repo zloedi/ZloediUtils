@@ -109,6 +109,25 @@ public static int hexSpriteHeight;
 public static float hexSpriteAspect;
 public static Texture2D hexSprite;
 
+#if false
+    str += "       @@       ";
+    str += "     @@@@@@     ";
+    str += "   @@@    @@@   ";
+    str += " @@@        @@@ ";
+    str += "@@            @@";
+    str += "@@            @@";
+    str += "@@            @@";
+    str += "@@            @@";
+    str += "@@            @@";
+    str += "@@            @@";
+    str += "@@            @@";
+    str += "@@            @@";
+    str += " @@@        @@@ ";
+    str += "   @@@    @@@   ";
+    str += "     @@@@@@     ";
+    str += "       @@       ";
+#endif
+
 public static void CreateHexTexture() { 
     string str = "";
     string
