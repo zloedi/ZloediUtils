@@ -635,7 +635,7 @@ public static bool SplitCommands( string str, out string [] cmds ) {
     return cmds.Length > 0;
 }
 
-public static bool TryExecute( string [] argv, object context = null ) {
+public static bool TryExecute( string [] argv, object context = null, bool silent = false ) {
     string str = argv[0].ToLowerInvariant();
 
     Variable v;
@@ -675,7 +675,9 @@ public static bool TryExecute( string [] argv, object context = null ) {
         }
         return true;
     }
-    Log( "Unknown var/command: '" + str + "'" );
+    if ( ! silent ) {
+        Log( "Unknown var/command: '" + str + "'" );
+    }
     return false;
 }
 
