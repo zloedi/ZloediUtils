@@ -48,11 +48,13 @@ public static int hotWidget;
 // this widget is usually pressed but not released yet
 public static int activeWidget;
 
-static float _oldCursorX, _cursorX;
-static float _oldCursorY, _cursorY;
+public static float cursorX;
+public static float cursorY;
+static float _oldCursorX;
+static float _oldCursorY;
 
 static bool CursorInRect( float x, float y, float w, float h ) {
-    return _cursorX >= x && _cursorY >= y && _cursorX < x + w && _cursorY < y + h;
+    return cursorX >= x && cursorY >= y && cursorX < x + w && cursorY < y + h;
 }
 
 // this callback might be called multiple times inside a single frame
@@ -66,9 +68,9 @@ public static bool OnMouseButton( bool down ) {
 }
 
 // assumes top-left origin for mouse
-public static void Begin( float cursorX, float cursorY ) {
-    _cursorX = cursorX;
-    _cursorY = cursorY;
+public static void Begin( float inCursorX, float inCursorY ) {
+    cursorX = inCursorX;
+    cursorY = inCursorY;
 #if QUI_USE_UNITY_UI
     BeginUnityUI();
 #endif
@@ -153,8 +155,8 @@ public static void End( bool skipUnityUI = false ) {
         _mouseButton = MouseButtonState.None;
     }
 
-    _oldCursorX = _cursorX;
-    _oldCursorY = _cursorY;
+    _oldCursorX = cursorX;
+    _oldCursorY = cursorY;
 
 #if QUI_USE_UNITY_UI
     if ( ! skipUnityUI ) {
@@ -166,8 +168,8 @@ public static void End( bool skipUnityUI = false ) {
 
 public static void DragPosition( WidgetResult res, ref float ioX, ref float ioY ) {
     if ( res == WidgetResult.Active ) {
-        float dx = _cursorX - _oldCursorX;
-        float dy = _cursorY - _oldCursorY;
+        float dx = cursorX - _oldCursorX;
+        float dy = cursorY - _oldCursorY;
         ioX += dx;
         ioY += dy;
     }
