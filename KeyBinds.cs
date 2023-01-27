@@ -348,6 +348,11 @@ static KeyBinds() {
     }
 }
 
+public static void BindClearAll_kmd( string [] argv ) {
+    _bindContext.Clear();
+    Log( "Cleared all Key Bindings." );
+}
+
 public static void Bind_kmd( string [] argv ) {
     if ( argv.Length < 3 ) {
         Log( "Usage: bind <KeyCode> <command> [context]" );
