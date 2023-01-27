@@ -259,6 +259,8 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     return true;
 }
 
+#if false
+
 static Mesh urpMesh = new Mesh();
 static List<Vector3> urpVerts = new List<Vector3>();
 static List<Vector2> urpUV = new List<Vector2>();
@@ -267,7 +269,6 @@ static List<int> urpTris = new List<int>();
 static int [] urpQuadBase = new int[6] { 0, 1, 2, 2, 3, 0 };
 static int [] urpQuad = new int[6];
 
-#if false
 //static void RenderURPMesh( bool skip = false ) {
 //
 //    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
@@ -436,10 +437,10 @@ public static void Init( int configVersion = -1 ) {
         fnameHistory = "qon_history.cfg";
         Log( "Run Standalone." );
     }
-    if ( QonUseRP ) {
-        Log( "Uses Rendering Pipeline asset." );
+    if ( QonInvertPlayY ) {
+        Log( "Inverted Y in Play window." );
     } else {
-        Log( "Not using Rendering Pipeline asset." );
+        Log( "Not Inverted Y in Play window." );
     }
     _historyPath = Path.Combine( Application.persistentDataPath, fnameHistory );
     _configPath = Path.Combine( Application.persistentDataPath, fnameCfg );
@@ -518,7 +519,7 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
     }
     OnGUIInternal();
     if ( Event.current.type == EventType.Repaint ) {
-        QGL.SetContext( null, invertedY: ! QonUseRP );
+        QGL.SetContext( null, invertedY: QonInvertPlayY );
         if ( notRunning ) {
             QUI.End( skipUnityUI: true );
         }
@@ -668,10 +669,12 @@ public static void Update() {
 
 #if QONSOLE_QUI
     QUI.Begin( ( int )_mousePosition.x, ( int )_mousePosition.y );
+#endif
+    Cellophane.GetArgv( "qonsole_tick", out string[] argv );
+    Cellophane.TryExecute( argv, silent: true );
     Qonsole.tick_f();
+#if QONSOLE_QUI
     QUI.End();
-#else
-    Qonsole.tick_f();
 #endif
 }
 
@@ -686,6 +689,15 @@ public static void OnGUI() {
 #endif
 #if QONSOLE_KEYBINDS
     if ( ! Active ) {
+        KeyCode kc = Event.current.button == 0 ? KeyCode.Mouse0 : KeyCode.Mouse1;
+        if ( Event.current.type == EventType.MouseDown ) {
+            KeyBinds.TryExecuteBinds( keyDown: kc );
+            _holdKeys.Add( kc );
+        } else if ( Event.current.type == EventType.MouseUp ) {
+            KeyBinds.TryExecuteBinds( keyUp: kc );
+            _holdKeys.Remove( kc );
+        }
+
         if ( Event.current.type == EventType.KeyDown ) {
             KeyBinds.TryExecuteBinds( keyDown: Event.current.keyCode );
             _holdKeys.Add( Event.current.keyCode );
@@ -703,7 +715,7 @@ public static void OnGUI() {
 
 public static void Start() {
     if ( QGL.Start() ) {
-        QGL.SetContext( null, invertedY: ! QonUseRP );
+        QGL.SetContext( null, invertedY: QonInvertPlayY );
         Started = true;
         Log( "Qonsole Started." );
         onStart_f();
@@ -874,9 +886,9 @@ public static float QonShowInEditor_kvar = 0;
 [Description( "Alpha blend value of the Qonsole background." )]
 public static float QonAlpha_kvar = 0.65f;
 [Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
-public static bool QonUseRP_kvar = false;
-public static bool QonUseRP => QonUseRP_kvar
-                    || UnityEngine.Rendering.GraphicsSettings.renderPipelineAsset != null;
+public static bool QonInvertPlayY_kvar = false;
+public static bool QonInvertPlayY => QonInvertPlayY_kvar
+                    && UnityEngine.Rendering.GraphicsSettings.renderPipelineAsset == null;
 
 static void Exit_kmd( string [] argv ) {
 #if UNITY_EDITOR
