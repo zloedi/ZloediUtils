@@ -16,8 +16,6 @@ public const int APPLEIIF_ROWS = 8;
 public const int APPLEIIF_CW = (APPLEIIF_WIDTH/APPLEIIF_CLMS);
 public const int APPLEIIF_CH = (APPLEIIF_HEIGHT/APPLEIIF_ROWS);
 
-static Texture2D _texture;
-
 public static readonly byte [] bitmap = new byte[APPLEIIF_WIDTH * APPLEIIF_HEIGHT / 8] {
 0x0e,0xf1,0x38,0xcf,0xf7,0x79,0x91,0x03,0x45,0x41,0x14,0x39,0x91,0x12,0x45,0x51,
 0x10,0x04,0x11,0x01,0x25,0xc1,0x16,0x45,0x55,0x14,0x05,0x51,0x10,0x04,0x11,0x01,
@@ -70,6 +68,7 @@ public static readonly byte [] bitmap = new byte[APPLEIIF_WIDTH * APPLEIIF_HEIGH
 };
 
 #if UNITY_STANDALONE
+static Texture2D _texture;
 public static Texture2D GetTexture() {
     if ( _texture ) {
         return _texture;
