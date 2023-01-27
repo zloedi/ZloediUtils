@@ -313,17 +313,17 @@ public static void DrawScreenChar( int c, float screenX, float screenY, float sc
     }
 }
 
-public static void TryExecute( string cmdLine ) {
-    string [] cmds;
-    if ( Cellophane.SplitCommands( cmdLine, out cmds ) ) {
-        string [] argv;
-        foreach ( var cmd in cmds ) {
-            if ( Cellophane.GetArgv( cmd, out argv ) ) {
-                Cellophane.TryExecute( argv );
-            }
-        }
-    }
-}
+//public static void TryExecute( string cmdLine ) {
+//    string [] cmds;
+//    if ( Cellophane.SplitCommands( cmdLine, out cmds ) ) {
+//        string [] argv;
+//        foreach ( var cmd in cmds ) {
+//            if ( Cellophane.GetArgv( cmd, out argv ) ) {
+//                Cellophane.TryExecute( argv );
+//            }
+//        }
+//    }
+//}
 
 public static Vector2 LatePrintWorld( object o, Vector3 worldPos, Color? color = null,
                                                                                 float scale = 1 ) {
