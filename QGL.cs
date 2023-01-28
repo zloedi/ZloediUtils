@@ -101,10 +101,10 @@ static Color TagToCol( string tag ) {
 }
 
 static int _font => _fonts == null ? 0 : Font_cvar % _fonts.Length;
-static int _fontNumColumns => _font == 0 ? CodePage437.FontSz : AppleFont.APPLEIIF_CLMS;
-static int _fontNumRows => _font == 0 ? CodePage437.FontSz : AppleFont.APPLEIIF_ROWS;
-static int _fontCharWidth => _font == 0 ? CodePage437.CharSz : AppleFont.APPLEIIF_CW;
-static int _fontCharHeight => _font == 0 ? CodePage437.CharSz : AppleFont.APPLEIIF_CH;
+static int _fontNumColumns => _font == 0 ? AppleFont.APPLEIIF_CLMS : CodePage437.FontSz;
+static int _fontNumRows    => _font == 0 ? AppleFont.APPLEIIF_ROWS : CodePage437.FontSz;
+static int _fontCharWidth  => _font == 0 ? AppleFont.APPLEIIF_CW   : CodePage437.CharSz;
+static int _fontCharHeight => _font == 0 ? AppleFont.APPLEIIF_CH   : CodePage437.CharSz;
 
 static int GetCharInFont( int c ) {
     return c % ( _fontNumColumns * _fontNumRows );
@@ -122,7 +122,7 @@ public static float TextDx => Mathf.Max( AppleFont.APPLEIIF_CW + 1, _fontCharWid
 public static float TextDy => _fontCharHeight + CharSpacingY_cvar;
 
 public static int GetCursorChar() {
-    return _font == 0 ? 0xdb : 127;
+    return _font == 0 ? 127 : 0xdb;
 }
 
 public static float ScreenWidth() {
@@ -207,8 +207,8 @@ public static void SetFontTexture() {
     _texFont = _fonts == null ? null : _fonts[_font];
     if ( ! _texFont ) {
         _fonts = new Texture2D [] {
-            CodePage437.GetTexture(),
             AppleFont.GetTexture(),
+            CodePage437.GetTexture(),
         };
         _texFont = _fonts[_font];
     }
