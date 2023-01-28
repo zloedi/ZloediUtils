@@ -69,7 +69,7 @@ public static void ResetToState( Crossfade cf, int state ) {
     cf.chan = 0;
 }
 
-public static bool UpdateState( int source, Crossfade cf, int state, int transition = 333,
+public static bool UpdateState( int source, Crossfade cf, int state, int transition = 266,
                                                                                 float speed = 1 ) {
     int [] c = {
         cf.chan & 1,
