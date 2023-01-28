@@ -6,6 +6,7 @@ public static class Animo {
 
 
 public class Source {
+    public int NumClips => stateName.Count;
     public List<string> stateName = new List<string>{ "None" };
     public List<int> state = new List<int>{ 0 };
     public List<ushort> duration = new List<ushort>{ 1 };
