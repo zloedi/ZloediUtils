@@ -69,8 +69,8 @@ public static void ResetToState( Crossfade cf, int state ) {
     cf.chan = 0;
 }
 
-public static bool UpdateState( int source, Crossfade cf, int state, bool clamp = false,
-                                                        int transition = 150, float speed = 1 ) {
+public static bool UpdateState( int source, Crossfade cf, int state, int transition = 333,
+                                                                                float speed = 1 ) {
     int [] c = {
         cf.chan & 1,
         ( cf.chan + 1 ) & 1,
@@ -86,12 +86,24 @@ public static bool UpdateState( int source, Crossfade cf, int state, bool clamp 
 
     int dt = ( int )( ( currentTimeMs - prevTimeMs ) * speed );
 
+    Source src = sourcesList[source];
+
+    // clamp the transition to half the clip duration of the shorter clip
+    for ( int i = 0; i < 2; i++ ) {
+        int chan = c[i];
+        int s = cf.state[chan];
+        transition = Mathf.Min( transition, src.duration[s] / 2 );
+    }
+
     // update crossfdade weights
-    cf.weight = Mathf.Min( 1, cf.weight + dt / ( float )transition );
+    if ( transition == 0 ) {
+        cf.weight = 1;
+    } else { 
+        cf.weight = Mathf.Min( 1, cf.weight + dt / ( float )transition );
+    }
 
     // advance timers
     bool result = false;
-    Source src = sourcesList[source];
     for ( int i = 0; i < 2; i++ ) {
         int chan = c[i];
         int s = cf.state[chan];
