@@ -437,6 +437,9 @@ public static void Init( int configVersion = -1 ) {
         fnameHistory = "qon_history.cfg";
         Log( "Run Standalone." );
     }
+
+    Qonsole.Log( $"Unity version: {Application.unityVersion}" );
+
     if ( QonInvertPlayY ) {
         Log( "Inverted Y in Play window." );
     } else {
@@ -887,8 +890,8 @@ public static float QonShowInEditor_kvar = 0;
 public static float QonAlpha_kvar = 0.65f;
 [Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
 public static bool QonInvertPlayY_kvar = false;
-public static bool QonInvertPlayY => QonInvertPlayY_kvar
-                    && UnityEngine.Rendering.GraphicsSettings.renderPipelineAsset == null;
+static bool _invertY = Application.unityVersion.Contains( "2020.3" );
+public static bool QonInvertPlayY => QonInvertPlayY_kvar || _invertY;
 
 static void Exit_kmd( string [] argv ) {
 #if UNITY_EDITOR
