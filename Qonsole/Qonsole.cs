@@ -192,8 +192,8 @@ static Action OverlayGetFade() {
     int timestamp = _totalTime;
     return () => {
         const float solidTime = 4.0f;
-        float t = _totalTime - timestamp;
-        float ts = 2f * ( solidTime - t / 1000f );
+        float t = ( _totalTime - timestamp ) / 1000f;
+        float ts = 2f * ( solidTime - t );
         _overlayAlpha = t < solidTime ? 1 : Mathf.Max( 0, 1 - ts * ts );
     };
 }
@@ -218,8 +218,8 @@ static void RenderGL( bool skip = false ) {
 
     if ( ! skip ) {
         int maxH = ( int )QGL.ScreenHeight();
-        int cW = ( int )( QGL.TextDx * QonScale );
-        int cH = ( int )( QGL.TextDy * QonScale );
+        int cW = ( int )( _textDx * QonScale );
+        int cH = ( int )( _textDy * QonScale );
         int conW = Screen.width / cW;
         int conH = maxH / cH;
 
@@ -247,8 +247,11 @@ static void RenderGL( bool skip = false ) {
 
 #endif
 
-static void RenderBegin( int deltaTime ) {
-    _totalTime += deltaTime;
+static void RenderBegin() {
+#if UNITY_STANDALONE
+    _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
+#else
+#endif
 }
 
 static void RenderEnd() {
@@ -990,8 +993,7 @@ public static void SDLDone() {
     OnApplicationQuit();
 }
 
-public static void SDLTick( IntPtr renderer, IntPtr window, int deltaTime,
-                                                                        bool skipRender = false ) {
+public static void SDLTick( IntPtr renderer, IntPtr window, bool skipRender = false ) {
     x_renderer = renderer;
     x_window = window;
 
@@ -1015,7 +1017,7 @@ public static void SDLTick( IntPtr renderer, IntPtr window, int deltaTime,
         }
     }
 
-    RenderBegin( deltaTime );
+    RenderBegin();
 
     SDL_GetWindowSize( x_window, out int screenW, out int screenH );
 
