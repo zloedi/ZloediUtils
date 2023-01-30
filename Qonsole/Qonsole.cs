@@ -3,14 +3,23 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 
-#if UNITY_EDITOR || UNITY_STANDALONE
+#if SDL || UNITY_EDITOR || UNITY_STANDALONE
 
 //#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
 //#define QONSOLE_BOOTSTRAP_EDITOR // if this is defined, the console will try to bootstrap itself in the editor
 //#define QONSOLE_QUI // if this is defined, QUI gets properly setup in the bootstrap pump
 //#define QONSOLE_KEYBINDS // if this is defined, use the KeyBinds inside the Qonsole loop
 
+#if UNITY_STANDALONE
 using UnityEngine;
+using QObject = UnityEngine.Object;
+#else
+using static AppleFont;
+using static SDL2.SDL;
+using static SDL2.SDL.SDL_BlendMode;
+using GalliumMath;
+using QObject = System.Object;
+#endif
 
 using static Qonche;
 
@@ -76,7 +85,7 @@ public class QonsoleBootstrap : MonoBehaviour {
 public static class Qonsole {
 
 
-#if QONSOLE_BOOTSTRAP
+#if UNITY_STANDALONE && QONSOLE_BOOTSTRAP
 [RuntimeInitializeOnLoadMethod]
 static void CreateBootstrapObject() {
     QonsoleBootstrap[] components = GameObject.FindObjectsOfType<QonsoleBootstrap>();
@@ -90,10 +99,15 @@ static void CreateBootstrapObject() {
 }
 #endif
 
-public static bool Active;
-public static bool Started;
+#if UNITY_STANDALONE
 // we hope it is the main thread?
 public static readonly int ThreadID = System.Threading.Thread.CurrentThread.ManagedThreadId;
+// the Unity editor (QGL) repaint callback
+public static Action<Camera> onEditorRepaint_f = c => {};
+#endif
+
+public static bool Active;
+public static bool Started;
 
 // stuff to be executed before the .cfg file is loaded
 public static Func<string> onPreLoadCfg_f = () => "echo executed before loading the cfg";
@@ -101,8 +115,6 @@ public static Func<string> onPreLoadCfg_f = () => "echo executed before loading 
 public static Func<string> onPostLoadCfg_f = () => "";
 // provide additional string to be appended to the .cfg file on flush/store
 public static Func<string> onStoreCfg_f;
-// the Unity editor (QGL) repaint callback
-public static Action<Camera> onEditorRepaint_f = c => {};
 // called inside the Update pump (optionally with QUI setup) if QONSOLE_BOOTSTRAP is defined
 public static Action tick_f = () => {};
 public static Action onStart_f = () => {};
@@ -110,7 +122,21 @@ public static Action onDone_f = () => {};
 // called inside OnGUI if QONSOLE_BOOTSTRAP is defined
 public static Action onGUI_f = () => {};
 
-static float _totalTime, _prevTime;
+#if UNITY_STANDALONE
+static bool _isEditor => Application.isEditor;
+static string _dataPath => Application.persistentDataPath;
+static float _textDx => QGL.TextDx;
+static float _textDy => QGL.TextDy;
+static int _cursorChar => QGL.GetCursorChar();
+#else
+static bool _isEditor = false;
+static string _dataPath = "./";
+static int _textDx = AppleFont.APPLEIIF_CW + 1;
+static int _textDy = AppleFont.APPLEIIF_CH + 3;
+static int _cursorChar => 127;
+#endif
+
+static int _totalTime;
 static string _historyPath;
 static string _configPath;
 static int _drawCharStartY;
@@ -156,34 +182,23 @@ static void DrawCharColorPop() {
 }
 
 static Vector2 QoncheToScreen( int x, int y ) {
-    float screenX = x * QGL.TextDx * QonScale;
-    float screenY = ( y - _drawCharStartY ) * QGL.TextDy * QonScale;
+    float screenX = x * _textDx * QonScale;
+    float screenY = ( y - _drawCharStartY ) * _textDy * QonScale;
     return new Vector2( screenX, screenY );
 }
 
 // FIXME: remove the allocations here
 static Action OverlayGetFade() {
-    float timestamp = _totalTime;
+    int timestamp = _totalTime;
     return () => {
         const float solidTime = 4.0f;
         float t = _totalTime - timestamp;
-        float ts = 2 * ( solidTime - t );
+        float ts = 2f * ( solidTime - t / 1000f );
         _overlayAlpha = t < solidTime ? 1 : Mathf.Max( 0, 1 - ts * ts );
     };
 }
 
-static void RenderBegin() {
-    float timeNow = Time.realtimeSinceStartup;
-    _totalTime += Mathf.Min( timeNow - _prevTime, 0.033f );
-    _prevTime = timeNow;
-}
-
-static void RenderEnd() {
-    _overlayAlpha = 1;
-    _drawCharStartY = 0;
-    _drawCharColorStack.Clear();
-    _drawCharColorStack.Add( Color.white );
-}
+#if UNITY_STANDALONE
 
 static void RenderGL( bool skip = false ) {
     void drawChar( int c, int x, int y, bool isCursor, object param ) { 
@@ -230,6 +245,19 @@ static void RenderGL( bool skip = false ) {
     RenderEnd();
 }
 
+#endif
+
+static void RenderBegin( int deltaTime ) {
+    _totalTime += deltaTime;
+}
+
+static void RenderEnd() {
+    _overlayAlpha = 1;
+    _drawCharStartY = 0;
+    _drawCharColorStack.Clear();
+    _drawCharColorStack.Add( Color.white );
+}
+
 static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color color,
                                                                         out Vector2 screenPos ) {
     color = Color.white;
@@ -244,7 +272,7 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     }
 
     if ( isCursor ) {
-        c = ( ( int )( Time.realtimeSinceStartup * 1000.0f ) & 256 ) != 0 ? c : QGL.GetCursorChar();
+        c = ( _totalTime & 256 ) != 0 ? c : _cursorChar;
     }
 
     if ( c == ' ' ) {
@@ -424,13 +452,13 @@ public static void Init( int configVersion = -1 ) {
         }
     }
     if ( string.IsNullOrEmpty( fnameCfg ) ) {
-        if ( Application.isEditor ) {
+        if ( _isEditor ) {
             fnameCfg = "qon_default_ed.cfg";
         } else {
             fnameCfg = "qon_default.cfg";
         }
     }
-    if ( Application.isEditor ) {
+    if ( _isEditor ) {
         fnameHistory = "qon_history_ed.cfg";
         Log( "Run in Unity Editor." );
     } else {
@@ -438,15 +466,17 @@ public static void Init( int configVersion = -1 ) {
         Log( "Run Standalone." );
     }
 
+#if UNITY_STANDALONE
     Qonsole.Log( $"Unity version: {Application.unityVersion}" );
+#endif
 
     if ( QonInvertPlayY ) {
         Log( "Inverted Y in Play window." );
     } else {
         Log( "Not Inverted Y in Play window." );
     }
-    _historyPath = Path.Combine( Application.persistentDataPath, fnameHistory );
-    _configPath = Path.Combine( Application.persistentDataPath, fnameCfg );
+    _historyPath = Path.Combine( _dataPath, fnameHistory );
+    _configPath = Path.Combine( _dataPath, fnameCfg );
     string history = string.Empty;
     string config = string.Empty;
     try {
@@ -486,6 +516,8 @@ public static void Init( int configVersion = -1 ) {
     //QUI.defaultFont = ...
 #endif
 }
+
+#if UNITY_STANDALONE
 
 public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPerPoint = 1,
                                                                 Action<Camera> onRepaint = null ) {
@@ -534,18 +566,6 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
     }
 }
 
-// == internal API ==
-
-public static void FlushConfig() {
-    File.WriteAllText( _historyPath, Cellophane.StoreHistory() );
-    File.WriteAllText( _configPath, Cellophane.StoreConfig() + onStoreCfg_f() );
-}
-
-public static void OnApplicationQuit() {
-    onDone_f();
-    FlushConfig();
-}
-
 public static void OnGUIInternal( bool skipRender = false ) {
     if ( ! Started ) {
         return;
@@ -586,7 +606,6 @@ public static void OnGUIInternal( bool skipRender = false ) {
                         } else if ( c == '\n' || c == '\r' ) {
                             string cmd = QON_GetCommand();
                             QON_EraseCommand();
-                            Action<string> a = _oneShotCmd_f;
                             _oneShotCmd_f( cmd );
                             _oneShotCmd_f = null;
                             Active = false;
@@ -663,24 +682,6 @@ public static void OnGUIInternal( bool skipRender = false ) {
     }
 }
 
-public static void Update() {
-#if QONSOLE_KEYBINDS
-    foreach ( var k in _holdKeys ) {
-        KeyBinds.TryExecuteBinds( keyHold: k );
-    }
-#endif
-
-#if QONSOLE_QUI
-    QUI.Begin( ( int )_mousePosition.x, ( int )_mousePosition.y );
-#endif
-    Cellophane.GetArgv( "qonsole_tick", out string[] argv );
-    Cellophane.TryExecute( argv, silent: true );
-    Qonsole.tick_f();
-#if QONSOLE_QUI
-    QUI.End();
-#endif
-}
-
 public static void OnGUI() {
 #if QONSOLE_QUI
     _mousePosition = Event.current.mousePosition;
@@ -711,20 +712,85 @@ public static void OnGUI() {
     }
 #endif
     onGUI_f();
-    OnGUIInternal( skipRender: Application.isEditor && QonShowInEditor_kvar == 2 );
+    OnGUIInternal( skipRender: _isEditor && QonShowInEditor_kvar == 2 );
+}
+
+static void PrintToSystemLog( string s, QObject o ) {
+    if ( ! QonPrintToUnityLog_kvar ) {
+        return;
+    }
+
+    // stack trace changes throw exception outside of the Main thread
+    if ( System.Threading.Thread.CurrentThread.ManagedThreadId != ThreadID ) {
+        Debug.Log( s, o );
+        return;
+    }
+
+    StackTraceLogType oldType = Application.GetStackTraceLogType( LogType.Log );
+    if ( _isEditor ) {
+        Application.SetStackTraceLogType( LogType.Log, StackTraceLogType.ScriptOnly );
+        Debug.Log( s, o );
+    } else {
+        Application.SetStackTraceLogType( LogType.Log, StackTraceLogType.None );
+        Debug.Log( s, o );
+    }
+    Application.SetStackTraceLogType( LogType.Log, oldType );
+}
+
+#else // UNITY_STANDALONE
+
+static void PrintToSystemLog( string s, QObject o ) {
+    if ( QonPrintToUnityLog_kvar ) {
+        System.Console.Write( Cellophane.ColorTagStripAll( s ) );
+    }
+}
+
+#endif // UNITY_STANDALONE
+
+public static void Update() {
+#if QONSOLE_KEYBINDS
+    foreach ( var k in _holdKeys ) {
+        KeyBinds.TryExecuteBinds( keyHold: k );
+    }
+#endif
+
+#if QONSOLE_QUI
+    QUI.Begin( ( int )_mousePosition.x, ( int )_mousePosition.y );
+#endif
+    Cellophane.GetArgv( "qonsole_tick", out string[] argv );
+    Cellophane.TryExecute( argv, silent: true );
+    Qonsole.tick_f();
+#if QONSOLE_QUI
+    QUI.End();
+#endif
+}
+
+public static void FlushConfig() {
+    File.WriteAllText( _historyPath, Cellophane.StoreHistory() );
+    File.WriteAllText( _configPath, Cellophane.StoreConfig() + onStoreCfg_f() );
+}
+
+public static void OnApplicationQuit() {
+    onDone_f();
+    FlushConfig();
 }
 
 // == public API ==
 
 public static void Start() {
+#if UNITY_STANDALONE
     if ( QGL.Start() ) {
         QGL.SetContext( null, invertedY: QonInvertPlayY );
         Started = true;
-        Log( "Qonsole Started." );
         onStart_f();
     } else {
         Started = false;
     }
+#else
+    Started = true;
+    onStart_f();
+#endif
+    Log( "Qonsole Started." );
 }
 
 public static void TryExecute( string cmdLine, object context = null ) {
@@ -747,29 +813,7 @@ public static void Error( object o ) {
     Error( o.ToString() );
 }
 
-static void PrintToUnityLog( string s, UnityEngine.Object o ) {
-    if ( ! QonPrintToUnityLog_kvar ) {
-        return;
-    }
-
-    // stack trace changes throw exception outside of the Main thread
-    if ( System.Threading.Thread.CurrentThread.ManagedThreadId != ThreadID ) {
-        Debug.Log( s, o );
-        return;
-    }
-
-    StackTraceLogType oldType = Application.GetStackTraceLogType( LogType.Log );
-    if ( Application.isEditor ) {
-        Application.SetStackTraceLogType( LogType.Log, StackTraceLogType.ScriptOnly );
-        Debug.Log( s, o );
-    } else {
-        Application.SetStackTraceLogType( LogType.Log, StackTraceLogType.None );
-        Debug.Log( s, o );
-    }
-    Application.SetStackTraceLogType( LogType.Log, oldType );
-}
-
-public static void Error( string s, UnityEngine.Object o = null ) {
+public static void Error( string s, QObject o = null ) {
     s = "ERROR: " + s;
     Action fade = OverlayGetFade();
 
@@ -780,7 +824,7 @@ public static void Error( string s, UnityEngine.Object o = null ) {
     } );
     QON_PrintAndAct( "\n", (x,y)=>DrawCharColorPop() );
 
-    PrintToUnityLog( s, o );
+    PrintToSystemLog( s, o );
 }
 
 // this will ignore color tags
@@ -789,11 +833,11 @@ public static void PrintRaw( string s ) {
     QON_PrintAndAct( s, (x,y)=>fade() );
 }
 
-public static void Log( string s, UnityEngine.Object o = null ) {
+public static void Log( string s, QObject o = null ) {
     Print( s + "\n", o );
 }
 
-public static void Log( object o, UnityEngine.Object unityObj = null ) {
+public static void Log( object o, QObject unityObj = null ) {
     Log( o == null ? "null" : o.ToString(), unityObj );
 }
 
@@ -802,11 +846,15 @@ public static void PrintAndAct( string s, Action<Vector2,float> a ) {
         QON_PrintAndAct( s, (x,y)=> {
             float alpha = Active ? 1 : _overlayAlpha;
             if ( alpha > 0 ) {
-                GL.End();
                 Vector2 screenPos = QoncheToScreen( x, y );
+#if UNITY_STANDALONE
+                GL.End();
                 a( screenPos, alpha );
                 QGL.SetFontTexture();
                 GL.Begin( GL.QUADS );
+#else
+                a( screenPos, alpha );
+#endif
             }
         } );
     } else {
@@ -815,8 +863,8 @@ public static void PrintAndAct( string s, Action<Vector2,float> a ) {
 }
 
 // print (colorized) text
-public static void Print( string s, UnityEngine.Object o = null ) {
-    string unityString = "";
+public static void Print( string s, QObject o = null ) {
+    string sysString = "";
     bool skipFade = false;
     for ( int i = 0; i < s.Length; i++ ) {
 
@@ -854,15 +902,17 @@ public static void Print( string s, UnityEngine.Object o = null ) {
             QON_Putc( s[i] );
         }
 
-        unityString += s[i];
+        sysString += s[i];
     }
 
-    PrintToUnityLog( unityString, o );
+    PrintToSystemLog( sysString, o );
 }
 
 public static void Break( string str ) {
     Log( str );
+#if UNITY_STANDALONE
     UnityEngine.Debug.Break();
+#endif
 }
 
 public static void OneShotCmd( string fillCommandLine, Action<string> a ) {
@@ -872,10 +922,16 @@ public static void OneShotCmd( string fillCommandLine, Action<string> a ) {
 }
 
 public static float LineHeight() {
-    return QGL.TextDy * QonScale;
+    return _textDy * QonScale;
 }
 
 // == Internal commands and vars ==
+
+#if UNITY_STANDALONE
+static bool _invertY = Application.unityVersion.Contains( "2020.3" );
+#else
+static bool _invertY = false;
+#endif
 
 [Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
 static int QonOverlayPercent_kvar = 0;
@@ -890,24 +946,106 @@ public static float QonShowInEditor_kvar = 0;
 public static float QonAlpha_kvar = 0.65f;
 [Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
 public static bool QonInvertPlayY_kvar = false;
-static bool _invertY = Application.unityVersion.Contains( "2020.3" );
 public static bool QonInvertPlayY => QonInvertPlayY_kvar || _invertY;
 
 static void Exit_kmd( string [] argv ) {
 #if UNITY_EDITOR
     UnityEditor.EditorApplication.isPlaying = false;
-#else
-    if ( Application.isEditor ) {
+#elif UNITY_STANDALONE
+    if ( _isEditor ) {
         Log( "Can't quit if not linked against Editor." );
     }
     Application.Quit();
+#else
+    Environment.Exit( 1 );
+    // ...
 #endif
 }
 
 static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
 
 
+#if SDL
+
+static IntPtr x_renderer;
+static IntPtr x_window;
+
+static void SDLDrawChar( int c, int x, int y, int w, int h, Color32 col ) {
+    int idx = c & ( APPLEIIF_ROWS * APPLEIIF_CLMS - 1 );
+    var tex = AppleFont.GetTexture( x_renderer );
+    SDL_SetTextureAlphaMod( tex, 0xff );
+    SDL_SetTextureBlendMode( tex, SDL_BLENDMODE_BLEND );
+    SDL_Rect src = new SDL_Rect {
+        x = idx % APPLEIIF_CLMS * APPLEIIF_CW,
+        y = idx / APPLEIIF_CLMS * APPLEIIF_CH,
+        w = APPLEIIF_CW,
+        h = APPLEIIF_CH,
+    };
+    SDL_SetTextureColorMod( tex, col.r, col.g, col.b );
+    SDL_Rect dst = new SDL_Rect { x = x, y = y, w = w, h = h };
+    SDL_RenderCopy( x_renderer, tex, ref src, ref dst );
 }
+
+public static void SDLDone() {
+    OnApplicationQuit();
+}
+
+public static void SDLTick( IntPtr renderer, IntPtr window, int deltaTime,
+                                                                        bool skipRender = false ) {
+    x_renderer = renderer;
+    x_window = window;
+
+    Update();
+
+    if ( ! Started ) {
+        return;
+    }
+
+    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
+        if ( DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
+            int cw = ( int )( APPLEIIF_CW * QonScale );
+            int ch = ( int )( APPLEIIF_CH * QonScale );
+            int cx = ( int )screenPos.x;
+            int cy = ( int )screenPos.y;
+
+            int off = ( int )QonScale;
+            SDLDrawChar( c, cx + off, cy + off, cw, ch, Color.black );
+            
+            SDLDrawChar( c, cx, cy, cw, ch, color );
+        }
+    }
+
+    RenderBegin( deltaTime );
+
+    SDL_GetWindowSize( x_window, out int screenW, out int screenH );
+
+    int cW = ( int )( _textDx * QonScale );
+    int cH = ( int )( _textDy * QonScale );
+    int conW = screenW / cW;
+    int conH = screenH / cH;
+
+    if ( Active ) {
+        SDL_SetRenderDrawBlendMode( x_renderer, SDL_BLENDMODE_BLEND );
+        SDL_SetRenderDrawColor( x_renderer, 0, 0, 0, ( byte )( QonAlpha_kvar * 255f ) );
+        SDL_Rect bgrRect = new SDL_Rect {
+            x = 0, y = 0, w = screenW, h = screenH
+        };
+        SDL_RenderFillRect( x_renderer, ref bgrRect );
+    } else {
+        int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
+        conH = conH * percent / 100;
+    }
+
+    QON_DrawChar = drawChar;
+    QON_DrawEx( conW, conH, ! Active, 0 );
+
+    RenderEnd();
+}
+
+#endif
+
+
+} // class Qonsole
 
 
 #else

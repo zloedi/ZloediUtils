@@ -5,6 +5,11 @@
 // apple II font
 #if UNITY_STANDALONE
 using UnityEngine;
+#elif SDL
+using System;
+using System.Runtime.InteropServices;
+using static SDL2.SDL;
+using static SDL2.SDL.SDL_TextureAccess;
 #endif
 
 public static class AppleFont {
@@ -89,6 +94,36 @@ public static Texture2D GetTexture() {
         }
     }
     _texture.Apply();
+    return _texture;
+}
+#elif SDL
+static IntPtr _texture;
+public static IntPtr GetTexture( IntPtr renderer ) {
+    if ( _texture != null && _texture != IntPtr.Zero ) {
+        return _texture;
+    }
+    SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "0" );
+    _texture = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_ABGR8888, 
+                    ( int )SDL_TEXTUREACCESS_STATIC, APPLEIIF_WIDTH, APPLEIIF_HEIGHT );
+    int pitch = APPLEIIF_WIDTH * 4;
+    int bw = APPLEIIF_WIDTH / 8;
+    byte [] bytes = new byte[pitch * APPLEIIF_HEIGHT];
+    for ( int y = 0, idx = 0; y < APPLEIIF_HEIGHT; y++ ) {
+        for ( int x = 0; x < bw; x++ ) {
+            int bt = bitmap[x + y * bw];
+            for ( int i = 0; i < 8; i++, idx += 4 ) {
+                int alpha = ( bt & ( 1 << i ) ) != 0 ? 0xff : 0;
+                bytes[idx + 0] = 0xff;
+                bytes[idx + 1] = 0xff;
+                bytes[idx + 2] = 0xff;
+                bytes[idx + 3] = ( byte )alpha;
+            }
+        }
+    }
+    IntPtr unmanagedPointer = Marshal.AllocHGlobal( bytes.Length );
+    Marshal.Copy( bytes, 0, unmanagedPointer, bytes.Length );
+    //SDL_Rect r = new SDL_Rect();
+    SDL_UpdateTexture( _texture, IntPtr.Zero, unmanagedPointer, pitch );
     return _texture;
 }
 #endif
