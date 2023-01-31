@@ -587,40 +587,42 @@ public static void OnGUIInternal( bool skipRender = false ) {
             // Also can't see a way to acquire a string better than OnGUI
             // As a bonus -- no dependency on the legacy Input system
             if ( Event.current.type == EventType.KeyDown ) {
-                if ( _oneShotCmd_f != null ) {
-                    if ( Event.current.keyCode == KeyCode.LeftArrow ) {
-                        QON_MoveLeft( 1 );
-                    } else if ( Event.current.keyCode == KeyCode.RightArrow ) {
-                        QON_MoveRight( 1 );
-                    } else if ( Event.current.keyCode == KeyCode.Home ) {
-                        QON_MoveLeft( 99999 );
-                    } else if ( Event.current.keyCode == KeyCode.End ) {
-                        QON_MoveRight( 99999 );
-                    } else if ( Event.current.keyCode == KeyCode.Delete ) {
-                        QON_Delete( 1 );
-                    } else if ( Event.current.keyCode == KeyCode.Backspace ) {
-                        QON_Backspace( 1 );
-                    } else if ( Event.current.keyCode == KeyCode.Escape ) {
-                        Log( "Canceled..." );
-                        QON_EraseCommand();
-                        Active = false;
-                        _oneShotCmd_f = null;
-                    } else {
-                        char c = Event.current.character;
-                        if ( c == '`' ) {
-                        } else if ( c == '\t' ) {
-                        } else if ( c == '\b' ) {
-                        } else if ( c == '\n' || c == '\r' ) {
-                            string cmd = QON_GetCommand();
-                            QON_EraseCommand();
-                            _oneShotCmd_f( cmd );
-                            _oneShotCmd_f = null;
-                            Active = false;
-                        } else {
-                            QON_InsertCommand( c.ToString() );
-                        }
-                    }
-                } else if ( Event.current.keyCode == KeyCode.BackQuote ) {
+                //if ( _oneShotCmd_f != null ) {
+                //    if ( Event.current.keyCode == KeyCode.LeftArrow ) {
+                //        QON_MoveLeft( 1 );
+                //    } else if ( Event.current.keyCode == KeyCode.RightArrow ) {
+                //        QON_MoveRight( 1 );
+                //    } else if ( Event.current.keyCode == KeyCode.Home ) {
+                //        QON_MoveLeft( 99999 );
+                //    } else if ( Event.current.keyCode == KeyCode.End ) {
+                //        QON_MoveRight( 99999 );
+                //    } else if ( Event.current.keyCode == KeyCode.Delete ) {
+                //        QON_Delete( 1 );
+                //    } else if ( Event.current.keyCode == KeyCode.Backspace ) {
+                //        QON_Backspace( 1 );
+                //    } else if ( Event.current.keyCode == KeyCode.Escape ) {
+                //        Log( "Canceled..." );
+                //        QON_EraseCommand();
+                //        Active = false;
+                //        _oneShotCmd_f = null;
+                //    } else {
+                //        char c = Event.current.character;
+                //        if ( c == '`' ) {
+                //        } else if ( c == '\t' ) {
+                //        } else if ( c == '\b' ) {
+                //        } else if ( c == '\n' || c == '\r' ) {
+                //            string cmd = QON_GetCommand();
+                //            QON_EraseCommand();
+                //            _oneShotCmd_f( cmd );
+                //            _oneShotCmd_f = null;
+                //            Active = false;
+                //        } else {
+                //            QON_InsertCommand( c.ToString() );
+                //        }
+                //    }
+                //} else 
+
+                if ( Event.current.keyCode == KeyCode.BackQuote ) {
                     Toggle();
                 } else if ( Event.current.keyCode == KeyCode.LeftArrow ) {
                     QON_MoveLeft( 1 );
@@ -668,14 +670,7 @@ public static void OnGUIInternal( bool skipRender = false ) {
                         QON_SetCommand( autocomplete );
                     } else if ( c == '\b' ) {
                     } else if ( c == '\n' || c == '\r' ) {
-                        _history = null;
-                        string cmdClean, cmdRaw;
-                        QON_GetCommandEx( out cmdClean, out cmdRaw );
-                        QON_EraseCommand();
-                        Log( cmdRaw );
-                        Cellophane.AddToHistory( cmdClean );
-                        TryExecute( cmdClean );
-                        FlushConfig();
+                        OnEnter();
                     } else {
                         _history = null;
                         QON_InsertCommand( c.ToString() );
@@ -745,6 +740,17 @@ static void PrintToSystemLog( string s, QObject o ) {
 }
 
 #else // UNITY_STANDALONE
+
+static void OnEnter() {
+    _history = null;
+    string cmdClean, cmdRaw;
+    QON_GetCommandEx( out cmdClean, out cmdRaw );
+    QON_EraseCommand();
+    Log( cmdRaw );
+    Cellophane.AddToHistory( cmdClean );
+    TryExecute( cmdClean );
+    FlushConfig();
+}
 
 static void PrintToSystemLog( string s, QObject o ) {
     if ( QonPrintToUnityLog_kvar ) {
@@ -1010,31 +1016,46 @@ public static bool SDLTick( IntPtr renderer, IntPtr window, bool skipRender = fa
                     Marshal.Copy( ( IntPtr )ev.text.text, b, 0, b.Length );
                 }
                 string txt = System.Text.Encoding.UTF8.GetString( b, 0, b.Length );
-                QON_InsertCommand( txt );
+                if ( txt.Length > 0 && txt[0] != '`' && txt[0] != '~' ) {
+                    QON_InsertCommand( txt );
+                }
                 break;
 
             case SDL_KEYDOWN:
                 switch ( code ) {
-                    //case SDLK_LEFT:      QON_MoveLeft( 1 );      break;
-                    //case SDLK_RIGHT:     QON_MoveRight( 1 );     break;
-                    //case SDLK_HOME:      QON_MoveLeft( 99999 );  break;
-                    //case SDLK_END:       QON_MoveRight( 99999 ); break;
-                    //case SDLK_DELETE:    QON_Delete( 1 );        break;
-                    //case SDLK_BACKSPACE: QON_Backspace( 1 );     break;
-                    //case SDLK_PAGEUP:    QON_PageUp();           break;
-                    //case SDLK_PAGEDOWN:  QON_PageDown();         break;
-                    //case SDLK_ESCAPE:    QON_EraseCommand();     break;
-                    case SDLK_RETURN: {
+                    case SDLK_LEFT:      QON_MoveLeft( 1 );      break;
+                    case SDLK_RIGHT:     QON_MoveRight( 1 );     break;
+                    case SDLK_HOME:      QON_MoveLeft( 99999 );  break;
+                    case SDLK_END:       QON_MoveRight( 99999 ); break;
+
+                    case SDLK_PAGEUP:    QON_PageUp();           break;
+                    case SDLK_PAGEDOWN:  QON_PageDown();         break;
+                    case SDLK_ESCAPE:    QON_EraseCommand();     break;
+                    case SDLK_BACKQUOTE: Toggle();               break;
+
+                    case SDLK_BACKSPACE: {
                         _history = null;
-                        string cmdClean, cmdRaw;
-                        QON_GetCommandEx( out cmdClean, out cmdRaw );
-                        QON_EraseCommand();
-                        Log( cmdRaw );
-                        Cellophane.AddToHistory( cmdClean );
-                        TryExecute( cmdClean );
-                        FlushConfig();
+                        QON_Backspace( 1 );
+                        break;
+                    }
+
+                    case SDLK_DELETE: {
+                        _history = null;
+                        QON_Delete( 1 );
+                        break;
+                    }
+
+                    case SDLK_TAB: {
+                        string autocomplete = Cellophane.Autocomplete( QON_GetCommand() );
+                        QON_SetCommand( autocomplete );
                     }
                     break;
+
+                    case SDLK_RETURN: {
+                        OnEnter();
+                    }
+                    break;
+
                     default: break;
                 }
                 break;

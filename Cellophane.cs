@@ -758,7 +758,7 @@ public static string StoreConfig() {
 
 public static void ReadHistory( string val ) {
     var vals = val.Split( new[]{'\n'}, StringSplitOptions.RemoveEmptyEntries ); 
-    _history = new List<string>(vals);
+    _history = new List<string>( vals );
 }
 
 public static string StoreHistory() {
