@@ -14,9 +14,12 @@ using System.IO;
 using UnityEngine;
 using QObject = UnityEngine.Object;
 #else
+using System.Runtime.InteropServices;
 using static AppleFont;
 using static SDL2.SDL;
 using static SDL2.SDL.SDL_BlendMode;
+using static SDL2.SDL.SDL_EventType;
+using static SDL2.SDL.SDL_Keycode;
 using GalliumMath;
 using QObject = System.Object;
 #endif
@@ -251,6 +254,7 @@ static void RenderBegin() {
 #if UNITY_STANDALONE
     _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
 #else
+    _totalTime = ( int )SDL_GetTicks();
 #endif
 }
 
@@ -993,15 +997,74 @@ public static void SDLDone() {
     OnApplicationQuit();
 }
 
-public static void SDLTick( IntPtr renderer, IntPtr window, bool skipRender = false ) {
+public static bool SDLTick( IntPtr renderer, IntPtr window, bool skipRender = false ) {
     x_renderer = renderer;
     x_window = window;
 
-    Update();
+    while ( SDL_PollEvent( out SDL_Event ev ) != 0 ) {
+        SDL_Keycode code = ev.key.keysym.sym;
+        switch( ev.type ) {
+            case SDL_TEXTINPUT:
+                byte [] b = new byte[SDL_TEXTINPUTEVENT_TEXT_SIZE];
+                unsafe {
+                    Marshal.Copy( ( IntPtr )ev.text.text, b, 0, b.Length );
+                }
+                string txt = System.Text.Encoding.UTF8.GetString( b, 0, b.Length );
+                QON_InsertCommand( txt );
+                break;
+
+            case SDL_KEYDOWN:
+                switch ( code ) {
+                    //case SDLK_LEFT:      QON_MoveLeft( 1 );      break;
+                    //case SDLK_RIGHT:     QON_MoveRight( 1 );     break;
+                    //case SDLK_HOME:      QON_MoveLeft( 99999 );  break;
+                    //case SDLK_END:       QON_MoveRight( 99999 ); break;
+                    //case SDLK_DELETE:    QON_Delete( 1 );        break;
+                    //case SDLK_BACKSPACE: QON_Backspace( 1 );     break;
+                    //case SDLK_PAGEUP:    QON_PageUp();           break;
+                    //case SDLK_PAGEDOWN:  QON_PageDown();         break;
+                    //case SDLK_ESCAPE:    QON_EraseCommand();     break;
+                    case SDLK_RETURN: {
+                        _history = null;
+                        string cmdClean, cmdRaw;
+                        QON_GetCommandEx( out cmdClean, out cmdRaw );
+                        QON_EraseCommand();
+                        Log( cmdRaw );
+                        Cellophane.AddToHistory( cmdClean );
+                        TryExecute( cmdClean );
+                        FlushConfig();
+                    }
+                    break;
+                    default: break;
+                }
+                break;
+
+			case SDL_MOUSEMOTION:
+				//x_mouseX = ev.motion.x;
+                //x_mouseY = ev.motion.y;
+				break;
+
+            case SDL_MOUSEBUTTONDOWN:
+                //ZH_UI_OnMouseButton( 1 );
+                break;
+
+            case SDL_MOUSEBUTTONUP:
+                //ZH_UI_OnMouseButton( 0 );
+                break;
+
+            case SDL_QUIT:
+                return false;
+
+            default:
+                break;
+        }
+    }
 
     if ( ! Started ) {
-        return;
+        return true;
     }
+
+    Update();
 
     void drawChar( int c, int x, int y, bool isCursor, object param ) { 
         if ( DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
@@ -1042,6 +1105,8 @@ public static void SDLTick( IntPtr renderer, IntPtr window, bool skipRender = fa
     QON_DrawEx( conW, conH, ! Active, 0 );
 
     RenderEnd();
+
+    return true;
 }
 
 #endif // SDL
