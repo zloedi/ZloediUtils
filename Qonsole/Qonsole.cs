@@ -1044,7 +1044,7 @@ public static void SDLTick( IntPtr renderer, IntPtr window, bool skipRender = fa
     RenderEnd();
 }
 
-#endif
+#endif // SDL
 
 
 } // class Qonsole
