@@ -741,6 +741,14 @@ static void PrintToSystemLog( string s, QObject o ) {
 
 #else // UNITY_STANDALONE
 
+static void PrintToSystemLog( string s, QObject o ) {
+    if ( QonPrintToUnityLog_kvar ) {
+        System.Console.Write( Cellophane.ColorTagStripAll( s ) );
+    }
+}
+
+#endif // UNITY_STANDALONE
+
 static void OnEnter() {
     _history = null;
     string cmdClean, cmdRaw;
@@ -751,14 +759,6 @@ static void OnEnter() {
     TryExecute( cmdClean );
     FlushConfig();
 }
-
-static void PrintToSystemLog( string s, QObject o ) {
-    if ( QonPrintToUnityLog_kvar ) {
-        System.Console.Write( Cellophane.ColorTagStripAll( s ) );
-    }
-}
-
-#endif // UNITY_STANDALONE
 
 public static void Update() {
 #if QONSOLE_KEYBINDS
