@@ -739,7 +739,7 @@ static void PrintToSystemLog( string s, QObject o ) {
     Application.SetStackTraceLogType( LogType.Log, oldType );
 }
 
-#else // UNITY_STANDALONE
+#else // if not UNITY_STANDALONE
 
 static void PrintToSystemLog( string s, QObject o ) {
     if ( QonPrintToUnityLog_kvar ) {
