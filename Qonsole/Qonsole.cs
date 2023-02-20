@@ -102,15 +102,27 @@ static void CreateBootstrapObject() {
 }
 #endif
 
-#if UNITY_STANDALONE
-// we hope it is the main thread?
-public static readonly int ThreadID = System.Threading.Thread.CurrentThread.ManagedThreadId;
-// the Unity editor (QGL) repaint callback
-public static Action<Camera> onEditorRepaint_f = c => {};
-#endif
-
 public static bool Active;
 public static bool Started;
+
+[Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
+static int QonOverlayPercent_kvar = 0;
+[Description( "Show the Qonsole output to the system (unity) log too." )]
+static bool QonPrintToSystemLog_kvar = true;
+[Description( "Console character size." )]
+static float QonScale_kvar = 1;
+static float QonScale => Mathf.Clamp( QonScale_kvar, 1, 100 );
+[Description( "Show the Qonsole in the editor: 0 -- no, 1 -- yes, 2 -- editor only." )]
+public static float QonShowInEditor_kvar = 0;
+[Description( "Alpha blend value of the Qonsole background." )]
+public static float QonAlpha_kvar = 0.65f;
+[Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
+public static bool QonInvertPlayY_kvar = false;
+#if QONSOLE_INVERTED_PLAY_Y
+public static bool QonInvertPlayY = true;
+#else
+public static bool QonInvertPlayY => QonInvertPlayY_kvar;
+#endif
 
 // stuff to be executed before the .cfg file is loaded
 public static Func<string> onPreLoadCfg_f = () => "echo executed before loading the cfg";
@@ -126,6 +138,10 @@ public static Action onDone_f = () => {};
 public static Action onGUI_f = () => {};
 
 #if UNITY_STANDALONE
+// we hope it is the main thread?
+public static readonly int ThreadID = System.Threading.Thread.CurrentThread.ManagedThreadId;
+// the Unity editor (QGL) repaint callback
+public static Action<Camera> onEditorRepaint_f = c => {};
 static bool _isEditor => Application.isEditor;
 static string _dataPath => Application.persistentDataPath;
 static float _textDx => QGL.TextDx;
@@ -152,6 +168,7 @@ static string [] _history;
 static int _historyItem;
 
 #if QONSOLE_QUI
+[Description( "Show the QUI rectangles" )]
 static bool DebugShowUIRects_kvar = false;
 static Vector2 _mousePosition;
 #endif
@@ -201,55 +218,6 @@ static Action OverlayGetFade() {
     };
 }
 
-#if UNITY_STANDALONE
-
-static void RenderGL( bool skip = false ) {
-    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
-        if ( DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
-            QGL.DrawScreenCharWithOutline( c, screenPos.x, screenPos.y, color, QonScale );
-        }
-    }
-
-    RenderBegin();
-
-    GL.PushMatrix();
-    GL.LoadPixelMatrix();
-
-    QGL.LateBlitFlush();
-    QGL.LatePrintFlush();
-    QGL.LateDrawLineFlush();
-
-    if ( ! skip ) {
-        int maxH = ( int )QGL.ScreenHeight();
-        int cW = ( int )( _textDx * QonScale );
-        int cH = ( int )( _textDy * QonScale );
-        int conW = Screen.width / cW;
-        int conH = maxH / cH;
-
-        if ( Active ) {
-            QGL.SetWhiteTexture();
-            GL.Begin( GL.QUADS );
-            GL.Color( new Color( 0, 0, 0, QonAlpha_kvar ) );
-            QGL.DrawSolidQuad( new Vector2( 0, 0 ), new Vector2( Screen.width, maxH ) );
-            GL.End();
-        } else {
-            int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
-            conH = conH * percent / 100;
-        }
-
-        QGL.SetFontTexture();
-        GL.Begin( GL.QUADS );
-        QON_DrawChar = drawChar;
-        QON_DrawEx( conW, conH, ! Active, 0 );
-        GL.End();
-    }
-
-    GL.PopMatrix();
-    RenderEnd();
-}
-
-#endif
-
 static void RenderBegin() {
 #if UNITY_STANDALONE
     _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
@@ -294,118 +262,10 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     return true;
 }
 
-#if false
-
-static Mesh urpMesh = new Mesh();
-static List<Vector3> urpVerts = new List<Vector3>();
-static List<Vector2> urpUV = new List<Vector2>();
-static List<Color> urpColors = new List<Color>();
-static List<int> urpTris = new List<int>();
-static int [] urpQuadBase = new int[6] { 0, 1, 2, 2, 3, 0 };
-static int [] urpQuad = new int[6];
-
-//static void RenderURPMesh( bool skip = false ) {
-//
-//    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
-//        if ( ! DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
-//            return;
-//        }
-//        int idx = c & ( CodePage437.FontSz * CodePage437.FontSz - 1 );
-//        float csz = ( float )CodePage437.CharSz;
-//        float n = csz / CodePage437.FontTexSide;
-//        Vector3 vertOff = new Vector3( screenPos.x, screenPos.y );
-//        Vector3 uvOff = new Vector3( idx % CodePage437.FontSz * n, idx / CodePage437.FontSz * n );
-//
-//        int numVerts = urpVerts.Count;
-//
-//        float charU = ( FontTexWidth / FontSz ) / ( float )FontTexWidth;
-//        float charV = ( FontTexHeight / FontSz ) / ( float )FontTexHeight;
-//        Vector3 [] charUVs = new Vector3[4] {
-//            new Vector3( 0, 0, 0 ),
-//            new Vector3( charU, 0, 0 ),
-//            new Vector3( charU, charV, 0 ),
-//            new Vector3( 0, charV, 0 ),
-//        };
-//
-//        urpUV.Add( CodePage437.charUVs[0] + uvOff );
-//        urpVerts.Add( CodePage437.CharVerts[0] * QonScale + vertOff );
-//        urpUV.Add( CodePage437.charUVs[1] + uvOff );
-//        urpVerts.Add( CodePage437.CharVerts[1] * QonScale + vertOff );
-//        urpUV.Add( CodePage437.charUVs[2] + uvOff );
-//        urpVerts.Add( CodePage437.CharVerts[2] * QonScale + vertOff );
-//        urpUV.Add( CodePage437.charUVs[3] + uvOff );
-//        urpVerts.Add( CodePage437.CharVerts[3] * QonScale + vertOff );
-//
-//        for ( int i = 0; i < 6; i++ ) {
-//            urpQuad[i] = urpQuadBase[i] + numVerts;
-//        }
-//
-//        urpTris.AddRange( urpQuad );
-//
-//        for ( int i = 0; i < 4; i++ ) {
-//            urpColors.Add( color );
-//        }
-//    }
-//
-//    RenderBegin();
-//
-//    if ( ! skip ) {
-//        int maxH = ( int )QGL.ScreenHeight();
-//        int cW = ( int )( QGL.TextDx * QonScale );
-//        int cH = ( int )( QGL.TextDy * QonScale );
-//        int conW = Screen.width / cW;
-//        int conH = maxH / cH;
-//
-//        if ( Active ) {
-//            // draw background
-//        } else {
-//            conH = conH * Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 ) / 100;
-//        }
-//
-//        QON_DrawChar = drawChar;
-//        QON_DrawEx( conW, conH, ! Active, 0 );
-//
-//        if ( urpVerts.Count > 0 ) {
-//            urpMesh.vertices = urpVerts.ToArray();
-//            urpMesh.triangles = urpTris.ToArray();
-//            urpMesh.colors = urpColors.ToArray();
-//            urpMesh.uv = urpUV.ToArray();
-//
-//            Vector2 [] outline = new Vector2 [] {
-//                new Vector3( QonScale, 0 ),
-//                new Vector3( 0, QonScale ),
-//                new Vector3( QonScale, QonScale ),
-//                new Vector3( -QonScale, QonScale ),
-//            };
-//
-//            QGL.SetMaterialColor( Color.black );
-//            QGL.SetFontTexture();
-//            for ( int i = 0; i < outline.Length; i++ ) {
-//                Graphics.DrawMeshNow( urpMesh, Camera.current.transform.position
-//                                        + Camera.current.transform.TransformVector( outline[i] ),
-//                                        Camera.current.transform.rotation );
-//                Graphics.DrawMeshNow( urpMesh, Camera.current.transform.position
-//                                        + Camera.current.transform.TransformVector( -outline[i] ),
-//                                        Camera.current.transform.rotation );
-//            }
-//
-//            QGL.SetMaterialColor( Color.white );
-//            QGL.SetFontTexture();
-//            Graphics.DrawMeshNow( urpMesh, Camera.current.transform.position,
-//                                                                Camera.current.transform.rotation );
-//
-//            urpVerts.Clear();
-//            urpUV.Clear();
-//            urpTris.Clear();
-//            urpColors.Clear();
-//
-//            urpMesh.Clear();
-//        }
-//    }
-//
-//    RenderEnd();
-//}
-#endif
+static void InternalCommand( string cmd ) {
+    Cellophane.GetArgv( cmd, out string[] argv );
+    Cellophane.TryExecute( argv, silent: true );
+}
 
 static void Clear_kmd( string [] argv ) {
     for ( int i = 0; i < 50; i++ ) {
@@ -440,6 +300,22 @@ static void Help_kmd( string [] argv ) {
     Cellophane.PrintInfo();
 }
 
+static void Exit_kmd( string [] argv ) {
+#if UNITY_EDITOR
+    UnityEditor.EditorApplication.isPlaying = false;
+#elif UNITY_STANDALONE
+    if ( _isEditor ) {
+        Log( "Can't quit if not linked against Editor." );
+    }
+    Application.Quit();
+#else
+    Environment.Exit( 1 );
+    // ...
+#endif
+}
+
+static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
+
 // some stuff need to be initialized before the Start() Unity callback
 public static void Init( int configVersion = -1 ) {
     string fnameCfg = null, fnameHistory;
@@ -448,8 +324,7 @@ public static void Init( int configVersion = -1 ) {
     bool customConfig = false;
     foreach ( var a in args ) {
         if ( a.StartsWith( "--cfg" ) ) {
-            string [] cfgArg = a.Split( new []{' ','='}, 
-                    StringSplitOptions.RemoveEmptyEntries ); 
+            string [] cfgArg = a.Split( new []{' ','='}, StringSplitOptions.RemoveEmptyEntries ); 
             if ( cfgArg.Length > 1 ) {
                 fnameCfg = cfgArg[1].Replace("\"", "");
                 Log( "Supplied cfg by command line: " + fnameCfg );
@@ -499,10 +374,12 @@ public static void Init( int configVersion = -1 ) {
     Cellophane.Log = (s) => { Log( s ); };
     Cellophane.Error = (s) => { Error( s ); };
     Cellophane.ScanVarsAndCommands();
+    InternalCommand( "qonsole_pre_config" );
     TryExecute( onPreLoadCfg_f() );
     Cellophane.ReadHistory( history );
     Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
     TryExecute( onPostLoadCfg_f() );
+    InternalCommand( "qonsole_post_config" );
     Help_kmd( null );
 
     if ( onStoreCfg_f == null ) {
@@ -713,12 +590,13 @@ public static void OnGUI() {
         }
     }
 #endif
+    InternalCommand( "qonsole_on_gui" );
     onGUI_f();
     OnGUIInternal( skipRender: _isEditor && QonShowInEditor_kvar == 2 );
 }
 
 static void PrintToSystemLog( string s, QObject o ) {
-    if ( ! QonPrintToUnityLog_kvar ) {
+    if ( ! QonPrintToSystemLog_kvar ) {
         return;
     }
 
@@ -739,10 +617,55 @@ static void PrintToSystemLog( string s, QObject o ) {
     Application.SetStackTraceLogType( LogType.Log, oldType );
 }
 
+static void RenderGL( bool skip = false ) {
+    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
+        if ( DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
+            QGL.DrawScreenCharWithOutline( c, screenPos.x, screenPos.y, color, QonScale );
+        }
+    }
+
+    RenderBegin();
+
+    GL.PushMatrix();
+    GL.LoadPixelMatrix();
+
+    QGL.LateBlitFlush();
+    QGL.LatePrintFlush();
+    QGL.LateDrawLineFlush();
+
+    if ( ! skip ) {
+        int maxH = ( int )QGL.ScreenHeight();
+        int cW = ( int )( _textDx * QonScale );
+        int cH = ( int )( _textDy * QonScale );
+        int conW = Screen.width / cW;
+        int conH = maxH / cH;
+
+        if ( Active ) {
+            QGL.SetWhiteTexture();
+            GL.Begin( GL.QUADS );
+            GL.Color( new Color( 0, 0, 0, QonAlpha_kvar ) );
+            QGL.DrawSolidQuad( new Vector2( 0, 0 ), new Vector2( Screen.width, maxH ) );
+            GL.End();
+        } else {
+            int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
+            conH = conH * percent / 100;
+        }
+
+        QGL.SetFontTexture();
+        GL.Begin( GL.QUADS );
+        QON_DrawChar = drawChar;
+        QON_DrawEx( conW, conH, ! Active, 0 );
+        GL.End();
+    }
+
+    GL.PopMatrix();
+    RenderEnd();
+}
+
 #else // if not UNITY_STANDALONE
 
 static void PrintToSystemLog( string s, QObject o ) {
-    if ( QonPrintToUnityLog_kvar ) {
+    if ( QonPrintToSystemLog_kvar ) {
         System.Console.Write( Cellophane.ColorTagStripAll( s ) );
     }
 }
@@ -770,8 +693,7 @@ public static void Update() {
 #if QONSOLE_QUI
     QUI.Begin( ( int )_mousePosition.x, ( int )_mousePosition.y );
 #endif
-    Cellophane.GetArgv( "qonsole_tick", out string[] argv );
-    Cellophane.TryExecute( argv, silent: true );
+    InternalCommand( "qonsole_tick" );
     Qonsole.tick_f();
 #if QONSOLE_QUI
     QUI.End();
@@ -784,6 +706,7 @@ public static void FlushConfig() {
 }
 
 public static void OnApplicationQuit() {
+    InternalCommand( "qonsole_done" );
     onDone_f();
     FlushConfig();
 }
@@ -795,6 +718,7 @@ public static void Start() {
     if ( QGL.Start() ) {
         QGL.SetContext( null, invertedY: QonInvertPlayY );
         Started = true;
+        InternalCommand( "qonsole_post_start" );
         onStart_f();
     } else {
         Started = false;
@@ -937,45 +861,6 @@ public static void OneShotCmd( string fillCommandLine, Action<string> a ) {
 public static float LineHeight() {
     return _textDy * QonScale;
 }
-
-// == Internal commands and vars ==
-
-#if UNITY_STANDALONE
-static bool _invertY = Application.unityVersion.Contains( "2020.3" );
-#else
-static bool _invertY = false;
-#endif
-
-[Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
-static int QonOverlayPercent_kvar = 0;
-[Description( "Show the Qonsole output to the unity log too." )]
-static bool QonPrintToUnityLog_kvar = true;
-[Description( "Console character size." )]
-static float QonScale_kvar = 1;
-static float QonScale => Mathf.Clamp( QonScale_kvar, 1, 100 );
-[Description( "Show the Qonsole in the editor: 0 -- no, 1 -- yes, 2 -- editor only." )]
-public static float QonShowInEditor_kvar = 0;
-[Description( "Alpha blend value of the Qonsole background." )]
-public static float QonAlpha_kvar = 0.65f;
-[Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
-public static bool QonInvertPlayY_kvar = false;
-public static bool QonInvertPlayY => QonInvertPlayY_kvar || _invertY;
-
-static void Exit_kmd( string [] argv ) {
-#if UNITY_EDITOR
-    UnityEditor.EditorApplication.isPlaying = false;
-#elif UNITY_STANDALONE
-    if ( _isEditor ) {
-        Log( "Can't quit if not linked against Editor." );
-    }
-    Application.Quit();
-#else
-    Environment.Exit( 1 );
-    // ...
-#endif
-}
-
-static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
 
 
 #if SDL
