@@ -25,6 +25,7 @@ public enum WidgetResult {
     Pressed,
     Active,
     Released,
+    Dropped,
     Count,
 }
 
@@ -53,7 +54,7 @@ public static float cursorY;
 static float _oldCursorX;
 static float _oldCursorY;
 
-static bool CursorInRect( float x, float y, float w, float h ) {
+public static bool CursorInRect( float x, float y, float w, float h ) {
     return cursorX >= x && cursorY >= y && cursorX < x + w && cursorY < y + h;
 }
 
@@ -193,6 +194,8 @@ public static WidgetResult ClickRect_wg( float x, float y, float w, float h, int
     if ( activeWidget == handle ) {
         if ( ( _mouseButton & MouseButtonState.Up ) != 0 && CursorInRect( x, y, w, h ) ) {
             res = WidgetResult.Released;
+        } else if ( ( _mouseButton & MouseButtonState.Up ) != 0 ) {
+            res = WidgetResult.Dropped;
         } else {
             res = WidgetResult.Active;
         }
