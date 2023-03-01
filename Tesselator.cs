@@ -1,3 +1,5 @@
+#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+
 using UnityEngine;
 using UnityEngine.Rendering;
 using System.Collections;
@@ -644,3 +646,5 @@ public static class Tesselator {
     //    go.transform.position = start;
     //}
 }
+
+#endif

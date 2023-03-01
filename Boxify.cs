@@ -1,3 +1,5 @@
+#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+
 using System.Collections.Generic;
 using System.Diagnostics;
 using System;
@@ -975,3 +977,5 @@ public static class Boxify
     }
 #endif
 }
+
+#endif

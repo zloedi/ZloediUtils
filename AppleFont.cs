@@ -2,8 +2,12 @@
 // This work is licensed under the terms of the MIT license.  
 // For a copy, see https://opensource.org/licenses/MIT.
 
+#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+#define HAS_UNITY
+#endif
+
 // apple II font
-#if UNITY_STANDALONE
+#if HAS_UNITY
 using UnityEngine;
 #elif SDL
 using System;
@@ -72,7 +76,7 @@ public static readonly byte [] bitmap = new byte[APPLEIIF_WIDTH * APPLEIIF_HEIGH
 0x71,0xc4,0x01,0x00,0x01,0x04,0x00,0x00,0x00,0x00,0x80,0x03,0x00,0x04,0x00,0x00,
 };
 
-#if UNITY_STANDALONE
+#if HAS_UNITY
 static Texture2D _texture;
 public static Texture2D GetTexture() {
     if ( _texture ) {

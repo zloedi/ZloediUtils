@@ -1,12 +1,17 @@
 // A library of routines to calculate and debug hex grids
 
+// define this to draw hex diagrams using QGL
 //#define HEXES_QONSOLE
+
+#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+#define HAS_UNITY
+#endif
 
 using System;
 using System.Globalization;
 using System.Collections.Generic;
 
-#if UNITY_STANDALONE
+#if HAS_UNITY
 using UnityEngine;
 #else
 using GalliumMath;
@@ -20,7 +25,7 @@ public const float SQRT_3 = 1.73205080757f;
 
 // we really hope this goes on the main thread
 static Hexes() {
-#if UNITY_STANDALONE
+#if HAS_UNITY
     CreateHexTexture();
 #endif
 }
@@ -102,7 +107,7 @@ public static Vector2Int EvenRToAxial( int col, int row ) {
 // == hexes visual stuff ==
 
 
-#if UNITY_STANDALONE
+#if HAS_UNITY
 
 public static int hexSpriteWidth;
 public static int hexSpriteHeight;
@@ -302,7 +307,7 @@ static void PrintHexes_kmd( string [] argv ) {
 
 #endif // HEXES_QONSOLE
 
-#endif // UNITY_STANDALONE
+#endif // HAS_UNITY
 
 
 }

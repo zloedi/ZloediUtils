@@ -3,14 +3,18 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 
-#if SDL || UNITY_EDITOR || UNITY_STANDALONE
+#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+#define HAS_UNITY
+#endif
+
+#if SDL || HAS_UNITY
 
 //#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
 //#define QONSOLE_BOOTSTRAP_EDITOR // if this is defined, the console will try to bootstrap itself in the editor
 //#define QONSOLE_QUI // if this is defined, QUI gets properly setup in the bootstrap pump
 //#define QONSOLE_KEYBINDS // if this is defined, use the KeyBinds inside the Qonsole loop
 
-#if UNITY_STANDALONE
+#if HAS_UNITY
 using UnityEngine;
 using QObject = UnityEngine.Object;
 #else
@@ -88,7 +92,7 @@ public class QonsoleBootstrap : MonoBehaviour {
 public static class Qonsole {
 
 
-#if UNITY_STANDALONE && QONSOLE_BOOTSTRAP
+#if HAS_UNITY && QONSOLE_BOOTSTRAP
 [RuntimeInitializeOnLoadMethod]
 static void CreateBootstrapObject() {
     QonsoleBootstrap[] components = GameObject.FindObjectsOfType<QonsoleBootstrap>();
@@ -137,7 +141,7 @@ public static Action onDone_f = () => {};
 // called inside OnGUI if QONSOLE_BOOTSTRAP is defined
 public static Action onGUI_f = () => {};
 
-#if UNITY_STANDALONE
+#if HAS_UNITY
 // we hope it is the main thread?
 public static readonly int ThreadID = System.Threading.Thread.CurrentThread.ManagedThreadId;
 // the Unity editor (QGL) repaint callback
@@ -219,7 +223,7 @@ static Action OverlayGetFade() {
 }
 
 static void RenderBegin() {
-#if UNITY_STANDALONE
+#if HAS_UNITY
     _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
 #else
     _totalTime = ( int )SDL_GetTicks();
@@ -303,7 +307,7 @@ static void Help_kmd( string [] argv ) {
 static void Exit_kmd( string [] argv ) {
 #if UNITY_EDITOR
     UnityEditor.EditorApplication.isPlaying = false;
-#elif UNITY_STANDALONE
+#elif HAS_UNITY
     if ( _isEditor ) {
         Log( "Can't quit if not linked against Editor." );
     }
@@ -348,7 +352,7 @@ public static void Init( int configVersion = -1 ) {
         Log( "Run Standalone." );
     }
 
-#if UNITY_STANDALONE
+#if HAS_UNITY
     Qonsole.Log( $"Unity version: {Application.unityVersion}" );
 #endif
 
@@ -401,7 +405,7 @@ public static void Init( int configVersion = -1 ) {
 #endif
 }
 
-#if UNITY_STANDALONE
+#if HAS_UNITY
 
 public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPerPoint = 1,
                                                                 Action<Camera> onRepaint = null ) {
@@ -662,7 +666,7 @@ static void RenderGL( bool skip = false ) {
     RenderEnd();
 }
 
-#else // if not UNITY_STANDALONE
+#else // if not HAS_UNITY
 
 static void PrintToSystemLog( string s, QObject o ) {
     if ( QonPrintToSystemLog_kvar ) {
@@ -670,7 +674,7 @@ static void PrintToSystemLog( string s, QObject o ) {
     }
 }
 
-#endif // UNITY_STANDALONE
+#endif // HAS_UNITY
 
 static void OnEnter() {
     _history = null;
@@ -714,7 +718,7 @@ public static void OnApplicationQuit() {
 // == public API ==
 
 public static void Start() {
-#if UNITY_STANDALONE
+#if HAS_UNITY
     if ( QGL.Start() ) {
         QGL.SetContext( null, invertedY: QonInvertPlayY );
         Started = true;
@@ -784,7 +788,7 @@ public static void PrintAndAct( string s, Action<Vector2,float> a ) {
             float alpha = Active ? 1 : _overlayAlpha;
             if ( alpha > 0 ) {
                 Vector2 screenPos = QoncheToScreen( x, y );
-#if UNITY_STANDALONE
+#if HAS_UNITY
                 GL.End();
                 a( screenPos, alpha );
                 QGL.SetFontTexture();
@@ -847,7 +851,7 @@ public static void Print( string s, QObject o = null ) {
 
 public static void Break( string str ) {
     Log( str );
-#if UNITY_STANDALONE
+#if HAS_UNITY
     UnityEngine.Debug.Break();
 #endif
 }

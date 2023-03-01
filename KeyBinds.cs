@@ -1,3 +1,5 @@
+#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -483,3 +485,5 @@ public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyU
 
 
 }
+
+#endif
