@@ -76,6 +76,26 @@ public static readonly byte [] bitmap = new byte[APPLEIIF_WIDTH * APPLEIIF_HEIGH
 0x71,0xc4,0x01,0x00,0x01,0x04,0x00,0x00,0x00,0x00,0x80,0x03,0x00,0x04,0x00,0x00,
 };
 
+
+public static void MeasureString( string s, out float w, out float h,
+                                            float scale = 1, float extraX = 0, float extraY = 0 ) { 
+    float cw = scale * ( APPLEIIF_CW + extraX );
+    float ch = scale * ( APPLEIIF_CH + extraY );
+
+    float x = 0, y = ch, max = 0;
+    foreach ( var c in s ) {
+        if ( c == '\n' ) {
+            x = 0;
+            y += ch;
+        } else {
+            x += cw;
+            max = Mathf.Max( max, x );
+        }
+    }
+    w = max;
+    h = y;
+}
+
 #if HAS_UNITY
 static Texture2D _texture;
 public static Texture2D GetTexture() {
@@ -83,8 +103,8 @@ public static Texture2D GetTexture() {
         return _texture;
     }
 
-    _texture = new  Texture2D(APPLEIIF_WIDTH, APPLEIIF_HEIGHT, textureFormat: TextureFormat.RGBA32, 
-                                                                    mipChain: false, linear: false); 
+    _texture = new Texture2D( APPLEIIF_WIDTH, APPLEIIF_HEIGHT, textureFormat: TextureFormat.RGBA32,
+                                                                mipChain: false, linear: false ); 
     _texture.filterMode = FilterMode.Point;
     int srcW = APPLEIIF_WIDTH / 8;
     for ( int y = 0; y < APPLEIIF_HEIGHT; y++ ) {
@@ -100,6 +120,57 @@ public static Texture2D GetTexture() {
     _texture.Apply();
     return _texture;
 }
+
+public static Texture2D CreateStringTexture( string s, int extraX = 0, int extraY = 0 ) {
+    MeasureString( s, out float w, out float h, extraX: extraX, extraY: extraY );
+    var tex = new Texture2D( ( int )( w + 0.5f ), ( int )( h + 0.5f ),
+                            textureFormat: TextureFormat.RGBA32, mipChain: false, linear: false ); 
+    tex.filterMode = FilterMode.Point;
+
+    for ( int y = 0; y < tex.height; y++ ) {
+        for ( int x = 0; x < tex.width; x++ ) {
+            tex.SetPixel( x, y, new Color32( 0, 0, 0, 0 ) );
+        }
+    }
+
+    int cx = 0;
+    int cy = 0;
+    int cw = APPLEIIF_CW + extraX;
+    int ch = APPLEIIF_CH + extraY;
+    foreach ( var c in s ) {
+
+        if ( c == '\n' ) {
+            cx = 0;
+            cy += ch;
+            continue;
+        }
+
+        int idx = c % ( APPLEIIF_CLMS * APPLEIIF_ROWS );
+
+        int minU = ( idx % APPLEIIF_CLMS ) * APPLEIIF_CW;
+        int minV = ( idx / APPLEIIF_CLMS ) * APPLEIIF_CH;
+
+        for ( int y = 0; y < APPLEIIF_CH; y++ ) {
+            for ( int x = 0; x < APPLEIIF_CW; x++ ) {
+                int dstX = cx + x;
+                int dstY = cy + y;
+                int u = minU + x;
+                int v = minV + y;
+
+                int b = bitmap[( u >> 3 ) + v * ( APPLEIIF_WIDTH >> 3 )];
+                b &= 1 << ( u & 7 );
+
+                Color32 color = new Color32( 0xff, 0xff, 0xff, ( byte )( b != 0 ? 0xff : 0 ) );
+                tex.SetPixel( dstX, tex.height - dstY - 1, color );
+            }
+        }
+
+        cx += cw;
+    }
+    tex.Apply();
+    return tex;
+}
+
 #elif SDL
 static IntPtr _texture;
 public static IntPtr GetTexture( IntPtr renderer ) {
