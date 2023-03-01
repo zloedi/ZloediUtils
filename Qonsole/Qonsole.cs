@@ -1,11 +1,11 @@
+#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+#define HAS_UNITY
+#endif
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-
-#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
-#define HAS_UNITY
-#endif
 
 #if SDL || HAS_UNITY
 
