@@ -245,16 +245,18 @@ public static void Scissor( float x, float y, float w, float h ) {
 
 #if QUI_USE_UNITY_UI
 
-struct TickItem {
+class TickItem {
 	public bool skipSort;
     public RectTransform rt;
     public Rect scissor;
+    public float garbageAge;
 };
 
-static Dictionary<int,RectTransform> _cache = new Dictionary<int,RectTransform>();
 static Dictionary<RectTransform,RectTransform[]> _refChildren =
                                                     new Dictionary<RectTransform,RectTransform[]>();
-static HashSet<RectTransform> _garbage = new HashSet<RectTransform>();
+static HashSet<TickItem> _garbage = new HashSet<TickItem>();
+static Dictionary<int,TickItem> _cache = new Dictionary<int,TickItem>();
+static List<TickItem> _dead = new List<TickItem>();
 static List<TickItem> _tickItems = new List<TickItem>();
 static TextGenerator _textGen = new TextGenerator();
 
@@ -376,9 +378,10 @@ static void TextureInternal( float x, float y, float w, float h, int handle, Tex
     }
 }
 
-public static void RegisterRT( RectTransform rt, float x = float.MaxValue, float y = float.MaxValue,
+static void RegisterItem( TickItem item, float x = float.MaxValue, float y = float.MaxValue,
 								float w = float.MaxValue, float h = float.MaxValue, int handle = 0,
 								bool isScissor = false, bool skipSort = false ) {
+    var rt = item.rt;
 	x = ( x != float.MaxValue ) ? x : rt.position.x;
 	y = ( y != float.MaxValue ) ? y : Screen.height - rt.position.y;
 	w = ( w != float.MaxValue ) ? w : rt.rect.width;
@@ -394,27 +397,16 @@ public static void RegisterRT( RectTransform rt, float x = float.MaxValue, float
         Rect cvs = canvas.GetComponent<RectTransform>().rect;
         scissor = new Rect( x + cvs.x, -y - cvs.y - h, w, h );
     }
-    _tickItems.Add( new TickItem {
-		skipSort = skipSort,
-        rt = rt,
-        scissor = scissor,
-    } );
-}
-
-static void RegisterGraphicCommon( Graphic graphic, float x, float y, float w, float h, int handle,
-                                                                    Color? color = null,
-                                                                    bool isScissor = false ) {
-    Color c = color == null ? Color.white : color.Value;
-    if ( graphic.color != c ) {
-        graphic.color = c;
-    }
-    RegisterRT( graphic.rectTransform, x, y, w, h, handle, isScissor );
+    item.scissor = scissor;
+    item.skipSort = skipSort;
+    item.rt = rt;
+    _tickItems.Add( item );
 }
 
 static T RegisterGraphic<T>( float x, float y, float w, float h, int handle, Color? color = null,
                             Action<T> onCreate = null, bool isScissor = false ) where T : Graphic {
-    RectTransform rt;
-    if ( ! _cache.TryGetValue( handle, out rt ) || ! rt ) {
+    TickItem item;
+    if ( ! _cache.TryGetValue( handle, out item ) || item == null || ! item.rt ) {
         GameObject go = new GameObject();
         go.transform.parent = canvas.transform;
         go.name = typeof( T ).Name + "_" + handle.ToString( "X4" );
@@ -424,19 +416,26 @@ static T RegisterGraphic<T>( float x, float y, float w, float h, int handle, Col
         }
         comp.rectTransform.pivot = new Vector3( 0, 1 );
         comp.raycastTarget = false;
-        rt = _cache[handle] = comp.rectTransform;
+        item = _cache[handle] = new TickItem {
+            rt = comp.rectTransform,
+        };
         Log( "Created a graphic " + comp );
     }
-    Graphic graphic = rt.GetComponent<Graphic>();
-    RegisterGraphicCommon( graphic, x, y, w, h, handle, color, isScissor );
+    Graphic graphic = item.rt.GetComponent<Graphic>();
+    Color c = color == null ? Color.white : color.Value;
+    if ( graphic.color != c ) {
+        graphic.color = c;
+    }
+    RegisterItem( item, x, y, w, h, handle, isScissor );
     return ( T )graphic;
 }
 
 static RectTransform RegisterPrefab( float x, float y, float w, float h, int handle,
                                                 GameObject prefab = null, bool isScissor = false ) {
-    RectTransform rt;
-    if ( ! _cache.TryGetValue( handle, out rt ) || ! rt ) {
+    TickItem item;
+    if ( ! _cache.TryGetValue( handle, out item ) || item == null ) {
         string name = "Prefab_" + handle.ToString( "X4" );
+        RectTransform rt;
         if ( prefab ) {
             GameObject go = GameObject.Instantiate( prefab );
 			go.name = name;
@@ -464,11 +463,13 @@ static RectTransform RegisterPrefab( float x, float y, float w, float h, int han
             rt = go.GetComponent<RectTransform>();
             Log( "Creating new object. rt: " + rt );
         }
-        _cache[handle] = rt;
+        item = _cache[handle] = new TickItem {
+            rt = rt,
+        };
     }
-    RegisterRT( rt, x, y, w, h, handle, isScissor: isScissor,
-														skipSort: rt.parent != canvas.transform );
-    return rt;
+    RegisterItem( item, x, y, w, h, handle, isScissor: isScissor,
+                                                    skipSort: item.rt.parent != canvas.transform );
+    return item.rt;
 }
 
 // == public Unity UI API ==
@@ -482,9 +483,8 @@ public static void BeginUnityUI() {
         defaultFont = Resources.GetBuiltinResource<Font>( "Arial.ttf" );
     }
     // the items from the previous tick are potentially garbage
-    _garbage.Clear();
     foreach ( var i in _tickItems ) {
-        _garbage.Add( i.rt );
+        _garbage.Add( i );
     }
     _tickItems.Clear();
 }
@@ -507,18 +507,29 @@ public static void EndUnityUI() {
     scissor.height += 20;
 
     foreach ( var i in _tickItems ) {
-        _garbage.Remove( i.rt );
+        _garbage.Remove( i );
     }
 
+    _dead.Clear();
+
     foreach ( var g in _garbage ) {
-        if ( g ) {
-            g.gameObject.SetActive( false );
-            //RectTransform [] children;
-            //if ( _refChildren.TryGetValue( g, out children ) ) {
-            //}
-            //// deactivating seems enough
-            ////GameObject.Destroy( g.gameObject );
+        g.garbageAge += Time.deltaTime;
+
+        if ( ! g.rt ) {
+            _dead.Add( g );
+            continue;
         }
+
+        if ( g.garbageAge > 5f ) {
+            GameObject.Destroy( g.rt.gameObject );
+            _dead.Add( g );
+        } else {
+            g.rt.gameObject.SetActive( false );
+        }
+    }
+
+    foreach ( var d in _dead ) {
+        _garbage.Remove( d );
     }
 
     for ( int i = 0; i < _tickItems.Count; i++ ) {
