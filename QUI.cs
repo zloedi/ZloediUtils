@@ -323,28 +323,45 @@ static UnityEngine.UI.Text TextInternal( string content, float x, float y, float
     return txt;
 }
 
-static void SpriteInternal( float x, float y, float w, float h, int handle, Texture2D tex = null,
-                                                                            Color? color = null,
-                                                                            bool scissor = false, 
-                                                                            Vector4? border = null,
-                                                                            float ppuMultiplier = 0,
-                                                            Image.Type type = Image.Type.Simple ) {
-    void initImage( Image i ) {
-        i.maskable = false;
-    }
-    Image img = RegisterGraphic<Image>( x, y, w, h, handle, color, initImage, scissor );
-    if ( ! img.sprite || img.sprite.texture != tex ) {
-        UnityEngine.Object.Destroy( img.sprite );
-        img.sprite = UnityEngine.Sprite.Create( tex, new Rect( 0.0f, 0.0f, tex.width, tex.height ),
-                                                Vector2.zero, 100f, 0, SpriteMeshType.FullRect,
-                                                border != null ? border.Value : Vector4.zero );
-    }
+static void InitImageGrapic( Image img ) {
+    img.maskable = false;
+}
+
+static void ImageGraphicCommon( Image img, float ppuMultiplier, Image.Type type ) {
     if ( img.type != type ) {
         img.type = type;
     } 
     if ( img.pixelsPerUnitMultiplier != ppuMultiplier ) {
         img.pixelsPerUnitMultiplier = ppuMultiplier;
     }
+}
+
+static void SpriteInternal( float x, float y, float w, float h, int handle, Texture2D tex = null,
+                                                            Color? color = null,
+                                                            bool scissor = false, 
+                                                            Vector4? border = null,
+                                                            float ppuMultiplier = 0,
+                                                            Image.Type type = Image.Type.Simple ) {
+    Image img = RegisterGraphic<Image>( x, y, w, h, handle, color, InitImageGrapic, scissor );
+    if ( ! img.sprite || img.sprite.texture != tex ) {
+        UnityEngine.Object.Destroy( img.sprite );
+        img.sprite = UnityEngine.Sprite.Create( tex, new Rect( 0.0f, 0.0f, tex.width, tex.height ),
+                                                Vector2.zero, 100f, 0, SpriteMeshType.FullRect,
+                                                border != null ? border.Value : Vector4.zero );
+    }
+    ImageGraphicCommon( img, ppuMultiplier, type );
+}
+
+static void SpriteInternal( float x, float y, float w, float h, int handle, Sprite sprite,
+                                                                            Color? color = null,
+                                                                            bool scissor = false, 
+                                                                            float ppuMultiplier = 0,
+                                                            Image.Type type = Image.Type.Simple ) {
+    Image img = RegisterGraphic<Image>( x, y, w, h, handle, color, InitImageGrapic, scissor );
+    if ( ! img.sprite || img.sprite != sprite ) {
+        img.sprite = sprite;
+    }
+    ImageGraphicCommon( img, ppuMultiplier, type );
 }
 
 static void TextureInternal( float x, float y, float w, float h, int handle, Texture2D tex = null,
@@ -461,6 +478,9 @@ public static Font defaultFont;
 public static Texture2D whiteTexture;
 
 public static void BeginUnityUI() {
+    if ( ! defaultFont ) {
+        defaultFont = Resources.GetBuiltinResource<Font>( "Arial.ttf" );
+    }
     // the items from the previous tick are potentially garbage
     _garbage.Clear();
     foreach ( var i in _tickItems ) {
@@ -532,7 +552,7 @@ public static void DisableScissor( int handle = 0, [CallerLineNumber] int lineNu
     RegisterPrefab( 0, 0, Screen.width, Screen.height, handle, isScissor: true );
 }
 
-public static void Sprite( float x, float y, float w, float h, Texture2D tex = null,
+public static void SpriteTex( float x, float y, float w, float h, Texture2D tex = null,
                                                         Color? color = null,
                                                         bool scissor = false,
                                                         Vector4? border = null,
@@ -543,6 +563,18 @@ public static void Sprite( float x, float y, float w, float h, Texture2D tex = n
                                                         [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
     SpriteInternal( x, y, w, h, handle, tex, color, scissor, border, ppuMultiplier, type );
+}
+
+public static void Sprite( float x, float y, float w, float h, Sprite sprite,
+                                                        Color? color = null,
+                                                        bool scissor = false,
+                                                        float ppuMultiplier = 1,
+                                                        Image.Type type = Image.Type.Simple,
+                                                        int handle = 0, 
+                                                        [CallerLineNumber] int lineNumber = 0,
+                                                        [CallerMemberName] string caller = null ) {
+    handle = NextHashWg( HashWg( lineNumber, caller ), handle );
+    SpriteInternal( x, y, w, h, handle, sprite, color, scissor, ppuMultiplier, type );
 }
 
 public static void Texture( float x, float y, float w, float h, Texture2D tex = null,
