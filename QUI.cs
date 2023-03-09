@@ -476,7 +476,6 @@ static RectTransform RegisterPrefab( float x, float y, float w, float h, int han
 
 public static Canvas canvas;
 public static Font defaultFont;
-public static Texture2D whiteTexture;
 
 public static void BeginUnityUI() {
     if ( ! defaultFont ) {
