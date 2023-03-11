@@ -31,7 +31,7 @@ public struct WrapBox {
         return id == int.MaxValue ? this.id : 31 * this.id + id;
     }
 
-    public WrapBox( float x, float y, float w, float h, int id ) {
+    public WrapBox( float x, float y, float w, float h, int id = 0 ) {
         this.x = Mathf.Round( x );
         this.y = Mathf.Round( y );
         this.w = Mathf.Round( w );
