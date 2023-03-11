@@ -403,10 +403,13 @@ static void RegisterItem( TickItem item, float x = float.MaxValue, float y = flo
     _tickItems.Add( item );
 }
 
+static bool TryGetItemFromCache( int handle, out TickItem item ) {
+    return _cache.TryGetValue( handle, out item ) && item != null && item.rt != null;
+}
+
 static T RegisterGraphic<T>( float x, float y, float w, float h, int handle, Color? color = null,
                             Action<T> onCreate = null, bool isScissor = false ) where T : Graphic {
-    TickItem item;
-    if ( ! _cache.TryGetValue( handle, out item ) || item == null || ! item.rt ) {
+    if ( ! TryGetItemFromCache( handle, out TickItem item ) ) {
         GameObject go = new GameObject();
         go.transform.parent = canvas.transform;
         go.name = typeof( T ).Name + "_" + handle.ToString( "X4" );
@@ -432,8 +435,7 @@ static T RegisterGraphic<T>( float x, float y, float w, float h, int handle, Col
 
 static RectTransform RegisterPrefab( float x, float y, float w, float h, int handle,
                                                 GameObject prefab = null, bool isScissor = false ) {
-    TickItem item;
-    if ( ! _cache.TryGetValue( handle, out item ) || item == null ) {
+    if ( ! TryGetItemFromCache( handle, out TickItem item ) ) {
         string name = "Prefab_" + handle.ToString( "X4" );
         RectTransform rt;
         if ( prefab ) {
