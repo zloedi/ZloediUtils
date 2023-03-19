@@ -39,7 +39,7 @@ public static Action<float,float,float,float> DrawLineRect = (x,y,w,h)=>{};
 public static Action<string> Log = (s) => {};
 public static Action<string> Error = (s) => {};
 
-public static bool showRects;
+public static bool DebugShowRects_cvar;
 
 static List<UIRect> _rects = new List<UIRect>();
 static MouseButtonState _mouseButton;
@@ -106,7 +106,7 @@ public static void End( bool skipUnityUI = false ) {
         }
     }
 
-    if ( showRects ) {
+    if ( DebugShowRects_cvar ) {
         foreach ( var r in _rects ) {
             if ( r.w > 0 && r.h > 0 ) {
                 DrawLineRect( r.x, r.y, r.w, r.h );
@@ -259,6 +259,9 @@ static Dictionary<int,TickItem> _cache = new Dictionary<int,TickItem>();
 static List<TickItem> _dead = new List<TickItem>();
 static List<TickItem> _tickItems = new List<TickItem>();
 static TextGenerator _textGen = new TextGenerator();
+
+// 1 -- show creation, 2 -- show destruction, 3 -- show all
+public static int DebugLogGraphicLife_cvar;
 
 public static RectTransform [] RegisterChildren( RectTransform rt, string [] refChildren ) {
     RectTransform [] result;
@@ -422,7 +425,10 @@ static T RegisterGraphic<T>( float x, float y, float w, float h, int handle, Col
         item = _cache[handle] = new TickItem {
             rt = comp.rectTransform,
         };
-        Log( "Created a graphic " + comp );
+
+        if ( DebugLogGraphicLife_cvar == 1 || DebugLogGraphicLife_cvar == 3 ) {
+            Log( $"Created a graphic {comp}" );
+        }
     }
     Graphic graphic = item.rt.GetComponent<Graphic>();
     Color c = color == null ? Color.white : color.Value;
@@ -514,6 +520,7 @@ public static void EndUnityUI() {
     _dead.Clear();
 
     foreach ( var g in _garbage ) {
+
         g.garbageAge += Time.deltaTime;
 
         if ( ! g.rt ) {
@@ -522,9 +529,17 @@ public static void EndUnityUI() {
         }
 
         if ( g.garbageAge > 5f ) {
+            if ( DebugLogGraphicLife_cvar == 2 || DebugLogGraphicLife_cvar == 3 ) {
+                string comp = g.rt.GetComponent<Graphic>()?.ToString();
+                if ( comp == null ) {
+                    comp = g.rt.ToString();
+                }
+                Log( $"Destroyed '{comp}', num visible: {_tickItems.Count}" );
+            }
             GameObject.Destroy( g.rt.gameObject );
             _dead.Add( g );
         } else {
+            // hide the item
             g.rt.gameObject.SetActive( false );
         }
     }
@@ -534,11 +549,21 @@ public static void EndUnityUI() {
     }
 
     for ( int i = 0; i < _tickItems.Count; i++ ) {
-        RectTransform rt = _tickItems[i].rt;
+        var ti = _tickItems[i];
+        RectTransform rt = ti.rt;
+
+        // make sure we are active
         rt.gameObject.SetActive( true );
+
+        // reset the wait-for-death timer each tick we are apparent
+        ti.garbageAge = -i * 0.1f;
+
+        // sort by order of calling
 		if ( ! _tickItems[i].skipSort ) {
 			rt.SetSiblingIndex( i );
 		}
+
+        // handle scissors
         IClippable c = rt.GetComponent<Graphic>() as IClippable;
         if ( c != null ) {
             c.Cull( scissor, true);

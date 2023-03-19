@@ -172,8 +172,6 @@ static string [] _history;
 static int _historyItem;
 
 #if QONSOLE_QUI
-[Description( "Show the QUI rectangles" )]
-static bool DebugShowUIRects_kvar = false;
 static Vector2 _mousePosition;
 #endif
 
@@ -398,7 +396,6 @@ public static void Init( int configVersion = -1 ) {
     QUI.DrawLineRect = (x,y,w,h) => QGL.LateDrawLineRect(x,y,w,h,color:Color.magenta);
     QUI.Log = s => Qonsole.Log( s );
     QUI.Error = s => Qonsole.Error( s );
-    QUI.showRects = DebugShowUIRects_kvar;
     //QUI.canvas = ...
     //QUI.whiteTexture = ...
     //QUI.defaultFont = ...
