@@ -57,13 +57,13 @@ public static void PrintStates( int source ) {
     Log( str );
 }
 
-public static void ResetToState( Crossfade cf, int state ) {
+public static void ResetToState( Crossfade cf, int state, int offset = 0 ) {
     cf.state[0] = state;
-    cf.time[0] = 0;
+    cf.time[0] = offset;
     cf.weight[0] = 1;
 
     cf.state[1] = state;
-    cf.time[1] = 0;
+    cf.time[1] = offset;
     cf.weight[1] = 0;
 
     cf.chan = 0;
