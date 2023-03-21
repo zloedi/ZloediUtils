@@ -377,10 +377,10 @@ public static void Init( int configVersion = -1 ) {
     Cellophane.Error = (s) => { Error( s ); };
     Cellophane.ScanVarsAndCommands();
     InternalCommand( "qonsole_pre_config" );
-    TryExecute( onPreLoadCfg_f() );
+    TryExecuteLegacy( onPreLoadCfg_f() );
     Cellophane.ReadHistory( history );
     Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
-    TryExecute( onPostLoadCfg_f() );
+    TryExecuteLegacy( onPostLoadCfg_f() );
     InternalCommand( "qonsole_post_config" );
     Help_kmd( null );
 
@@ -731,7 +731,27 @@ public static void Start() {
     Log( "Qonsole Started." );
 }
 
-public static void TryExecute( string cmdLine, object context = null ) {
+// tries to handle properly ';' inside tags and quotes
+public static void TryExecute( string cmdLine, object context = null, bool keepJsonTags = false ) {
+    if ( Cellophane.GetArgv( cmdLine, out string [] argv, keepJsonTags: keepJsonTags ) ) {
+        List<string> tokens = new List<string>();
+        for ( int i = 0; i < argv.Length; i++ ) {
+            if ( argv[i] == ";" ) {
+                if ( tokens.Count > 0 ) {
+                    Cellophane.TryExecute( tokens.ToArray(), context );
+                    tokens.Clear();
+                }
+            } else {
+                tokens.Add( argv[i] );
+            }
+        }
+        Cellophane.TryExecute( tokens.ToArray(), context );
+    }
+}
+
+// FIXME: remove someday
+// FIXME: spltting is broken, see SplitCommands
+public static void TryExecuteLegacy( string cmdLine, object context = null ) {
     string [] cmds;
     if ( Cellophane.SplitCommands( cmdLine, out cmds ) ) {
         string [] argv;

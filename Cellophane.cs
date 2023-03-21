@@ -630,6 +630,8 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
 
 // doesn't care about <json></json> pairs, just splits along ';'
 // if a ';' ends up inside a json string, it will mess up the commands
+// FIXME: breaks the quoted strings too
+// FIXME: maybe good for the game config, but not much else
 public static bool SplitCommands( string str, out string [] cmds ) {
     cmds = str.Split( new []{';'}, StringSplitOptions.RemoveEmptyEntries ); 
     return cmds.Length > 0;
