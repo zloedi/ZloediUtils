@@ -477,6 +477,15 @@ public static bool UseColor = false;
 public static Action<string> Log = (s) => {};
 public static Action<string> Error = (s) => {};
 
+public static bool TryFindCommand( string str, out Action<string[],object> action ) {
+    if ( TryFindCommand( str, out Command c ) ) {
+        action = c.ActionArgv;
+        return true;
+    }
+    action = null;
+    return false;
+}
+
 public static string Autocomplete( string input ) {
     if ( _allNames.Length < 2 ) {
         return input;

@@ -167,6 +167,10 @@ static int _drawCharStartY;
 static float _overlayAlpha = 1;
 // the colorization stack for nested tags
 static List<Color> _drawCharColorStack = new List<Color>(){ Color.white };
+// the internal commands have a different path of execution
+// to avoid recursion of Cellophane.TryExecute
+static Dictionary<string,Action<string[],object>> _internalCommands =
+                                                new Dictionary<string,Action<string[],object>>();
 static Action<string> _oneShotCmd_f;
 static string [] _history;
 static int _historyItem;
@@ -265,8 +269,13 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
 }
 
 static void InternalCommand( string cmd ) {
-    Cellophane.GetArgv( cmd, out string[] argv );
-    Cellophane.TryExecute( argv, silent: true );
+    Action<string[],object> action;
+    if ( ! _internalCommands.TryGetValue( cmd, out action ) ) {
+        if ( ! Cellophane.TryFindCommand( cmd, out action ) ) {
+            return;
+        }
+    }
+    action( null, null );
 }
 
 static void Clear_kmd( string [] argv ) {
