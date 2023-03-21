@@ -369,18 +369,6 @@ static void SpriteInternal( float x, float y, float w, float h, int handle, Spri
     ImageGraphicCommon( img, ppuMultiplier, type );
 }
 
-static void TextureInternal( float x, float y, float w, float h, int handle, Texture2D tex = null,
-                                                                            Color? color = null,
-                                                                            bool scissor = false ) {
-    void initImage( RawImage i ) {
-        i.maskable = false;
-    }
-    RawImage img = RegisterGraphic<RawImage>( x, y, w, h, handle, color, initImage, scissor );
-    if ( img.texture != tex ) {
-        img.texture = tex;
-    }
-}
-
 static void RegisterItem( TickItem item, float x = float.MaxValue, float y = float.MaxValue,
 								float w = float.MaxValue, float h = float.MaxValue, int handle = 0,
 								bool isScissor = false, bool skipSort = false ) {
@@ -614,13 +602,25 @@ public static void Sprite( float x, float y, float w, float h, Sprite sprite,
     SpriteInternal( x, y, w, h, handle, sprite, color, scissor, ppuMultiplier, type );
 }
 
+public static void Texture_wg( float x, float y, float w, float h, int handle, Texture2D tex = null,
+                                                                            Color? color = null,
+                                                                            bool scissor = false ) {
+    void initImage( RawImage i ) {
+        i.maskable = false;
+    }
+    RawImage img = RegisterGraphic<RawImage>( x, y, w, h, handle, color, initImage, scissor );
+    if ( img.texture != tex ) {
+        img.texture = tex;
+    }
+}
+
 public static void Texture( float x, float y, float w, float h, Texture2D tex = null,
                                                         Color? color = null, bool scissor = false,
                                                         int handle = 0, 
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
-    TextureInternal( x, y, w, h, handle, tex, color, scissor );
+    Texture_wg( x, y, w, h, handle, tex, color, scissor );
 }
 
 public static RectTransform [] PrefabWH( float x, float y, float w, float h, 
@@ -685,6 +685,15 @@ public static void MeasuredText( string content, float x, float y, float w, floa
     measureH = _textGen.GetPreferredHeight( content, tgs );
     // QUI End() will activate it, keep it invisible for now, so string can be measured and drawn separately
     txt.gameObject.SetActive( false );
+}
+
+public static void Text_wg( string content, float x, float y, float w, float h,
+                                            Font font = null, int fontSize = 20, 
+                                            TextAnchor align = TextAnchor.UpperLeft,
+                                            VerticalWrapMode overflow = VerticalWrapMode.Overflow,
+                                            Color? color = null,
+                                            int handle = 0 ) {
+    TextInternal( content, x, y, w, h, handle, font, fontSize, align, overflow, color );
 }
 
 public static void Text( string content, float x, float y, float w, float h,
