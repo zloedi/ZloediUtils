@@ -82,6 +82,15 @@ public struct WrapBox {
         return new WrapBox( inX, inY, inW, inH, GetId( id ) );
     }
 
+    public WrapBox CenterRight( float inW, float inH, float x = 0, float y = 0,
+                                                                        int id = int.MaxValue ) {
+        inW = Scale( inW );
+        inH = Scale( inH );
+        float inX = this.x + this.w - inW - Scale( x );
+        float inY = this.y + ( this.h - inH ) * 0.5f + Scale( y );
+        return new WrapBox( inX, inY, inW, inH, GetId( id ) );
+    }
+
     public WrapBox BottomLeft( float inW, float inH, float x = 0, float y = 0,
                                                                         int id = int.MaxValue ) {
         inW *= canvasScale;
