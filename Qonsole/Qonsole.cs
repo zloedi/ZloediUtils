@@ -636,8 +636,7 @@ static void RenderGL( bool skip = false ) {
 
     RenderBegin();
 
-    GL.PushMatrix();
-    GL.LoadPixelMatrix();
+    QGL.Begin();
 
     QGL.LateBlitFlush();
     QGL.LatePrintFlush();
@@ -668,7 +667,8 @@ static void RenderGL( bool skip = false ) {
         GL.End();
     }
 
-    GL.PopMatrix();
+    QGL.End( skipLateFlush: true );
+
     RenderEnd();
 }
 
@@ -725,8 +725,7 @@ public static void OnApplicationQuit() {
 
 public static void Start() {
 #if HAS_UNITY
-    if ( QGL.Start() ) {
-        QGL.SetContext( null, invertedY: QonInvertPlayY );
+    if ( QGL.Start( invertedY: QonInvertPlayY ) ) {
         Started = true;
         InternalCommand( "qonsole_post_start" );
         onStart_f();

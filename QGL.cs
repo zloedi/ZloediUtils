@@ -141,11 +141,12 @@ public static float ScreenHeight() {
     return Screen.height;
 }
 
-public static bool Start() {
+public static bool Start( bool invertedY = false ) {
     Shader shader = Shader.Find( "GLSprites" );
     if ( shader ) {
         _material = new Material( shader );
         _material.hideFlags = HideFlags.HideAndDontSave;
+        SetContext( null, invertedY: invertedY );
         return true;
     }
     Debug.LogError( "Can't find GL shader" );
@@ -497,6 +498,24 @@ public static void SetContext( Camera camera, float pixelsPerPoint = 1, bool inv
     _camera = camera;
     _invertedY = invertedY;
     QGL.pixelsPerPoint = pixelsPerPoint;
+}
+
+public static void Begin() {
+    GL.PushMatrix();
+    GL.LoadPixelMatrix();
+}
+
+public static void End( bool skipLateFlush = false ) {
+    if ( ! skipLateFlush ) {
+        if ( _material ) {
+            LateBlitFlush();
+            LatePrintFlush();
+            LateDrawLineFlush();
+        } else {
+            Debug.LogError( "Can't find GL material. Should call QGL.Start()" );
+        }
+    }
+    GL.PopMatrix();
 }
 
 
