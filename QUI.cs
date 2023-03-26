@@ -577,6 +577,16 @@ public static void DisableScissor( int handle = 0, [CallerLineNumber] int lineNu
     RegisterPrefab( 0, 0, Screen.width, Screen.height, handle, isScissor: true );
 }
 
+public static void SpriteTex_wg( float x, float y, float w, float h, int handle,
+                                                        Texture2D tex = null,
+                                                        Color? color = null,
+                                                        bool scissor = false,
+                                                        Vector4? border = null,
+                                                        float ppuMultiplier = 1,
+                                                        Image.Type type = Image.Type.Simple ) {
+    SpriteInternal( x, y, w, h, handle, tex, color, scissor, border, ppuMultiplier, type );
+}
+
 public static void SpriteTex( float x, float y, float w, float h, Texture2D tex = null,
                                                         Color? color = null,
                                                         bool scissor = false,
@@ -588,6 +598,14 @@ public static void SpriteTex( float x, float y, float w, float h, Texture2D tex 
                                                         [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
     SpriteInternal( x, y, w, h, handle, tex, color, scissor, border, ppuMultiplier, type );
+}
+
+public static void Sprite_wg( float x, float y, float w, float h, Sprite sprite, int handle,
+                                                        Color? color = null,
+                                                        bool scissor = false,
+                                                        float ppuMultiplier = 1,
+                                                        Image.Type type = Image.Type.Simple ) {
+    SpriteInternal( x, y, w, h, handle, sprite, color, scissor, ppuMultiplier, type );
 }
 
 public static void Sprite( float x, float y, float w, float h, Sprite sprite,
