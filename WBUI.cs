@@ -5,7 +5,8 @@ using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UI;
 
-// Combines WrapBox and QUI into an Immediate mode UI library on top of Unity UI
+// Combines WrapBox and QUI into an Immediate mode UI library on top of Unity UI.
+// It handles layout/anchoring and scaling using WrapBoxes.
 
 public static class WBUI {
 
