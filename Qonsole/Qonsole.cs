@@ -69,7 +69,7 @@ public class QonsoleBootstrap : MonoBehaviour {
         KeyBinds.Error = s => Qonsole.Error( s );
     }
 
-    void Start() {
+    void Awake() {
         TrySetupQonsole();
     }
 
@@ -360,14 +360,11 @@ public static void Init( int configVersion = -1 ) {
     }
 
 #if HAS_UNITY
-    Qonsole.Log( $"Unity version: {Application.unityVersion}" );
+    Log( $"Unity version: {Application.unityVersion}" );
 #endif
 
-    if ( QonInvertPlayY ) {
-        Log( "Inverted Y in Play window." );
-    } else {
-        Log( "Not Inverted Y in Play window." );
-    }
+    Log( "Inverted Y in Play window: " + QonInvertPlayY );
+
     _historyPath = Path.Combine( _dataPath, fnameHistory );
     _configPath = Path.Combine( _dataPath, fnameCfg );
     string history = string.Empty;
