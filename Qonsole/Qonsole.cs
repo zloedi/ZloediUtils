@@ -532,8 +532,8 @@ public static void OnGUIInternal( bool skipRender = false ) {
                         QON_SetCommand( _history[0] );
                         _history = null;
                     } else {
-                        // cancel something else?
-                        QON_Backspace( 999999 );
+                        // just erase the prompt if no history
+                        QON_EraseCommand();
                     }
                 } else if ( Event.current.keyCode == KeyCode.DownArrow
                             || Event.current.keyCode == KeyCode.UpArrow ) {
