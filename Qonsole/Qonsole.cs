@@ -533,6 +533,7 @@ public static void OnGUIInternal( bool skipRender = false ) {
                         _history = null;
                     } else {
                         // cancel something else?
+                        QON_Backspace( 999999 );
                     }
                 } else if ( Event.current.keyCode == KeyCode.DownArrow
                             || Event.current.keyCode == KeyCode.UpArrow ) {

@@ -697,9 +697,7 @@ public static string [] GetHistory( string currentCmd ) {
     if ( currentCmd.Length > 0 ) {
         foreach ( var s in _history ) {
             if ( s.Contains( currentCmd ) ) {
-                if ( ! res.Contains( s ) ) {
-                    res.Add( s );
-                }
+                res.Add( s );
             }
         }
     } else {
