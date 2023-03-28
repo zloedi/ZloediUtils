@@ -44,9 +44,6 @@ static List<LateText> _texts = new List<LateText>();
 static List<LateImage> _images = new List<LateImage>();
 static List<LateLine> _lines = new List<LateLine>();
 
-static QGL() {
-}
-
 static void BlitSlow( Texture2D texture, Vector2 srcPos, Vector2 srcSize, Vector3 dstPos,
                                 Vector3 dstSize, Color? color = null, Material material = null) { 
     Color col = color == null ? Color.white : color.Value;
@@ -171,7 +168,7 @@ public static void DrawTextWithOutline( string s, float x, float y, Color color,
     for ( int i = 0, j = 0; i < s.Length; i++ ) {
         if ( s[i] == '\n' ) {
             j = 0;
-            y += TextDy;
+            y += TextDy * scale;
         } else {
             DrawScreenCharWithOutline( s[i], x + j * TextDx * scale, y, color, scale );
             j++;
@@ -346,6 +343,26 @@ public static void LatePrint( string str, float x, float y, Color? color = null,
     } );
 }
 
+public static void LatePrint_tl( object o, Vector2 xy, Color? color = null, float scale = 1 ) {
+    LatePrint_tl( o.ToString(), xy.x, xy.y, color, scale );
+}
+
+public static void LatePrint_tl( object o, float x, float y, Color? color = null, float scale = 1 ) {
+    LatePrint_tl( o.ToString(), x, y, color, scale );
+}
+
+public static void LatePrint_tl( string str, float x, float y, Color? color = null, float scale = 1 ) {
+    Vector2 sz = MeasureString( str, scale );
+    _texts.Add( new LateText {
+        context = _context,
+        x = ( int )x,
+        y = ( int )y,
+        scale = scale,
+        str = str,
+        color = color == null ? Color.green : color.Value,
+    } );
+}
+
 public static void LatePrintFlush() {
     SetFontTexture();
     GL.Begin( GL.QUADS );
@@ -366,6 +383,10 @@ public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, f
     Vector2 pt = WorldToScreenPos( worldPos );
     LateBlit( tex, pt.x, pt.y, w, h );
     return pt;
+}
+
+public static void LateBlit( Vector2 xy, Vector2 sz, Color? color = null ) {
+    LateBlit( null, xy, sz.x, sz.y, color );
 }
 
 public static void LateBlit( Texture2D tex, Vector2 xy, float w, float h, Color? color = null ) {

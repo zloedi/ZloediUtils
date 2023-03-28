@@ -18,6 +18,10 @@ public struct WrapBox {
         return f * canvasScale;
     }
 
+    public static float Unscale( float f ) {
+        return f / canvasScale;
+    }
+
     public float x, y, w, h;
     public float W => w / canvasScale;
     public float H => h / canvasScale;

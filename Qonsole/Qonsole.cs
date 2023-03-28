@@ -2,6 +2,24 @@
 #define HAS_UNITY
 #endif
 
+// persistent history, browse previously issued commands (in previous app runs) using up/down arrows
+// persistent cvars stored in config file in the app config directory
+// versioned config files -- changing the config version resets all vars to defaults
+// works in the editor window too, if the game is paused or not ran, setup vars before running the game
+// no dependencies in the code that uses it, no need of attributes, code using it compiles without qonsole
+// can modify cvars from inside code and still be persistent
+// doesn't need any Unity assets; drawn using GL calls and font bytes are part of the source code
+// supports custom config files by command line param: "--cfg=zloedi.cfg"; custom config files don't get erased/reset on config version change (the defaults do)
+// separate configs ingame and inside Unity editor: qon_default.cfg vs qon_default_ed.cfg
+// autocompletes partial commands, not only start-of-command
+// can do multiple commands one after the other example:
+//           open_all_doors ; kill_all_enemies ; spawn_monster living Ally 9 12 ; spawn_monster cityguard 8 10 ; teleport bru
+// can repeat commands by prepending a number i.e. "3clear"
+// colorized output
+// config file supports arbitrary commands
+// var descriptions stored as comments in the config file
+// and more...
+
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
