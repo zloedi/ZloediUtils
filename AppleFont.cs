@@ -2,7 +2,7 @@
 // This work is licensed under the terms of the MIT license.  
 // For a copy, see https://opensource.org/licenses/MIT.
 
-#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+#if UNITY_STANDALONE || UNITY_2021_1_OR_NEWER
 #define HAS_UNITY
 #endif
 
@@ -89,7 +89,7 @@ public static void MeasureString( string s, out float w, out float h,
             y += ch;
         } else {
             x += cw;
-            max = Mathf.Max( max, x );
+            max = Math.Max( max, x );
         }
     }
     w = max;

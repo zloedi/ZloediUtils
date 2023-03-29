@@ -1,4 +1,4 @@
-#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+#if UNITY_2021_0_OR_NEWER
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
