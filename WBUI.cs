@@ -1,4 +1,4 @@
-#if UNITY_2021_0_OR_NEWER
+#if UNITY_2021_1_OR_NEWER
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -22,6 +22,17 @@ public static int Hash( WrapBox wbox, int handle, int lineNumber, string caller 
     return handle;
 }
 
+public static void Text_wg( string content, WrapBox wbox,
+                                            Font font = null, float fontSize = 20, 
+                                            TextAnchor align = TextAnchor.UpperLeft,
+                                            VerticalWrapMode overflow = VerticalWrapMode.Overflow,
+                                            Color? color = null,
+                                            int handle = 0 ) {
+    fontSize = WrapBox.ScaleRound( fontSize );
+    QUI.Text_wg( content, wbox.x, wbox.y, wbox.w, wbox.h, font, ( int )fontSize, align, overflow,
+                                                                                    color, handle );
+}
+
 public static void Text( string content, WrapBox wbox,
                                             Font font = null, float fontSize = 20, 
                                             TextAnchor align = TextAnchor.UpperLeft,
@@ -31,9 +42,7 @@ public static void Text( string content, WrapBox wbox,
                                             [CallerLineNumber] int lineNumber = 0,
                                             [CallerMemberName] string caller = null ) {
     handle = Hash( wbox, handle, lineNumber, caller );
-    fontSize = WrapBox.ScaleRound( fontSize );
-    QUI.Text_wg( content, wbox.x, wbox.y, wbox.w, wbox.h, font, ( int )fontSize, align, overflow,
-                                                                                    color, handle );
+    Text_wg( content, wbox, font, fontSize, align, overflow, color, handle );
 }
 
 public static void FillRect( WrapBox wbox, Color? color = null, int handle = 0,
