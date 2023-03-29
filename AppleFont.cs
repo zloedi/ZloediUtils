@@ -10,11 +10,11 @@
 #if HAS_UNITY
 using UnityEngine;
 #elif SDL
-using System;
 using System.Runtime.InteropServices;
 using static SDL2.SDL;
 using static SDL2.SDL.SDL_TextureAccess;
 #endif
+using System;
 
 public static class AppleFont {
 
