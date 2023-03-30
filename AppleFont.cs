@@ -2,7 +2,7 @@
 // This work is licensed under the terms of the MIT license.  
 // For a copy, see https://opensource.org/licenses/MIT.
 
-#if UNITY_STANDALONE || UNITY_2021_1_OR_NEWER
+#if UNITY_2021_1_OR_NEWER
 #define HAS_UNITY
 #endif
 

@@ -1,4 +1,4 @@
-#if UNITY_EDITOR || UNITY_STANDALONE
+#if UNITY_2021_1_OR_NEWER
 
 using UnityEngine;
 
