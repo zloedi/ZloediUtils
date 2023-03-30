@@ -590,10 +590,12 @@ public static void OnGUIInternal( bool skipRender = false ) {
 public static void OnGUI() {
 #if QONSOLE_QUI
     _mousePosition = Event.current.mousePosition;
-    if ( Event.current.type == EventType.MouseDown ) {
-        QUI.OnMouseButton( true );
-    } else if ( Event.current.type == EventType.MouseUp ) {
-        QUI.OnMouseButton( false );
+    if ( Event.current.button == 0 ) {
+        if ( Event.current.type == EventType.MouseDown ) {
+            QUI.OnMouseButton( true );
+        } else if ( Event.current.type == EventType.MouseUp ) {
+            QUI.OnMouseButton( false );
+        }
     }
 #endif
 #if QONSOLE_KEYBINDS
