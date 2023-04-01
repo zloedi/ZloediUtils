@@ -686,9 +686,22 @@ public static RectTransform [] Prefab( float posX = float.MaxValue, float posY =
     return RegisterChildren( rt, refChildren );
 }
 
+public static void MeasuredText_wg( string content, float x, float y, float w, float h, int handle,
+                                            out float measureW, out float measureH,
+                                            Font font = null, int fontSize = 20, 
+                                            TextAnchor align = TextAnchor.UpperLeft,
+                                            VerticalWrapMode overflow = VerticalWrapMode.Overflow,
+                                            Color? color = null ) {
+    var txt = TextInternal( content, x, y, w, h, handle, font, fontSize, align, overflow, color );
+    TextGenerationSettings tgs = txt.GetGenerationSettings( txt.rectTransform.rect.size ); 
+    measureW = Mathf.Min( w, _textGen.GetPreferredWidth( content, tgs ) );
+    measureH = _textGen.GetPreferredHeight( content, tgs );
+    // QUI End() will activate it, keep it invisible for now, so string can be measured and drawn separately
+    txt.gameObject.SetActive( false );
+}
+
 public static void MeasuredText( string content, float x, float y, float w, float h,
                                             out float measureW, out float measureH,
-                                            bool visible = true,
                                             Font font = null, int fontSize = 20, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
@@ -697,12 +710,8 @@ public static void MeasuredText( string content, float x, float y, float w, floa
                                             [CallerLineNumber] int lineNumber = 0,
                                             [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
-    var txt = TextInternal( content, x, y, w, h, handle, font, fontSize, align, overflow, color );
-    TextGenerationSettings tgs = txt.GetGenerationSettings( txt.rectTransform.rect.size ); 
-    measureW = Mathf.Min( w, _textGen.GetPreferredWidth( content, tgs ) );
-    measureH = _textGen.GetPreferredHeight( content, tgs );
-    // QUI End() will activate it, keep it invisible for now, so string can be measured and drawn separately
-    txt.gameObject.SetActive( false );
+    MeasuredText_wg( content, x, y, w, h, handle, out measureW, out measureH, font,
+                                                                fontSize, align, overflow, color );
 }
 
 public static void Text_wg( string content, float x, float y, float w, float h,

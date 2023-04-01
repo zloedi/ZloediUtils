@@ -22,6 +22,33 @@ public static int Hash( WrapBox wbox, int handle, int lineNumber, string caller 
     return handle;
 }
 
+public static void MeasuredText_wg( string content, WrapBox wbox, int handle,
+                                            out float measureW, out float measureH,
+                                            Font font = null, int fontSize = 20, 
+                                            TextAnchor align = TextAnchor.UpperLeft,
+                                            VerticalWrapMode overflow = VerticalWrapMode.Overflow,
+                                            Color? color = null ) {
+    QUI.MeasuredText_wg( content, wbox.x, wbox.y, wbox.w, wbox.h, handle, out measureW, out measureH,
+                                                font, fontSize, align, overflow, color );
+    measureW /= WrapBox.canvasScale;
+    measureH /= WrapBox.canvasScale;
+}
+
+public static int MeasuredText( string content, WrapBox wbox,
+                                            out float measureW, out float measureH,
+                                            Font font = null, int fontSize = 20, 
+                                            TextAnchor align = TextAnchor.UpperLeft,
+                                            VerticalWrapMode overflow = VerticalWrapMode.Overflow,
+                                            Color? color = null,
+                                            int handle = 0,
+                                            [CallerLineNumber] int lineNumber = 0,
+                                            [CallerMemberName] string caller = null ) {
+    handle = Hash( wbox, handle, lineNumber, caller );
+    MeasuredText_wg( content, wbox, handle, out measureW, out measureH, font, fontSize,
+                                                                        align, overflow, color );
+    return handle;
+}
+
 public static void Text_wg( string content, WrapBox wbox,
                                             Font font = null, float fontSize = 20, 
                                             TextAnchor align = TextAnchor.UpperLeft,
