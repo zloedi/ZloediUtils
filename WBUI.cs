@@ -1,4 +1,4 @@
-#if UNITY_2021_0_OR_NEWER
+#if UNITY_2021_1_OR_NEWER
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -20,6 +20,44 @@ public static int Hash( WrapBox wbox, int handle, int lineNumber, string caller 
     handle = Hash( handle, lineNumber, caller );
     handle = QUI.NextHashWg( wbox.id, handle );
     return handle;
+}
+
+public static void MeasuredText_wg( string content, WrapBox wbox, int handle,
+                                            out float measureW, out float measureH,
+                                            Font font = null, int fontSize = 20, 
+                                            TextAnchor align = TextAnchor.UpperLeft,
+                                            VerticalWrapMode overflow = VerticalWrapMode.Overflow,
+                                            Color? color = null ) {
+    QUI.MeasuredText_wg( content, wbox.x, wbox.y, wbox.w, wbox.h, handle, out measureW, out measureH,
+                                                font, fontSize, align, overflow, color );
+    measureW /= WrapBox.canvasScale;
+    measureH /= WrapBox.canvasScale;
+}
+
+public static int MeasuredText( string content, WrapBox wbox,
+                                            out float measureW, out float measureH,
+                                            Font font = null, int fontSize = 20, 
+                                            TextAnchor align = TextAnchor.UpperLeft,
+                                            VerticalWrapMode overflow = VerticalWrapMode.Overflow,
+                                            Color? color = null,
+                                            int handle = 0,
+                                            [CallerLineNumber] int lineNumber = 0,
+                                            [CallerMemberName] string caller = null ) {
+    handle = Hash( wbox, handle, lineNumber, caller );
+    MeasuredText_wg( content, wbox, handle, out measureW, out measureH, font, fontSize,
+                                                                        align, overflow, color );
+    return handle;
+}
+
+public static void Text_wg( string content, WrapBox wbox,
+                                            Font font = null, float fontSize = 20, 
+                                            TextAnchor align = TextAnchor.UpperLeft,
+                                            VerticalWrapMode overflow = VerticalWrapMode.Overflow,
+                                            Color? color = null,
+                                            int handle = 0 ) {
+    fontSize = WrapBox.ScaleRound( fontSize );
+    QUI.Text_wg( content, wbox.x, wbox.y, wbox.w, wbox.h, font, ( int )fontSize, align, overflow,
+                                                                                    color, handle );
 }
 
 public static void Text( string content, WrapBox wbox,

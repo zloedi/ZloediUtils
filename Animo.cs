@@ -129,7 +129,11 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
     bool result = cf.time[c[1]] + transition >= src.duration[cf.state[c[1]]];
 
     // keep the rollover/clamp AFTER the overflow check
-    cf.time[c[1]] %= src.duration[cf.state[c[1]]];
+    if ( clamp ) {
+        cf.time[c[1]] = Mathf.Min( cf.time[c[1]], src.duration[cf.state[c[1]]] );
+    } else {
+        cf.time[c[1]] %= src.duration[cf.state[c[1]]];
+    }
 
     // freeze the fade-out clip at the last frame, so we don't get 'pops' 
     // on no-loop animations overflow while transitioning
