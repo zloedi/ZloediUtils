@@ -70,6 +70,7 @@ public static void ResetToState( Crossfade cf, int state, int offset = 0 ) {
     cf.chan = 0;
 }
 
+// can crossfade to same state at time 0
 public static void CrossfadeToState( Crossfade cf, int state ) {
     int [] c = {
         ( cf.chan + 0 ) & 1,
@@ -85,8 +86,7 @@ public static void CrossfadeToState( Crossfade cf, int state ) {
 
     cf.chan++;
 
-    c[0] = ( cf.chan + 0 ) & 1;
-    c[1] = ( cf.chan + 1 ) & 1;
+    cf.switchEvent = true;
 
 #if false
     Qonsole.Log( "switch to " + state + " chan: " + cf.chan );
@@ -100,11 +100,11 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
         ( cf.chan + 1 ) & 1,
     };
 
-    cf.switchEvent = cf.state[c[1]] != state;
-
     // start crossfading to another state
-    if ( cf.switchEvent ) {
+    if ( cf.state[c[1]] != state ) {
         CrossfadeToState( cf, state );
+        c[0] = ( cf.chan + 0 ) & 1;
+        c[1] = ( cf.chan + 1 ) & 1;
     }
 
     Source src = sourcesList[source];
