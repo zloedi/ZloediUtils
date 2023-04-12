@@ -154,7 +154,7 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
     return result;
 }
 
-public static void Begin( int nowMs ) {
+public static void Begin() {
 }
 
 public static void SampleAnimations( int source, Animator ar, Crossfade cf ) {
