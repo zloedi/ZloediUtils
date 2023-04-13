@@ -35,7 +35,7 @@ struct LateImage {
     public int context;
     public float x, y, w, h;
     public Color color;
-    public Texture2D texture;
+    public Texture texture;
     public Material material;
 }
 
@@ -44,7 +44,7 @@ static List<LateText> _texts = new List<LateText>();
 static List<LateImage> _images = new List<LateImage>();
 static List<LateLine> _lines = new List<LateLine>();
 
-static void BlitSlow( Texture2D texture, Vector2 srcPos, Vector2 srcSize, Vector3 dstPos,
+static void BlitSlow( Texture texture, Vector2 srcPos, Vector2 srcSize, Vector3 dstPos,
                                 Vector3 dstSize, Color? color = null, Material material = null) { 
     Color col = color == null ? Color.white : color.Value;
     texture = texture ? texture : _texWhite;
@@ -221,7 +221,7 @@ public static void SetMaterialColor( Color color ) {
     _material.color = color;
 }
 
-public static void SetTexture( Texture2D tex ) {
+public static void SetTexture( Texture tex ) {
     _material.SetTexture( "_MainTex", tex );
     _material.SetPass( 0 );
 }
@@ -389,7 +389,7 @@ public static void LateBlit( Vector2 xy, Vector2 sz, Color? color = null ) {
     LateBlit( null, xy, sz.x, sz.y, color );
 }
 
-public static void LateBlit( Texture2D tex, Vector2 xy, float w, float h, Color? color = null ) {
+public static void LateBlit( Texture tex, Vector2 xy, float w, float h, Color? color = null ) {
     LateBlit( tex, xy.x, xy.y, w, h, color );
 }
 
@@ -397,7 +397,7 @@ public static void LateBlit( float x, float y, float w, float h, Color? color = 
     LateBlit( null, x, y, w, h, color );
 }
 
-public static void LateBlit( Texture2D tex, float x, float y, float w, float h, Color? color = null,
+public static void LateBlit( Texture tex, float x, float y, float w, float h, Color? color = null,
                                                                             Material mat = null ) {
     _images.Add( new LateImage {
         context = _context,

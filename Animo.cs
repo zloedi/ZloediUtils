@@ -19,6 +19,7 @@ public class Crossfade {
     public float [] weight = new float[2];
     public int [] state = new int[2];
     public int [] time = new int[2];
+    public bool switchEvent;
 }
 
 public static Action<string> Log = (s) => {};
@@ -69,6 +70,29 @@ public static void ResetToState( Crossfade cf, int state, int offset = 0 ) {
     cf.chan = 0;
 }
 
+// can crossfade to same state at time 0
+public static void CrossfadeToState( Crossfade cf, int state ) {
+    int [] c = {
+        ( cf.chan + 0 ) & 1,
+        ( cf.chan + 1 ) & 1,
+    };
+
+    cf.state[c[0]] = state;
+    cf.time[c[0]] = 0;
+    cf.weight[c[0]] = 1 - cf.weight[c[1]];
+
+    // the transition is always: 'c[0] crossfades into c[1]'
+    // this increment will do the flip
+
+    cf.chan++;
+
+    cf.switchEvent = true;
+
+#if false
+    Qonsole.Log( "switch to " + state + " chan: " + cf.chan );
+#endif
+}
+
 public static bool UpdateState( int dt, int source, Crossfade cf, int state, bool clamp = false,
                                                         int transition = 266, float speed = 1 ) {
     int [] c = {
@@ -78,21 +102,9 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
 
     // start crossfading to another state
     if ( cf.state[c[1]] != state ) {
-        cf.state[c[0]] = state;
-        cf.time[c[0]] = 0;
-        cf.weight[c[0]] = 1 - cf.weight[c[1]];
-
-        // the transition is always: 'c[0] crossfades into c[1]'
-        // this increment will do the flip
-
-        cf.chan++;
-
+        CrossfadeToState( cf, state );
         c[0] = ( cf.chan + 0 ) & 1;
         c[1] = ( cf.chan + 1 ) & 1;
-
-#if false
-        Qonsole.Log( "switch to " + state + " chan: " + cf.chan );
-#endif
     }
 
     Source src = sourcesList[source];
@@ -142,7 +154,7 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
     return result;
 }
 
-public static void Begin( int nowMs ) {
+public static void Begin() {
 }
 
 public static void SampleAnimations( int source, Animator ar, Crossfade cf ) {
