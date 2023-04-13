@@ -1,4 +1,4 @@
-#if UNITY_2021_1_OR_NEWER
+#if UNITY_2021_1_OR_NEWER && QUI_USE_UNITY_UI
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
