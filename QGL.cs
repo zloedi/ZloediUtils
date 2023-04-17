@@ -343,6 +343,7 @@ public static void LatePrint( string str, float x, float y, Color? color = null,
     } );
 }
 
+// top-left version of the late prints which are centered
 public static void LatePrint_tl( object o, Vector2 xy, Color? color = null, float scale = 1 ) {
     LatePrint_tl( o.ToString(), xy.x, xy.y, color, scale );
 }
