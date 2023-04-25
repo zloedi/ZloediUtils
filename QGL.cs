@@ -85,18 +85,6 @@ static void DrawText( string s, float x, float y ) {
     }
 }
 
-static Color TagToCol( string tag ) {
-    int [] rgb = new int[3 * 2];
-    if ( tag.Length > rgb.Length ) {
-        for ( int i = 0; i < rgb.Length; i++ ) {
-            rgb[i] = Uri.FromHex( tag[i + 1] );
-        }
-    }
-    return new Color( ( ( rgb[0] << 4 ) | rgb[1] ) / 255.999f,
-                      ( ( rgb[2] << 4 ) | rgb[3] ) / 255.999f,
-                      ( ( rgb[4] << 4 ) | rgb[5] ) / 255.999f );
-}
-
 static int _font => _fonts == null ? 0 : Font_cvar % _fonts.Length;
 static int _fontNumColumns => _font == 0 ? AppleFont.APPLEIIF_CLMS : CodePage437.FontSz;
 static int _fontNumRows    => _font == 0 ? AppleFont.APPLEIIF_ROWS : CodePage437.FontSz;
@@ -117,6 +105,18 @@ public static float pixelsPerPoint = 1;
 
 public static float TextDx => Mathf.Max( AppleFont.APPLEIIF_CW + 1, _fontCharWidth + CharSpacingX_cvar );
 public static float TextDy => _fontCharHeight + CharSpacingY_cvar;
+
+public static Color TagToCol( string tag ) {
+    int [] rgb = new int[3 * 2];
+    if ( tag.Length > rgb.Length ) {
+        for ( int i = 0; i < rgb.Length; i++ ) {
+            rgb[i] = Uri.FromHex( tag[i + 1] );
+        }
+    }
+    return new Color( ( ( rgb[0] << 4 ) | rgb[1] ) / 255.999f,
+                      ( ( rgb[2] << 4 ) | rgb[3] ) / 255.999f,
+                      ( ( rgb[4] << 4 ) | rgb[5] ) / 255.999f );
+}
 
 public static int GetCursorChar() {
     return _font == 0 ? 127 : 0xdb;
@@ -164,13 +164,22 @@ public static Vector2 MeasureString( string s, float scale = 1 ) {
     return new Vector2( max, y );
 }
 
+static List<Color> _colStack = new List<Color>();
 public static void DrawTextWithOutline( string s, float x, float y, Color color, float scale = 1 ) {
     for ( int i = 0, j = 0; i < s.Length; i++ ) {
+        if ( Cellophane.ColorTagLead( s, i, out string tl ) ) {
+            _colStack.Add( TagToCol( tl ) );
+            i += tl.Length;
+        } else if ( Cellophane.ColorTagClose( s, i, out string tc ) ) {
+            _colStack.RemoveAt( _colStack.Count - 1 );
+            i += tc.Length;
+        }
         if ( s[i] == '\n' ) {
             j = 0;
             y += TextDy * scale;
         } else {
-            DrawScreenCharWithOutline( s[i], x + j * TextDx * scale, y, color, scale );
+            var c = _colStack.Count > 0 ? _colStack[_colStack.Count - 1] : color;
+            DrawScreenCharWithOutline( s[i], x + j * TextDx * scale, y, c, scale );
             j++;
         }
     }

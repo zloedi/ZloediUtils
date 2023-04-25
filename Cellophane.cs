@@ -792,6 +792,9 @@ public static void ScanVarsAndCommands() {
 static readonly int tagLen = "[000000]".Length;
 public static bool ColorTagLead( string str, int i, out string tag ) {
     tag = string.Empty;
+    if ( str.Length <= i ) {
+        return false;
+    }
     if ( str[i] != '[' ) {
         return false;
     }
