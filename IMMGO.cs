@@ -6,7 +6,7 @@ using UnityEngine;
 
 
 public class ImmObject {
-    public int garbageAge;
+    public float garbageAge;
     public bool garbageMaterials;
     public Renderer [] rends;
     public GameObject go;
@@ -41,14 +41,14 @@ public static void End() {
     _immDead.Clear();
 
     foreach ( var i in _immGarbage ) {
-        i.garbageAge += Gb.time.deltaMS;
+        i.garbageAge += Time.deltaTime;
 
         if ( ! i.go ) {
             _immDead.Add( i );
             continue;
         }
 
-        if ( i.garbageAge > 5000 ) {
+        if ( i.garbageAge > 5f ) {
             if ( i.garbageMaterials ) {
                 foreach ( var r in i.rends ) {
                     UnityEngine.Object.Destroy( r.material );

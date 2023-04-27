@@ -201,18 +201,6 @@ static Vector2 _mousePosition;
 static HashSet<KeyCode> _holdKeys = new HashSet<KeyCode>();
 #endif
 
-static Color TagToCol( string tag ) {
-    int [] rgb = new int[3 * 2];
-    if ( tag.Length > rgb.Length ) {
-        for ( int i = 0; i < rgb.Length; i++ ) {
-            rgb[i] = Uri.FromHex( tag[i + 1] );
-        }
-    }
-    return new Color( ( ( rgb[0] << 4 ) | rgb[1] ) / 255.999f,
-                      ( ( rgb[2] << 4 ) | rgb[3] ) / 255.999f,
-                      ( ( rgb[4] << 4 ) | rgb[5] ) / 255.999f );
-}
-
 static void DrawCharColorPush( Color newColor ) {
     if ( _drawCharColorStack.Count < 16 ) {
         _drawCharColorStack.Add( newColor );
@@ -858,7 +846,7 @@ public static void Print( string s, QObject o = null ) {
         while ( true ) {
             if ( Cellophane.ColorTagLead( s, i, out tag ) ) {
                 i += tag.Length;
-                Color c = TagToCol( tag );
+                Color c = QGL.TagToCol( tag );
                 actions.Add( ()=>DrawCharColorPush( c ) );
             } else if ( Cellophane.ColorTagClose( s, i, out tag ) ) {
                 i += tag.Length;
