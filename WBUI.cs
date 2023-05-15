@@ -22,12 +22,21 @@ public static int Hash( WrapBox wbox, int handle, int lineNumber, string caller 
     return handle;
 }
 
+public static int Hash( WrapBox wbox, int handle ) {
+    int id = 23;
+    id = QUI.NextHashWg( id, wbox.id );
+    id = QUI.NextHashWg( id, handle );
+    return id;
+}
+
 public static void MeasuredText_wg( string content, WrapBox wbox, int handle,
                                             out float measureW, out float measureH,
-                                            Font font = null, int fontSize = 20, 
+                                            Font font = null, int fontSize = 0, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null ) {
+    handle = Hash( wbox, handle );
+    fontSize = ( int )WrapBox.ScaleRound( fontSize );
     QUI.MeasuredText_wg( content, wbox.x, wbox.y, wbox.w, wbox.h, handle, out measureW, out measureH,
                                                 font, fontSize, align, overflow, color );
     measureW /= WrapBox.canvasScale;
@@ -36,7 +45,7 @@ public static void MeasuredText_wg( string content, WrapBox wbox, int handle,
 
 public static int MeasuredText( string content, WrapBox wbox,
                                             out float measureW, out float measureH,
-                                            Font font = null, int fontSize = 20, 
+                                            Font font = null, int fontSize = 0, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null,
@@ -50,18 +59,18 @@ public static int MeasuredText( string content, WrapBox wbox,
 }
 
 public static void Text_wg( string content, WrapBox wbox,
-                                            Font font = null, float fontSize = 20, 
+                                            Font font = null, int fontSize = 0, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null,
                                             int handle = 0 ) {
-    fontSize = WrapBox.ScaleRound( fontSize );
-    QUI.Text_wg( content, wbox.x, wbox.y, wbox.w, wbox.h, font, ( int )fontSize, align, overflow,
+    fontSize = ( int )WrapBox.ScaleRound( fontSize );
+    QUI.Text_wg( content, wbox.x, wbox.y, wbox.w, wbox.h, font, fontSize, align, overflow,
                                                                                     color, handle );
 }
 
 public static void Text( string content, WrapBox wbox,
-                                            Font font = null, float fontSize = 20, 
+                                            Font font = null, int fontSize = 0, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null,
@@ -84,6 +93,11 @@ public static void Texture( WrapBox wbox, Texture2D tex = null, Color? color = n
                                                         [CallerMemberName] string caller = null ) {
     QUI.Texture_wg( wbox.x, wbox.y, wbox.w, wbox.h, tex: tex, color: color,
                                                 handle: Hash( wbox, handle, lineNumber, caller ) );
+}
+
+public static QUI.WidgetResult ClickRect_wg( WrapBox wbox, int handle = 0 ) {
+    handle = Hash( wbox, handle );
+    return QUI.ClickRect_wg( wbox.x, wbox.y, wbox.w, wbox.h, handle: handle );
 }
 
 public static QUI.WidgetResult ClickRect( WrapBox wbox, int handle = 0,
@@ -130,6 +144,19 @@ public static WrapBox FitTexture( WrapBox wbox, Texture2D tex ) {
 
 public static bool CursorInRect( WrapBox wbox ) {
     return QUI.CursorInRect( wbox.x, wbox.y, wbox.w, wbox.h );
+}
+
+public static void EnableScissor( WrapBox wbox, int handle = 0,
+                                                        [CallerLineNumber] int lineNumber = 0,
+                                                        [CallerMemberName] string caller = null ) {
+    handle = Hash( wbox, handle, lineNumber, caller );
+    QUI.EnableScissor_wg( wbox.x, wbox.y, wbox.w, wbox.h, handle );
+}
+
+public static void DisableScissor( int handle = 0, [CallerLineNumber] int lineNumber = 0,
+                                                        [CallerMemberName] string caller = null ) {
+    handle = Hash( handle, lineNumber, caller );
+    QUI.DisableScissor_wg( handle );
 }
 
 
