@@ -64,6 +64,7 @@ public static void Text_wg( string content, WrapBox wbox,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null,
                                             int handle = 0 ) {
+    handle = Hash( wbox, handle );
     fontSize = ( int )WrapBox.ScaleRound( fontSize );
     QUI.Text_wg( content, wbox.x, wbox.y, wbox.w, wbox.h, font, fontSize, align, overflow,
                                                                                     color, handle );
@@ -78,6 +79,7 @@ public static void Text( string content, WrapBox wbox,
                                             [CallerLineNumber] int lineNumber = 0,
                                             [CallerMemberName] string caller = null ) {
     handle = Hash( wbox, handle, lineNumber, caller );
+    fontSize = ( int )WrapBox.ScaleRound( fontSize );
     Text_wg( content, wbox, font, fontSize, align, overflow, color, handle );
 }
 
