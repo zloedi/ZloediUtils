@@ -431,15 +431,7 @@ public static string StoreConfig() {
 
 private static void Execute( KeyCode key, string cmdLine ) {
     //Log( "Execute key binding: " + key + " " + cmdLine );
-    string [] cmds;
-    if ( Cellophane.SplitCommands( cmdLine, out cmds ) ) {
-        string [] argv;
-        foreach ( var cmd in cmds ) {
-            if ( Cellophane.GetArgv( cmd, out argv ) ) {
-                Cellophane.TryExecute( argv );
-            }
-        }
-    }
+    Cellophane.TryExecuteString( cmdLine );
 }
 
 public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyUp = KeyCode.None,
