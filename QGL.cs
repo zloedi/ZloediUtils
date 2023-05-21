@@ -41,6 +41,7 @@ struct LateImage {
 
 // these are postponed and drawn after all geometry in scene
 static List<LateText> _texts = new List<LateText>();
+static List<LateText> _textsNokia = new List<LateText>();
 static List<LateImage> _images = new List<LateImage>();
 static List<LateLine> _lines = new List<LateLine>();
 
@@ -162,6 +163,90 @@ public static Vector2 MeasureString( string s, float scale = 1 ) {
         }
     }
     return new Vector2( max, y );
+}
+
+public static Vector2 MeasureStringNokia( string s, float scale = 1 ) { 
+    float cx = 0;
+    float cy = NokiaFont.NOKIA_LN_H * scale;
+    float max = 0;
+    foreach ( var cc in s ) {
+        int c = cc & 255;
+        NokiaFont.Glyph g = NokiaFont.glyphs[c];
+        cx += c == '\n' ? -cx : g.xadvance * scale;
+        cy += c == '\n' ? NokiaFont.NOKIA_LN_H * scale : 0;
+        max = Mathf.Max( max, cx );
+    }
+    return new Vector2( max, cy );
+}
+
+public static void DrawTextNokia( string s, float x, float y, Color color, float scale = 1 ) {
+    y = _invertedY ? ScreenHeight() - y : y;
+
+    float cx = 0;
+    float cy = 0;
+
+    foreach ( var cc in s ) {
+        int c = cc & 255;
+
+        NokiaFont.Glyph g = NokiaFont.glyphs[c];
+
+        var src = new float[] {
+            g.x,
+            g.y,
+            g.width,
+            g.height,
+        };
+
+        var dst = new float[] {
+            x + cx,
+            y + cy - g.yoffset * scale,
+            g.width,
+            g.height,
+        };
+
+
+        Vector3 uvOff = new Vector3( src[0] / NokiaFont.NOKIA_IMG_W,
+                                        src[1] / NokiaFont.NOKIA_IMG_H );
+        float charU = src[2] / NokiaFont.NOKIA_IMG_W;
+        float charV = src[3] / NokiaFont.NOKIA_IMG_H;
+
+        var uv = new Vector3[4] {
+            new Vector3( 0, 0, 0 ),
+            new Vector3( charU, 0, 0 ),
+            new Vector3( charU, charV, 0 ),
+            new Vector3( 0, charV, 0 ),
+        };
+
+        for ( int i = 0; i < 4; i++ ) {
+            uv[i] += uvOff;
+        }
+
+        Vector3 [] verts;
+        if ( _invertedY ) {
+            verts = new Vector3[4] {
+                new Vector3( 0, 0, 0 ),
+                new Vector3( dst[2], 0, 0 ),
+                new Vector3( dst[2], -dst[3], 0 ),
+                new Vector3( 0, -dst[3], 0 ),
+            };
+        } else {
+            verts = new Vector3[4] {
+                new Vector3( 0, 0, 0 ),
+                new Vector3( dst[2], 0, 0 ),
+                new Vector3( dst[2], dst[3], 0 ),
+                new Vector3( 0, dst[3], 0 ),
+            };
+        }
+
+        GL.Color( color );
+        for ( int i = 0; i < 4; i++ ) {
+            GL.TexCoord( uv[i] );
+            GL.Vertex( verts[i] * scale + new Vector3( dst[0], dst[1] ) );
+        }
+
+        cx += c == '\n' ? -cx : g.xadvance * scale;
+        cy += c == '\n' ? -NokiaFont.NOKIA_LN_H * scale : 0;
+    }
 }
 
 static List<Color> _colStack = new List<Color>();
@@ -340,9 +425,9 @@ public static void LatePrint( object o, float x, float y, Color? color = null, f
     LatePrint( o.ToString(), x, y, color, scale );
 }
 
-public static void LatePrint( string str, float x, float y, Color? color = null, float scale = 1 ) {
-    Vector2 sz = MeasureString( str, scale );
-    _texts.Add( new LateText {
+static void AddCenteredText( List<LateText> texts, string str, Vector2 sz, float x, float y,
+                                                            Color? color = null, float scale = 1 ) {
+    texts.Add( new LateText {
         context = _context,
         x = ( int )( x - sz.x / 2f ),
         y = ( int )( y - sz.y / 2f ),
@@ -352,7 +437,24 @@ public static void LatePrint( string str, float x, float y, Color? color = null,
     } );
 }
 
-// top-left version of the late prints which are centered
+static void AddText( List<LateText> texts, string str, float x, float y, Color? color = null,
+                                                                                float scale = 1 ) {
+    texts.Add( new LateText {
+        context = _context,
+        x = ( int )x,
+        y = ( int )y,
+        scale = scale,
+        str = str,
+        color = color == null ? Color.green : color.Value,
+    } );
+}
+
+public static void LatePrint( string str, float x, float y, Color? color = null, float scale = 1 ) {
+    Vector2 sz = MeasureString( str, scale );
+    AddCenteredText( _texts, str, sz, x, y, color, scale );
+}
+
+// top-left version of the late prints (which are centered)
 public static void LatePrint_tl( object o, Vector2 xy, Color? color = null, float scale = 1 ) {
     LatePrint_tl( o.ToString(), xy.x, xy.y, color, scale );
 }
@@ -362,15 +464,18 @@ public static void LatePrint_tl( object o, float x, float y, Color? color = null
 }
 
 public static void LatePrint_tl( string str, float x, float y, Color? color = null, float scale = 1 ) {
-    Vector2 sz = MeasureString( str, scale );
-    _texts.Add( new LateText {
-        context = _context,
-        x = ( int )x,
-        y = ( int )y,
-        scale = scale,
-        str = str,
-        color = color == null ? Color.green : color.Value,
-    } );
+    AddText( _texts, str, x, y, color, scale );
+}
+
+public static void LatePrintNokia( string str, float x, float y, Color? color = null,
+                                                                                float scale = 1 ) {
+    Vector2 sz = MeasureStringNokia( str, scale );
+    AddCenteredText( _textsNokia, str, sz, x, y, color, scale );
+}
+
+public static void LatePrintNokia_tl( string str, float x, float y, Color? color = null,
+                                                                                float scale = 1 ) {
+    AddText( _textsNokia, str, x, y, color, scale );
 }
 
 public static void LatePrintFlush() {
@@ -382,11 +487,26 @@ public static void LatePrintFlush() {
         }
     }
     GL.End();
-    for ( int i = _texts.Count - 1; i >= 0; i-- ) {
-        if ( _texts[i].context == _context ) {
-            _texts.RemoveAt( i );
+
+    SetTexture( NokiaFont.GetTexture() );
+    GL.Begin( GL.QUADS );
+    foreach ( var s in _textsNokia ) {
+        if ( s.context == _context ) {
+            DrawTextNokia( s.str, s.x, s.y, s.color, s.scale );
         }
     }
+    GL.End();
+
+    void removeTexts( List<LateText> texts ) {
+        for ( int i = texts.Count - 1; i >= 0; i-- ) {
+            if ( texts[i].context == _context ) {
+                texts.RemoveAt( i );
+            }
+        }
+    }
+
+    removeTexts( _texts );
+    removeTexts( _textsNokia );
 }
 
 public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h ) {
