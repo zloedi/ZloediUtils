@@ -733,6 +733,7 @@ public static void Start() {
 #if HAS_UNITY
     if ( QGL.Start( invertedY: QonInvertPlayY ) ) {
         Started = true;
+        Log( "Qonsole Started." );
         InternalCommand( "qonsole_post_start" );
         onStart_f();
     } else {
@@ -740,9 +741,9 @@ public static void Start() {
     }
 #else
     Started = true;
+    Log( "Qonsole Started." );
     onStart_f();
 #endif
-    Log( "Qonsole Started." );
 }
 
 public static void TryExecute( string cmdLine, object context = null, bool keepJsonTags = false ) {
