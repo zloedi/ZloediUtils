@@ -3,7 +3,10 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
+
+#if QUI_USE_UNITY_UI
 using UnityEngine.UI;
+#endif
 
 // Combines WrapBox and QUI into an Immediate mode UI library on top of Unity UI.
 // It handles layout/anchoring and scaling using WrapBoxes.
@@ -28,6 +31,32 @@ public static int Hash( WrapBox wbox, int handle ) {
     id = QUI.NextHashWg( id, handle );
     return id;
 }
+
+public static WrapBox FitTexture( WrapBox wbox, Texture2D tex ) {
+    float texR = ( float )tex.width / tex.height;
+    float wboxR = ( float )wbox.W / wbox.H;
+    float w = wbox.H * Mathf.Min( texR, wboxR );
+    float h = w / texR;
+    return wbox.Center( w, h );
+}
+
+public static bool CursorInRect( WrapBox wbox ) {
+    return QUI.CursorInRect( wbox.x, wbox.y, wbox.w, wbox.h );
+}
+
+public static QUI.WidgetResult ClickRect_wg( WrapBox wbox, int handle = 0 ) {
+    handle = Hash( wbox, handle );
+    return QUI.ClickRect_wg( wbox.x, wbox.y, wbox.w, wbox.h, handle: handle );
+}
+
+public static QUI.WidgetResult ClickRect( WrapBox wbox, int handle = 0,
+                                                        [CallerLineNumber] int lineNumber = 0,
+                                                        [CallerMemberName] string caller = null ) {
+    return QUI.ClickRect( wbox.x, wbox.y, wbox.w, wbox.h, handle: handle, lineNumber: lineNumber,
+                                                                                caller: caller );
+}
+
+#if QUI_USE_UNITY_UI
 
 public static void MeasuredText_wg( string content, WrapBox wbox, int handle,
                                             out float measureW, out float measureH,
@@ -98,18 +127,6 @@ public static void Texture( WrapBox wbox, Texture2D tex = null, Color? color = n
                                                 handle: Hash( wbox, handle, lineNumber, caller ) );
 }
 
-public static QUI.WidgetResult ClickRect_wg( WrapBox wbox, int handle = 0 ) {
-    handle = Hash( wbox, handle );
-    return QUI.ClickRect_wg( wbox.x, wbox.y, wbox.w, wbox.h, handle: handle );
-}
-
-public static QUI.WidgetResult ClickRect( WrapBox wbox, int handle = 0,
-                                                        [CallerLineNumber] int lineNumber = 0,
-                                                        [CallerMemberName] string caller = null ) {
-    return QUI.ClickRect_wg( wbox.x, wbox.y, wbox.w, wbox.h,
-                                                handle: Hash( wbox, handle, lineNumber, caller ) );
-}
-
 public static void SpriteTex( WrapBox wbox, Texture2D tex = null,
                                                         Color? color = null,
                                                         bool scissor = false,
@@ -137,18 +154,6 @@ public static void Sprite( WrapBox wbox, Sprite sprite, Color? color = null, boo
                                                                                             type );
 }
 
-public static WrapBox FitTexture( WrapBox wbox, Texture2D tex ) {
-    float texR = ( float )tex.width / tex.height;
-    float wboxR = ( float )wbox.W / wbox.H;
-    float w = wbox.H * Mathf.Min( texR, wboxR );
-    float h = w / texR;
-    return wbox.Center( w, h );
-}
-
-public static bool CursorInRect( WrapBox wbox ) {
-    return QUI.CursorInRect( wbox.x, wbox.y, wbox.w, wbox.h );
-}
-
 public static void EnableScissor( WrapBox wbox, int handle = 0,
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
@@ -162,7 +167,10 @@ public static void DisableScissor( int handle = 0, [CallerLineNumber] int lineNu
     QUI.DisableScissor_wg( handle );
 }
 
+#endif // Use unity UI
+
 
 }
 
-#endif
+#endif // Has Unity
+

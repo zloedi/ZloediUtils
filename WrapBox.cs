@@ -1,14 +1,19 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
-using UnityEngine.UI;
 
 public struct WrapBox {
+    const float DefaultMinRes = 1080;
+
+    // scale stuff down, if resolution is below this value
+    static float _canvasMinResolution = DefaultMinRes;
+
     // FIXME: this matches the y value of CanvasScaler.referenceResolution
     // FIXME: should be either read from canvas scaler or enforced there
     // FIXME: ultimately we may want always scale, ignoring the canvas resolution
     // Canvases only scale stuff DOWN
-    public static float canvasScale => Mathf.Min( 1f, ( float )Screen.height / 1080 );
+    public static float canvasScale => Mathf.Min( 1f,
+                                                    ( float )Screen.height / _canvasMinResolution );
 
     public static float ScaleRound( float f ) {
         return Mathf.Round( Scale( f ) );
@@ -20,6 +25,14 @@ public struct WrapBox {
 
     public static float Unscale( float f ) {
         return f / canvasScale;
+    }
+
+    public static void DisableCanvasScale() {
+        _canvasMinResolution = 0.001f;
+    }
+
+    public static void EnableCanvasScale() {
+        _canvasMinResolution = DefaultMinRes;
     }
 
     public float x, y, w, h;

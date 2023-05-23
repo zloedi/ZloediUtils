@@ -644,9 +644,11 @@ static void RenderGL( bool skip = false ) {
 
     QGL.Begin();
 
-    QGL.LateBlitFlush();
-    QGL.LatePrintFlush();
-    QGL.LateDrawLineFlush();
+    QGL.FlushLates();
+
+    //QGL.LateBlitFlush();
+    //QGL.LatePrintFlush();
+    //QGL.LateDrawLineFlush();
 
     if ( ! skip ) {
         int maxH = ( int )QGL.ScreenHeight();
