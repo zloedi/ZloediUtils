@@ -17,56 +17,26 @@ static int _context;
 static Camera _camera;
 static bool _invertedY;
 
-class Late {
-    public virtual void Draw() {
-    }
-}
-
-class LateLine : Late {
+class LateLine {
     public int context;
     public List<Vector2> line;
     public Color color;
-    //public override void Draw() {
-    //    GL.Color( l.color );
-    //    for ( int i = 0; i < l.line.Count - 1; i++ ) {
-    //        GL.Vertex( l.line[i + 0] );
-    //        GL.Vertex( l.line[i + 1] );
-    //    }
-    //}
 }
 
-class LateText : Late {
+class LateText {
     public int context;
     public float x, y;
     public float scale;
     public string str;
     public Color color;
-
-    //public override void Draw() {
-    //    DrawTextWithOutline( str, x, y, color, scale );
-    //}
 }
 
-class LateTextNokia : LateText {
-    //public override void Draw() {
-    //    DrawTextNokia( str, x, y, color, scale );
-    //}
-}
-
-class LateImage : Late {
+class LateImage {
     public int context;
     public float x, y, w, h;
     public Color color;
     public Texture texture;
     public Material material;
-
-    //public override void Draw() {
-    //    Vector2 srcPos = new Vector2( 0, 0 );
-    //    Vector2 srcSize = new Vector2( texture.width, texture.height );
-    //    Vector2 dstPos = new Vector2( x, y );
-    //    Vector2 dstSize = new Vector2( w, h );
-    //    BlitSlow( texture, srcPos, srcSize, dstPos, dstSize, color, material );
-    //}
 }
 
 // these are postponed and drawn after all geometry in scene
@@ -536,36 +506,25 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
 }
 
 public static void LatePrintFlush( int n ) {
-    //SetFontTexture();
-    //GL.Begin( GL.QUADS );
-    //for ( int i = start; i < start + n; i++ ) {
-    //    var s = _lates[i] as LateText;
-    //    if ( s.context == _context ) {
-    //        DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
-    //    }
-    //}
-    //GL.End();
-
-    SetTexture( NokiaFont.GetTexture() );
+    SetFontTexture();
     GL.Begin( GL.QUADS );
-    for ( int i = 0; i < n; i++ ) {
+    for ( int i = start; i < start + n; i++ ) {
         var s = _lates[i] as LateText;
         if ( s.context == _context ) {
-            DrawTextNokia( s.str, s.x, s.y, s.color, s.scale );
+            DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
         }
     }
     GL.End();
 
-    //void removeTexts( List<LateText> texts ) {
-    //    for ( int i = texts.Count - 1; i >= 0; i-- ) {
-    //        if ( texts[i].context == _context ) {
-    //            texts.RemoveAt( i );
-    //        }
+    //SetTexture( NokiaFont.GetTexture() );
+    //GL.Begin( GL.QUADS );
+    //for ( int i = 0; i < n; i++ ) {
+    //    var s = _lates[i] as LateText;
+    //    if ( s.context == _context ) {
+    //        DrawTextNokia( s.str, s.x, s.y, s.color, s.scale );
     //    }
     //}
-
-    //removeTexts( _texts );
-    //removeTexts( _textsNokia );
+    //GL.End();
 }
 
 public static void LatePrintFlush() {
