@@ -17,32 +17,65 @@ static int _context;
 static Camera _camera;
 static bool _invertedY;
 
-struct LateLine {
+class Late {
+    public virtual void Draw() {
+    }
+}
+
+class LateLine : Late {
     public int context;
     public List<Vector2> line;
     public Color color;
+    //public override void Draw() {
+    //    GL.Color( l.color );
+    //    for ( int i = 0; i < l.line.Count - 1; i++ ) {
+    //        GL.Vertex( l.line[i + 0] );
+    //        GL.Vertex( l.line[i + 1] );
+    //    }
+    //}
 }
 
-struct LateText {
+class LateText : Late {
     public int context;
     public float x, y;
     public float scale;
     public string str;
     public Color color;
+
+    //public override void Draw() {
+    //    DrawTextWithOutline( str, x, y, color, scale );
+    //}
 }
 
-struct LateImage {
+class LateTextNokia : LateText {
+    //public override void Draw() {
+    //    DrawTextNokia( str, x, y, color, scale );
+    //}
+}
+
+class LateImage : Late {
     public int context;
     public float x, y, w, h;
     public Color color;
     public Texture texture;
     public Material material;
+
+    //public override void Draw() {
+    //    Vector2 srcPos = new Vector2( 0, 0 );
+    //    Vector2 srcSize = new Vector2( texture.width, texture.height );
+    //    Vector2 dstPos = new Vector2( x, y );
+    //    Vector2 dstSize = new Vector2( w, h );
+    //    BlitSlow( texture, srcPos, srcSize, dstPos, dstSize, color, material );
+    //}
 }
 
 // these are postponed and drawn after all geometry in scene
 static List<LateText> _texts = new List<LateText>();
+static List<LateText> _textsNokia = new List<LateText>();
 static List<LateImage> _images = new List<LateImage>();
 static List<LateLine> _lines = new List<LateLine>();
+
+static List<object> _lates = new List<object>();
 
 static void BlitSlow( Texture texture, Vector2 srcPos, Vector2 srcSize, Vector3 dstPos,
                                 Vector3 dstSize, Color? color = null, Material material = null) { 
@@ -162,6 +195,104 @@ public static Vector2 MeasureString( string s, float scale = 1 ) {
         }
     }
     return new Vector2( max, y );
+}
+
+public static Vector2Int MeasureStringNokiaInt( string s, int scale = 1 ) { 
+    int cx = 0;
+    int cy = NokiaFont.NOKIA_LN_H * scale;
+    int max = 0;
+    foreach ( var cc in s ) {
+        int c = cc & 255;
+        NokiaFont.Glyph g = NokiaFont.glyphs[c];
+        cx += c == '\n' ? -cx : g.xadvance * scale;
+        cy += c == '\n' ? NokiaFont.NOKIA_LN_H * scale : 0;
+        max = Mathf.Max( max, cx );
+    }
+    return new Vector2Int( max, cy );
+}
+
+public static Vector2 MeasureStringNokia( string s, float scale = 1 ) { 
+    float cx = 0;
+    float cy = NokiaFont.NOKIA_LN_H * scale;
+    float max = 0;
+    foreach ( var cc in s ) {
+        int c = cc & 255;
+        NokiaFont.Glyph g = NokiaFont.glyphs[c];
+        cx += c == '\n' ? -cx : g.xadvance * scale;
+        cy += c == '\n' ? NokiaFont.NOKIA_LN_H * scale : 0;
+        max = Mathf.Max( max, cx );
+    }
+    return new Vector2( max, cy );
+}
+
+public static void DrawTextNokia( string s, float x, float y, Color color, float scale = 1 ) {
+    y = _invertedY ? ScreenHeight() - y : y;
+
+    float cx = 0;
+    float cy = 0;
+
+    foreach ( var cc in s ) {
+        int c = cc & 255;
+
+        NokiaFont.Glyph g = NokiaFont.glyphs[c];
+
+        var src = new float[] {
+            g.x,
+            g.y,
+            g.width,
+            g.height,
+        };
+
+        var dst = new float[] {
+            x + cx,
+            y + cy - g.yoffset * scale,
+            g.width,
+            g.height,
+        };
+
+
+        Vector3 uvOff = new Vector3( src[0] / NokiaFont.NOKIA_IMG_W,
+                                        src[1] / NokiaFont.NOKIA_IMG_H );
+        float charU = src[2] / NokiaFont.NOKIA_IMG_W;
+        float charV = src[3] / NokiaFont.NOKIA_IMG_H;
+
+        var uv = new Vector3[4] {
+            new Vector3( 0, 0, 0 ),
+            new Vector3( charU, 0, 0 ),
+            new Vector3( charU, charV, 0 ),
+            new Vector3( 0, charV, 0 ),
+        };
+
+        for ( int i = 0; i < 4; i++ ) {
+            uv[i] += uvOff;
+        }
+
+        Vector3 [] verts;
+        if ( _invertedY ) {
+            verts = new Vector3[4] {
+                new Vector3( 0, 0, 0 ),
+                new Vector3( dst[2], 0, 0 ),
+                new Vector3( dst[2], -dst[3], 0 ),
+                new Vector3( 0, -dst[3], 0 ),
+            };
+        } else {
+            verts = new Vector3[4] {
+                new Vector3( 0, 0, 0 ),
+                new Vector3( dst[2], 0, 0 ),
+                new Vector3( dst[2], dst[3], 0 ),
+                new Vector3( 0, dst[3], 0 ),
+            };
+        }
+
+        GL.Color( color );
+        for ( int i = 0; i < 4; i++ ) {
+            GL.TexCoord( uv[i] );
+            GL.Vertex( verts[i] * scale + new Vector3( dst[0], dst[1] ) );
+        }
+
+        cx += c == '\n' ? -cx : g.xadvance * scale;
+        cy += c == '\n' ? -NokiaFont.NOKIA_LN_H * scale : 0;
+    }
 }
 
 static List<Color> _colStack = new List<Color>();
@@ -340,19 +471,42 @@ public static void LatePrint( object o, float x, float y, Color? color = null, f
     LatePrint( o.ToString(), x, y, color, scale );
 }
 
-public static void LatePrint( string str, float x, float y, Color? color = null, float scale = 1 ) {
-    Vector2 sz = MeasureString( str, scale );
-    _texts.Add( new LateText {
+static void AddCenteredText( List<LateText> texts, string str, Vector2 sz, float x, float y,
+                                                            Color? color = null, float scale = 1 ) {
+    var txt = new LateText {
         context = _context,
         x = ( int )( x - sz.x / 2f ),
         y = ( int )( y - sz.y / 2f ),
         scale = scale,
         str = str,
         color = color == null ? Color.green : color.Value,
-    } );
+    };
+
+    texts.Add( txt );
+    _lates.Add( txt );
 }
 
-// top-left version of the late prints which are centered
+static void AddText( List<LateText> texts, string str, float x, float y, Color? color = null,
+                                                                                float scale = 1 ) {
+    var txt = new LateText {
+        context = _context,
+        x = ( int )x,
+        y = ( int )y,
+        scale = scale,
+        str = str,
+        color = color == null ? Color.green : color.Value,
+    };
+
+    texts.Add( txt );
+    _lates.Add( txt );
+}
+
+public static void LatePrint( string str, float x, float y, Color? color = null, float scale = 1 ) {
+    Vector2 sz = MeasureString( str, scale );
+    AddCenteredText( _texts, str, sz, x, y, color, scale );
+}
+
+// top-left version of the late prints (which are centered)
 public static void LatePrint_tl( object o, Vector2 xy, Color? color = null, float scale = 1 ) {
     LatePrint_tl( o.ToString(), xy.x, xy.y, color, scale );
 }
@@ -362,15 +516,56 @@ public static void LatePrint_tl( object o, float x, float y, Color? color = null
 }
 
 public static void LatePrint_tl( string str, float x, float y, Color? color = null, float scale = 1 ) {
-    Vector2 sz = MeasureString( str, scale );
-    _texts.Add( new LateText {
-        context = _context,
-        x = ( int )x,
-        y = ( int )y,
-        scale = scale,
-        str = str,
-        color = color == null ? Color.green : color.Value,
-    } );
+    AddText( _texts, str, x, y, color, scale );
+}
+
+public static void LatePrintNokia( string str, Vector2Int xy, Color? color = null,
+                                                                                float scale = 1 ) {
+    LatePrintNokia( str, xy.x, xy.y, color, scale );
+}
+
+public static void LatePrintNokia( string str, float x, float y, Color? color = null,
+                                                                                float scale = 1 ) {
+    Vector2 sz = MeasureStringNokia( str, scale );
+    AddCenteredText( _textsNokia, str, sz, x, y, color, scale );
+}
+
+public static void LatePrintNokia_tl( string str, float x, float y, Color? color = null,
+                                                                                float scale = 1 ) {
+    AddText( _textsNokia, str, x, y, color, scale );
+}
+
+public static void LatePrintFlush( int n ) {
+    //SetFontTexture();
+    //GL.Begin( GL.QUADS );
+    //for ( int i = start; i < start + n; i++ ) {
+    //    var s = _lates[i] as LateText;
+    //    if ( s.context == _context ) {
+    //        DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
+    //    }
+    //}
+    //GL.End();
+
+    SetTexture( NokiaFont.GetTexture() );
+    GL.Begin( GL.QUADS );
+    for ( int i = 0; i < n; i++ ) {
+        var s = _lates[i] as LateText;
+        if ( s.context == _context ) {
+            DrawTextNokia( s.str, s.x, s.y, s.color, s.scale );
+        }
+    }
+    GL.End();
+
+    //void removeTexts( List<LateText> texts ) {
+    //    for ( int i = texts.Count - 1; i >= 0; i-- ) {
+    //        if ( texts[i].context == _context ) {
+    //            texts.RemoveAt( i );
+    //        }
+    //    }
+    //}
+
+    //removeTexts( _texts );
+    //removeTexts( _textsNokia );
 }
 
 public static void LatePrintFlush() {
@@ -382,11 +577,26 @@ public static void LatePrintFlush() {
         }
     }
     GL.End();
-    for ( int i = _texts.Count - 1; i >= 0; i-- ) {
-        if ( _texts[i].context == _context ) {
-            _texts.RemoveAt( i );
+
+    SetTexture( NokiaFont.GetTexture() );
+    GL.Begin( GL.QUADS );
+    foreach ( var s in _textsNokia ) {
+        if ( s.context == _context ) {
+            DrawTextNokia( s.str, s.x, s.y, s.color, s.scale );
         }
     }
+    GL.End();
+
+    void removeTexts( List<LateText> texts ) {
+        for ( int i = texts.Count - 1; i >= 0; i-- ) {
+            if ( texts[i].context == _context ) {
+                texts.RemoveAt( i );
+            }
+        }
+    }
+
+    removeTexts( _texts );
+    removeTexts( _textsNokia );
 }
 
 public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h ) {
@@ -409,7 +619,7 @@ public static void LateBlit( float x, float y, float w, float h, Color? color = 
 
 public static void LateBlit( Texture tex, float x, float y, float w, float h, Color? color = null,
                                                                             Material mat = null ) {
-    _images.Add( new LateImage {
+    var img = new LateImage {
         context = _context,
         x = x,
         y = y,
@@ -418,7 +628,10 @@ public static void LateBlit( Texture tex, float x, float y, float w, float h, Co
         color = color == null ? Color.white : color.Value,
         texture = tex != null ? tex : _texWhite,
         material = mat,
-    } );
+    };
+    
+    _images.Add( img );
+    _lates.Add( img );
 }
 
 public static void LateBlitFlush() {
@@ -434,6 +647,19 @@ public static void LateBlitFlush() {
     for ( int i = _images.Count - 1; i >= 0; i-- ) {
         if ( _images[i].context == _context ) {
             _images.RemoveAt( i );
+        }
+    }
+}
+
+public static void LateBlitFlush( int n ) {
+    for ( int i = 0; i < n; i++ ) {
+        var img = _lates[i] as LateImage;
+        if ( img.context == _context ) {
+            Vector2 srcPos = new Vector2( 0, 0 );
+            Vector2 srcSize = new Vector2( img.texture.width, img.texture.height );
+            Vector2 dstPos = new Vector2( img.x, img.y );
+            Vector2 dstSize = new Vector2( img.w, img.h );
+            BlitSlow( img.texture, srcPos, srcSize, dstPos, dstSize, img.color, img.material );
         }
     }
 }
@@ -487,11 +713,15 @@ public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
         float y = _invertedY ? ScreenHeight() - l[i].y : l[i].y;
         l[i] = new Vector2( l[i].x, y );
     }
-    _lines.Add( new LateLine {
+
+    var ln = new LateLine {
         context = _context,
         line = l,
         color = color == null ? Color.white : color.Value,
-    } );
+    };
+
+    _lines.Add( ln );
+    //_lates.Add( ln );
 }
 
 public static void LateDrawLineFlush() {
@@ -534,6 +764,34 @@ public static void SetContext( Camera camera, float pixelsPerPoint = 1, bool inv
 public static void Begin() {
     GL.PushMatrix();
     GL.LoadPixelMatrix();
+}
+
+public static void FlushLates() {
+#if false
+        LateBlitFlush();
+        LatePrintFlush();
+        LateDrawLineFlush();
+#else
+        while ( _lates.Count > 0 ) {
+            int n;
+
+            n = 0;
+            for ( int i = 0; i < _lates.Count && _lates[i] is LateText ; i++, n++ ) { }
+            LatePrintFlush( n );
+            _lates.RemoveRange( 0, n );
+
+            n = 0;
+            for ( int i = 0; i < _lates.Count && _lates[i] is LateImage; i++, n++ ) { }
+            LateBlitFlush( n );
+            _lates.RemoveRange( 0, n );
+
+            n = 0;
+            for ( int i = 0; i < _lates.Count && _lates[i] is LateLine; i++, n++ ) { }
+            _lates.RemoveRange( 0, n );
+        }
+
+        LateDrawLineFlush();
+#endif
 }
 
 public static void End( bool skipLateFlush = false ) {

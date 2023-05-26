@@ -303,12 +303,13 @@ static int HashTransform( RectTransform rt ) {
 }
 
 static UnityEngine.UI.Text TextInternal( string content, float x, float y, float w, float h,
-                                            int handle, Font font = null, int fontSize = 20, 
+                                            int handle, Font font = null, int fontSize = 0, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null ) {
     UnityEngine.UI.Text txt = RegisterGraphic<UnityEngine.UI.Text>( x, y, w, h, handle, color );
     font = font == null ? defaultFont : font;
+    fontSize = fontSize == 0 ? ( int )( h * 0.7f ) : fontSize;
     if ( txt.fontSize != fontSize ) {
         txt.fontSize = fontSize;
     }
@@ -564,17 +565,25 @@ public static void EndUnityUI() {
     }
 }
 
+public static void EnableScissor_wg( float x, float y, float w, float h, int handle ) {
+    RegisterPrefab( x, y, w, h, handle, isScissor: true );
+}
+
 public static void EnableScissor( float x, float y, float w, float h, int handle = 0,
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
-    RegisterPrefab( x, y, w, h, handle, isScissor: true );
+    EnableScissor_wg( x, y, w, h, handle );
+}
+
+public static void DisableScissor_wg( int handle ) {
+    RegisterPrefab( 0, 0, Screen.width, Screen.height, handle, isScissor: true );
 }
 
 public static void DisableScissor( int handle = 0, [CallerLineNumber] int lineNumber = 0,
-                                               [CallerMemberName] string caller = null ) {
+                                                       [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
-    RegisterPrefab( 0, 0, Screen.width, Screen.height, handle, isScissor: true );
+    DisableScissor_wg( handle );
 }
 
 public static void SpriteTex_wg( float x, float y, float w, float h, int handle,
@@ -688,7 +697,7 @@ public static RectTransform [] Prefab( float posX = float.MaxValue, float posY =
 
 public static void MeasuredText_wg( string content, float x, float y, float w, float h, int handle,
                                             out float measureW, out float measureH,
-                                            Font font = null, int fontSize = 20, 
+                                            Font font = null, int fontSize = 0, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null ) {
@@ -702,7 +711,7 @@ public static void MeasuredText_wg( string content, float x, float y, float w, f
 
 public static void MeasuredText( string content, float x, float y, float w, float h,
                                             out float measureW, out float measureH,
-                                            Font font = null, int fontSize = 20, 
+                                            Font font = null, int fontSize = 0, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null,
@@ -715,7 +724,7 @@ public static void MeasuredText( string content, float x, float y, float w, floa
 }
 
 public static void Text_wg( string content, float x, float y, float w, float h,
-                                            Font font = null, int fontSize = 20, 
+                                            Font font = null, int fontSize = 0, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null,
@@ -724,7 +733,7 @@ public static void Text_wg( string content, float x, float y, float w, float h,
 }
 
 public static void Text( string content, float x, float y, float w, float h,
-                                            Font font = null, int fontSize = 20, 
+                                            Font font = null, int fontSize = 0, 
                                             TextAnchor align = TextAnchor.UpperLeft,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null,
@@ -737,7 +746,7 @@ public static void Text( string content, float x, float y, float w, float h,
 
 public static WidgetResult ClickText( string content, float x, float y, float w, float h,
                                         Font font = null, TextAnchor align = TextAnchor.UpperLeft,
-                                            int fontSize = 20,
+                                            int fontSize = 0,
                                             VerticalWrapMode overflow = VerticalWrapMode.Overflow,
                                             Color? color = null,
                                             int handle = 0,

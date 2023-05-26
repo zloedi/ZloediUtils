@@ -74,7 +74,6 @@ static Variable [] _variables;
 static int [] _orderedDist;
 static string [] _allNames;
 static List<string> _history = new List<string>();
-static List<string> _tokens = new List<string>();
 
 // when sorting the autocomplete buffer, anything above this distance doesn't 
 // contain the match candidate
@@ -560,6 +559,7 @@ public static string StripJSONTags( string str ) {
     return str;
 }
 
+static List<string> _argvTokens = new List<string>();
 public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = false ) {
     if ( string.IsNullOrEmpty( str ) ) {
         argv = new string[0];
@@ -568,7 +568,7 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
         return false;
     }
 
-    _tokens.Clear();
+    _argvTokens.Clear();
     int comment = 0;
     int quoted = 0;
     string token = "";
@@ -588,7 +588,7 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
             json = false;
         }
         if ( comment < 2 && ! json && token.Length > 0 ) {
-            _tokens.Add( token );
+            _argvTokens.Add( token );
             token = "";
         }
     }
@@ -633,20 +633,48 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
         }
     }
     AddToken();
-    argv = _tokens.ToArray();
+    argv = _argvTokens.ToArray();
     return argv.Length > 0;
 }
 
-// doesn't care about <json></json> pairs, just splits along ';'
-// if a ';' ends up inside a json string, it will mess up the commands
-// FIXME: breaks the quoted strings too
-// FIXME: maybe good for the game config, but not much else
-public static bool SplitCommands( string str, out string [] cmds ) {
+// ignores any quoted or json strings, just split along the semicolon
+public static bool SimpleCommandsSplit( string str, out string [] cmds ) {
     cmds = str.Split( new []{';'}, StringSplitOptions.RemoveEmptyEntries ); 
     return cmds.Length > 0;
 }
 
+// handles properly ';' inside tags and quotes
+static List<string> _exeTokens = new List<string>();
+public static bool TryExecuteString( string str, object context = null, bool silent = false,
+                                                                    bool keepJsonTags = false ) {
+    if ( GetArgv( str, out string [] argv, keepJsonTags: keepJsonTags ) ) {
+        _exeTokens.Clear();
+        for ( int i = 0; i < argv.Length; i++ ) {
+            if ( argv[i] == ";" ) {
+                if ( _exeTokens.Count > 0 ) {
+                    TryExecute( _exeTokens.ToArray(), context, silent );
+                    _exeTokens.Clear();
+                }
+            } else {
+                _exeTokens.Add( argv[i] );
+            }
+        }
+        if ( _exeTokens.Count > 0 ) {
+            TryExecute( _exeTokens.ToArray(), context, silent );
+        }
+        return true;
+    }
+    return false;
+}
+
 public static bool TryExecute( string [] argv, object context = null, bool silent = false ) {
+    if ( argv.Length == 0 ) {
+        if ( ! silent ) {
+            Error( "Zero argv-s in TryExecute." );
+        }
+        return false;
+    }
+
     string str = argv[0].ToLowerInvariant();
 
     Variable v;

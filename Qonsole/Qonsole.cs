@@ -385,8 +385,8 @@ public static void Init( int configVersion = -1 ) {
         Cellophane.ConfigVersion_kvar = configVersion;
     }
     Cellophane.UseColor = true;
-    Cellophane.Log = (s) => { Log( s ); };
-    Cellophane.Error = (s) => { Error( s ); };
+    Cellophane.Log = s => Log( s );
+    Cellophane.Error = s => Error( $"[Cellophane] {s}" );
     Cellophane.ScanVarsAndCommands();
     InternalCommand( "qonsole_pre_config" );
     TryExecuteLegacy( onPreLoadCfg_f() );
@@ -644,9 +644,11 @@ static void RenderGL( bool skip = false ) {
 
     QGL.Begin();
 
-    QGL.LateBlitFlush();
-    QGL.LatePrintFlush();
-    QGL.LateDrawLineFlush();
+    QGL.FlushLates();
+
+    //QGL.LateBlitFlush();
+    //QGL.LatePrintFlush();
+    //QGL.LateDrawLineFlush();
 
     if ( ! skip ) {
         int maxH = ( int )QGL.ScreenHeight();
@@ -733,6 +735,7 @@ public static void Start() {
 #if HAS_UNITY
     if ( QGL.Start( invertedY: QonInvertPlayY ) ) {
         Started = true;
+        Log( "Qonsole Started." );
         InternalCommand( "qonsole_post_start" );
         onStart_f();
     } else {
@@ -740,34 +743,18 @@ public static void Start() {
     }
 #else
     Started = true;
+    Log( "Qonsole Started." );
     onStart_f();
 #endif
-    Log( "Qonsole Started." );
 }
 
-// tries to handle properly ';' inside tags and quotes
 public static void TryExecute( string cmdLine, object context = null, bool keepJsonTags = false ) {
-    if ( Cellophane.GetArgv( cmdLine, out string [] argv, keepJsonTags: keepJsonTags ) ) {
-        List<string> tokens = new List<string>();
-        for ( int i = 0; i < argv.Length; i++ ) {
-            if ( argv[i] == ";" ) {
-                if ( tokens.Count > 0 ) {
-                    Cellophane.TryExecute( tokens.ToArray(), context );
-                    tokens.Clear();
-                }
-            } else {
-                tokens.Add( argv[i] );
-            }
-        }
-        Cellophane.TryExecute( tokens.ToArray(), context );
-    }
+    Cellophane.TryExecuteString( cmdLine, context: context, keepJsonTags: keepJsonTags );
 }
 
-// FIXME: remove someday
-// FIXME: spltting is broken, see SplitCommands
 public static void TryExecuteLegacy( string cmdLine, object context = null ) {
     string [] cmds;
-    if ( Cellophane.SplitCommands( cmdLine, out cmds ) ) {
+    if ( Cellophane.SimpleCommandsSplit( cmdLine, out cmds ) ) {
         string [] argv;
         foreach ( var cmd in cmds ) {
             if ( Cellophane.GetArgv( cmd, out argv ) ) {
@@ -1105,7 +1092,7 @@ public static void Init( int configVersion = 0 ) {
     Cellophane.ConfigVersion_kvar = configVersion;
     Cellophane.UseColor = false;
     Cellophane.Log = s => Log( s );
-    Cellophane.Error = s => Error( s );
+    Cellophane.Error = s => Error( $"[Cellophane] {s}" );
     Cellophane.ScanVarsAndCommands();
     Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
     FlushConfig();
@@ -1120,16 +1107,8 @@ public static void FlushConfig() {
     }
 }
 
-public static void TryExecute( string cmdLine, object context = null ) {
-    string [] cmds;
-    if ( Cellophane.SplitCommands( cmdLine, out cmds ) ) {
-        string [] argv;
-        foreach ( var cmd in cmds ) {
-            if ( Cellophane.GetArgv( cmd, out argv ) ) {
-                Cellophane.TryExecute( argv, context );
-            }
-        }
-    }
+public static void TryExecute( string cmdLine, object context = null, bool keepJsonTags = false ) {
+    Cellophane.TryExecuteString( cmdLine, context: context, keepJsonTags: keepJsonTags );
 }
 
 public static void Print( string s ) {

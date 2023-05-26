@@ -9,7 +9,7 @@ public static class KeyBinds {
 public static Action<string> Log = s => {};
 public static Action<string> Error = s => {};
 
-private static KeyCode[] _keys = new KeyCode [] {
+public static readonly KeyCode[] keys = new KeyCode [] {
     KeyCode.None, //Not assigned (never returned as the result of a keystroke).
     KeyCode.Backspace, //The backspace key.
     KeyCode.Delete, //The forward delete key.
@@ -345,8 +345,8 @@ private static Dictionary<string,string[]> _bindContext = new Dictionary<string,
 private static Dictionary<KeyCode,int> _keyToIndex = new Dictionary<KeyCode,int>();
 
 static KeyBinds() {
-    for ( int i = 0; i < _keys.Length; i++ ) {
-        _keyToIndex[_keys[i]] = i;
+    for ( int i = 0; i < keys.Length; i++ ) {
+        _keyToIndex[keys[i]] = i;
     }
 }
 
@@ -361,8 +361,8 @@ public static void Bind_kmd( string [] argv ) {
         foreach ( var kv in _bindContext ) {
             string context = kv.Key;
             string [] ctxCommands = kv.Value;
-            for ( int i = 0; i < _keys.Length; i++ ) {
-                KeyCode key = _keys[i];
+            for ( int i = 0; i < keys.Length; i++ ) {
+                KeyCode key = keys[i];
                 string cmd = ctxCommands[i];
                 if ( cmd.Length > 0 ) {
                     Log( $"{key}: [ff9000]{cmd}[-] {context}" );
@@ -381,7 +381,7 @@ public static void Bind_kmd( string [] argv ) {
 
     string [] ctxCommands;
     if ( ! _bindContext.TryGetValue( context, out ctxCommands ) ) {
-        ctxCommands = new string[_keys.Length];
+        ctxCommands = new string[keys.Length];
         for ( int i = 0; i < ctxCommands.Length; i++ ) {
             ctxCommands[i] = "";
         }
@@ -418,8 +418,8 @@ public static string StoreConfig() {
     foreach ( var kv in _bindContext ) {
         string context = kv.Key;
         string [] ctxCommands = kv.Value;
-        for ( int i = 0; i < _keys.Length; i++ ) {
-            KeyCode key = _keys[i];
+        for ( int i = 0; i < keys.Length; i++ ) {
+            KeyCode key = keys[i];
             string cmd = ctxCommands[i];
             if ( cmd.Length > 0 ) {
                 cfg += $"bind {key} \"{cmd}\" {context}\n";
@@ -431,15 +431,7 @@ public static string StoreConfig() {
 
 private static void Execute( KeyCode key, string cmdLine ) {
     //Log( "Execute key binding: " + key + " " + cmdLine );
-    string [] cmds;
-    if ( Cellophane.SplitCommands( cmdLine, out cmds ) ) {
-        string [] argv;
-        foreach ( var cmd in cmds ) {
-            if ( Cellophane.GetArgv( cmd, out argv ) ) {
-                Cellophane.TryExecute( argv );
-            }
-        }
-    }
+    Cellophane.TryExecuteString( cmdLine );
 }
 
 public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyUp = KeyCode.None,
@@ -447,7 +439,7 @@ public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyU
                                                                     string context = "" ) {
 #if KEYBINDS_LEGACY
     string cmd;
-    foreach ( var key in _keys ) {
+    foreach ( var key in keys ) {
         if ( Input.GetKeyDown( key ) && GetCmd( key, context, out cmd ) ) {
             if ( cmd[0] != '+' && cmd[0] != '-' ) {
                 Execute( key, cmd );
