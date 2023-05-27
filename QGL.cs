@@ -791,6 +791,11 @@ public static void FlushLates() {
         }
 
         LateDrawLineFlush();
+
+        _texts.Clear();
+        _textsNokia.Clear();
+        _images.Clear();
+        _lines.Clear();
 #endif
 }
 
