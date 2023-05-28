@@ -52,8 +52,8 @@ public static QUI.WidgetResult ClickRect_wg( WrapBox wbox, int handle = 0 ) {
 public static QUI.WidgetResult ClickRect( WrapBox wbox, int handle = 0,
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
-    return QUI.ClickRect( wbox.x, wbox.y, wbox.w, wbox.h, handle: handle, lineNumber: lineNumber,
-                                                                                caller: caller );
+    handle = Hash( wbox, handle, lineNumber, caller );
+    return QUI.ClickRect_wg( wbox.x, wbox.y, wbox.w, wbox.h, handle: handle );
 }
 
 #if QUI_USE_UNITY_UI
