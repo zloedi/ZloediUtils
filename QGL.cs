@@ -508,7 +508,7 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
 public static void LatePrintFlush( int n ) {
     SetFontTexture();
     GL.Begin( GL.QUADS );
-    for ( int i = start; i < start + n; i++ ) {
+    for ( int i = 0; i < n; i++ ) {
         var s = _lates[i] as LateText;
         if ( s.context == _context ) {
             DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
@@ -726,7 +726,7 @@ public static void Begin() {
 }
 
 public static void FlushLates() {
-#if false
+#if true
         LateBlitFlush();
         LatePrintFlush();
         LateDrawLineFlush();
