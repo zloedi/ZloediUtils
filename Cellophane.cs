@@ -642,7 +642,7 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
     return argv.Length > 0;
 }
 
-// bare minimum tokenizer
+// bare minimum tokenizer -- no quotes, no json, no comments
 public static bool GetArgvBare( string str, out string [] argv ) {
     _argvTokens.Clear();
     string token = "";
