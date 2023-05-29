@@ -576,7 +576,7 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
 
     bool json = false;
 
-    void AddToken() {
+    void addToken() {
         if ( token.StartsWith( "<json>" ) ) {
             token = token.Substring( "<json>".Length );
             json = true;
@@ -603,7 +603,7 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
         if ( json ) {
             token += ( char )c;
             if ( token.EndsWith( "</json>" ) ) {
-                AddToken();
+                addToken();
             }
         } else {
             if ( comment >= 2 ) {
@@ -614,30 +614,59 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
             } else if ( c == '"' ) {
                 quoted++;
                 if ( quoted == 2 ) {
-                    AddToken();
+                    addToken();
                     quoted = 0;
                 }
             } else if ( quoted == 0 && ( c == '\n' || c == '\r' || c == ' ' || c == '\t' ) ) {
-                AddToken();
+                addToken();
             } else if ( quoted == 0 && c == '=' ) {
-                AddToken();
+                addToken();
                 token = "=";
-                AddToken();
+                addToken();
             } else if ( quoted == 0 && c == ';' ) {
-                AddToken();
+                addToken();
                 token = ";";
-                AddToken();
+                addToken();
             } else if ( quoted == 0 && c == '/' ) {
                 comment++;
             } else {
                 token += ( char )c;
                 if ( token.StartsWith( "<json>" ) ) {
-                    AddToken();
+                    addToken();
                 }
             }
         }
     }
-    AddToken();
+    addToken();
+    argv = _argvTokens.ToArray();
+    return argv.Length > 0;
+}
+
+// bare minimum tokenizer
+public static bool GetArgvBare( string str, out string [] argv ) {
+    _argvTokens.Clear();
+    string token = "";
+
+    void addToken() {
+        if ( token.Length > 0 ) {
+            _argvTokens.Add( token );
+            token = "";
+        }
+    }
+
+    for ( int i = 0; i < str.Length; i++ ) {
+        int c = str[i];
+        if ( c == '\n' || c == '\r' || c == ' ' || c == '\t' ) {
+            addToken();
+        } else if ( c == ';' ) {
+            addToken();
+            token = ";";
+            addToken();
+        } else {
+            token += ( char )c;
+        }
+    }
+    addToken();
     argv = _argvTokens.ToArray();
     return argv.Length > 0;
 }
