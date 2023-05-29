@@ -560,7 +560,8 @@ public static string StripJSONTags( string str ) {
 }
 
 static List<string> _argvTokens = new List<string>();
-public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = false ) {
+public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = false,
+                                                                        bool keepQuotes = false ) {
     if ( string.IsNullOrEmpty( str ) ) {
         argv = new string[0];
         // spams on the console too
@@ -588,7 +589,11 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
             json = false;
         }
         if ( comment < 2 && ! json && token.Length > 0 ) {
-            _argvTokens.Add( token );
+            if ( keepQuotes && quoted == 2 ) {
+                _argvTokens.Add( '"' + token + '"' );
+            } else {
+                _argvTokens.Add( token );
+            }
             token = "";
         }
     }
@@ -641,6 +646,27 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
 public static bool SimpleCommandsSplit( string str, out string [] cmds ) {
     cmds = str.Split( new []{';'}, StringSplitOptions.RemoveEmptyEntries ); 
     return cmds.Length > 0;
+}
+
+// handles properly ';' inside tags and quotes
+static List<string> _splitCmds = new List<string>();
+public static bool SplitCommands( string str, out string [] cmds ) {
+    _splitCmds.Clear();
+    if ( GetArgv( str, out string [] argv, keepJsonTags: true, keepQuotes: true ) ) {
+        string cmd = string.Empty;
+        for ( int i = 0; i < argv.Length; i++ ) {
+            cmd += $"{argv[i]} ";
+            if ( argv[i] == ";" ) {
+                _splitCmds.Add( cmd );
+                cmd = string.Empty;
+            }
+        }
+        _splitCmds.Add( cmd );
+        cmds = _splitCmds.ToArray();
+        return cmds.Length > 0;
+    }
+    cmds = new string[0];
+    return false;
 }
 
 // handles properly ';' inside tags and quotes
