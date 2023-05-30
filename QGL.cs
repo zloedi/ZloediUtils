@@ -17,56 +17,29 @@ static int _context;
 static Camera _camera;
 static bool _invertedY;
 
-class Late {
-    public virtual void Draw() {
-    }
-}
-
-class LateLine : Late {
+class LateLine {
     public int context;
     public List<Vector2> line;
     public Color color;
-    //public override void Draw() {
-    //    GL.Color( l.color );
-    //    for ( int i = 0; i < l.line.Count - 1; i++ ) {
-    //        GL.Vertex( l.line[i + 0] );
-    //        GL.Vertex( l.line[i + 1] );
-    //    }
-    //}
 }
 
-class LateText : Late {
+class LateText {
     public int context;
     public float x, y;
     public float scale;
     public string str;
     public Color color;
-
-    //public override void Draw() {
-    //    DrawTextWithOutline( str, x, y, color, scale );
-    //}
 }
 
-class LateTextNokia : LateText {
-    //public override void Draw() {
-    //    DrawTextNokia( str, x, y, color, scale );
-    //}
-}
+//class LateTextNokia : LateText {
+//}
 
-class LateImage : Late {
+class LateImage {
     public int context;
     public float x, y, w, h;
     public Color color;
     public Texture texture;
     public Material material;
-
-    //public override void Draw() {
-    //    Vector2 srcPos = new Vector2( 0, 0 );
-    //    Vector2 srcSize = new Vector2( texture.width, texture.height );
-    //    Vector2 dstPos = new Vector2( x, y );
-    //    Vector2 dstSize = new Vector2( w, h );
-    //    BlitSlow( texture, srcPos, srcSize, dstPos, dstSize, color, material );
-    //}
 }
 
 // these are postponed and drawn after all geometry in scene
@@ -475,8 +448,8 @@ static void AddCenteredText( List<LateText> texts, string str, Vector2 sz, float
                                                             Color? color = null, float scale = 1 ) {
     var txt = new LateText {
         context = _context,
-        x = ( int )( x - sz.x / 2f ),
-        y = ( int )( y - sz.y / 2f ),
+        x = Mathf.Round( x - sz.x / 2f ),
+        y = Mathf.Round( y - sz.y / 2f ),
         scale = scale,
         str = str,
         color = color == null ? Color.green : color.Value,
@@ -721,7 +694,23 @@ public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
     };
 
     _lines.Add( ln );
-    //_lates.Add( ln );
+    _lates.Add( ln );
+}
+
+public static void LateDrawLineFlush( int n ) {
+    SetWhiteTexture();
+    GL.Begin( GL.LINES);
+    for ( int i = 0; i < n; i++ ) {
+        var l = _lates[i] as LateLine;
+        if ( l.context == _context ) {
+            GL.Color( l.color );
+            for ( int j = 0; j < l.line.Count - 1; j++ ) {
+                GL.Vertex( l.line[j + 0] );
+                GL.Vertex( l.line[j + 1] );
+            }
+        }
+    }
+    GL.End();
 }
 
 public static void LateDrawLineFlush() {
@@ -787,10 +776,9 @@ public static void FlushLates() {
 
             n = 0;
             for ( int i = 0; i < _lates.Count && _lates[i] is LateLine; i++, n++ ) { }
+            LateDrawLineFlush( n );
             _lates.RemoveRange( 0, n );
         }
-
-        LateDrawLineFlush();
 
         _texts.Clear();
         _textsNokia.Clear();
