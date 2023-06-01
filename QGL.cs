@@ -448,8 +448,8 @@ static void AddCenteredText( List<LateText> texts, string str, Vector2 sz, float
                                                             Color? color = null, float scale = 1 ) {
     var txt = new LateText {
         context = _context,
-        x = Mathf.Round( x - sz.x / 2f ),
-        y = Mathf.Round( y - sz.y / 2f ),
+        x = Mathf.Round( x - ( int )sz.x / 2 ),
+        y = Mathf.Round( y - ( int )sz.y / 2 ),
         scale = scale,
         str = str,
         color = color == null ? Color.green : color.Value,
