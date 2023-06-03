@@ -136,6 +136,11 @@ public static int [] FloodMap( int origin, int maxRange, int navMapPitch,
 public static bool TracePath( int target, int floodMapPitch, Context ctx, List<int> ioResult ) { 
     ioResult.Clear();
     target = Clamp( target, 0, ctx.floodMap.Length - 1 );
+    if ( ctx.floodMap[target] == BLOC 
+            || ctx.floodMap[target] == FREE 
+            || ctx.floodMap[ctx.origin] == BLOC ) {
+        return false;
+    }
     int [] prims = {
          -1,
          -floodMapPitch,
