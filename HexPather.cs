@@ -104,6 +104,17 @@ public static int [] FloodMap( int origin, int maxRange, int navMapPitch,
     for ( int i = 0; i < navMapLength; i++ ) {
         ctx.floodMap[i] = navMap[i] != 0 ? BLOC : FREE;
     }
+#if false
+    for ( int i = navMapLength; i < ctx.floodMap.Length; i++ ) {
+        ctx.floodMap[i] = BLOC;
+    }
+#else
+    // add a row of blocking tiles under the last row
+    int n = Math.Min( navMapLength + navMapPitch, ctx.floodMap.Length );
+    for ( int i = navMapLength; i < n; i++ ) {
+        ctx.floodMap[i] = BLOC;
+    }
+#endif
     int max = ctx.floodMap.Length - 1;
     ctx.floodMap[origin] = 0;
     Reset( ctx, origin );
