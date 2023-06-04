@@ -86,11 +86,11 @@ public static Context CreateContext( int navMapSize ) {
 
 // before being able to trace paths, you need to flood the map
 // reuse the context for tracing multiple paths
-public static int [] FloodMap( int origin, int maxRange, int navMapPitch,
+public static bool FloodMap( int origin, int maxRange, int navMapPitch,
                                                 byte [] navMap, int navMapLength, Context ctx ) {
     origin = Clamp( origin, 0, navMapLength - 1 );
     if ( navMap[origin] != 0 ) {
-        return ctx.floodMap;
+        return false;
     }
     int [] prims = {
          -1,
@@ -139,7 +139,7 @@ public static int [] FloodMap( int origin, int maxRange, int navMapPitch,
         }
     } while ( ! FrontIsEmpty( ctx ) );
 
-    return ctx.floodMap;
+    return true;
 }
 
 // call this to get a path between two nodes
