@@ -148,8 +148,8 @@ public struct WrapBox {
         return TopLeft( W, H );
     }
 
-    public WrapBox CopyMoveDown() {
-        var copy = new WrapBox( x, y, w, h, GetId( id ) );
+    public WrapBox CopyMoveDown( int i ) {
+        var copy = new WrapBox( x, y, w, h, GetId( i ) );
         y += h;
         return copy;
     }
