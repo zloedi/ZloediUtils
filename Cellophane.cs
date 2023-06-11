@@ -427,6 +427,9 @@ static void CollectItems() {
                     }
                 };
             }
+            if ( cmd.name == "cellophane_on_register" ) {
+                cmd.ActionArgv( new string [] { cmd.name, type.Name }, null );
+            }
             cmds.Add(cmd);
         }
     }
@@ -682,12 +685,13 @@ static List<string> _splitCmds = new List<string>();
 public static bool SplitCommands( string str, out string [] cmds ) {
     _splitCmds.Clear();
     if ( GetArgv( str, out string [] argv, keepJsonTags: true, keepQuotes: true ) ) {
-        string cmd = string.Empty;
-        for ( int i = 0; i < argv.Length; i++ ) {
-            cmd += $"{argv[i]} ";
+        string cmd = argv[0];
+        for ( int i = 1; i < argv.Length; i++ ) {
             if ( argv[i] == ";" ) {
-                _splitCmds.Add( cmd );
+                _splitCmds.Add( cmd + ';' );
                 cmd = string.Empty;
+            } else {
+                cmd += $" {argv[i]}";
             }
         }
         _splitCmds.Add( cmd );

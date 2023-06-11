@@ -8,12 +8,17 @@ public struct WrapBox {
     // scale stuff down, if resolution is below this value
     static float _canvasMinResolution = DefaultMinRes;
 
+    // use fixed scale if canvas scale is disabled
+    static float _fixedScale = 1;
+
     // FIXME: this matches the y value of CanvasScaler.referenceResolution
     // FIXME: should be either read from canvas scaler or enforced there
     // FIXME: ultimately we may want always scale, ignoring the canvas resolution
     // Canvases only scale stuff DOWN
-    public static float canvasScale => Mathf.Min( 1f,
-                                                    ( float )Screen.height / _canvasMinResolution );
+    public static float canvasScale =>
+                            _canvasMinResolution == 0
+                                ? _fixedScale
+                                : Mathf.Min( 1f, ( float )Screen.height / _canvasMinResolution );
 
     public static float ScaleRound( float f ) {
         return Mathf.Round( Scale( f ) );
@@ -27,8 +32,9 @@ public struct WrapBox {
         return f / canvasScale;
     }
 
-    public static void DisableCanvasScale() {
-        _canvasMinResolution = 0.001f;
+    public static void DisableCanvasScale( float fixedScale = 1 ) {
+        _fixedScale = fixedScale;
+        _canvasMinResolution = 0f;
     }
 
     public static void EnableCanvasScale() {
@@ -132,5 +138,29 @@ public struct WrapBox {
         float inX = this.x + ( this.w - inW ) * 0.5f;
         float inY = this.y + this.h - inH - Scale( y );
         return new WrapBox( inX, inY, inW, inH, GetId( id ) );
+    }
+
+    // == iterating top-down ==
+
+    // moves the box below the current one
+    public WrapBox NextDown() {
+        y += h;
+        return TopLeft( W, H );
+    }
+
+    public WrapBox CopyMoveDown() {
+        var copy = new WrapBox( x, y, w, h, GetId( id ) );
+        y += h;
+        return copy;
+    }
+
+    // eat top from this box, generate a box from the difference, return modified box
+    public WrapBox EatTop( int eatH, out WrapBox wboxDifference ) {
+        wboxDifference = TopLeft( W, eatH );
+        return EatTop( wboxDifference );
+    }
+
+    public WrapBox EatTop( WrapBox wbox ) {
+        return BottomLeft( W, H - wbox.H );
     }
 }
