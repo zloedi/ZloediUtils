@@ -148,9 +148,20 @@ public struct WrapBox {
         return TopLeft( W, H );
     }
 
+    public WrapBox NextRight() {
+        x += w;
+        return TopLeft( W, H );
+    }
+
     public WrapBox CopyMoveDown( int i ) {
         var copy = new WrapBox( x, y, w, h, GetId( i ) );
         y += h;
+        return copy;
+    }
+
+    public WrapBox CopyMoveRight( int i ) {
+        var copy = new WrapBox( x, y, w, h, GetId( i ) );
+        x += w;
         return copy;
     }
 
