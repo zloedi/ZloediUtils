@@ -51,10 +51,10 @@ public static void End() {
         if ( i.garbageAge > 5f ) {
             if ( i.garbageMaterials ) {
                 foreach ( var r in i.rends ) {
-                    UnityEngine.Object.Destroy( r.material );
+                    Destroy( r.material );
                 }
             }
-            GameObject.Destroy( i.go );
+            DestroyGO( i.go );
             //Qonsole.Log( $"Removing IMM garbage {i.go.name}" );
             _immDead.Add( i );
         } else {
@@ -94,7 +94,7 @@ public static ImmObject RegisterPrefab( GameObject prefab, Action<GameObject> on
             _immRoot.transform.parent = root;
         }
         go.transform.parent = _immRoot.transform;
-        go.name = $"{prefab.name}{handle}";
+        go.name = $"{prefab.name}{handle.ToString( "X8" )}";
         if ( layer != -1 ) {
             go.layer = layer;
         }
@@ -127,7 +127,7 @@ public static GameObject SpriteTex( Texture2D tex, Vector3 pos, Material mat = n
     foreach ( var r in imo.rends ) {
         var sr = ( SpriteRenderer )r;
         if ( ! sr.sprite || sr.sprite.texture != tex ) {
-            UnityEngine.Object.Destroy( sr.sprite );
+            Destroy( sr.sprite );
             sr.sprite = UnityEngine.Sprite.Create( tex, new Rect( 0.0f, 0.0f, tex.width, tex.height ),
                                                     Vector2.one * 0.5f, 100f, 0, SpriteMeshType.FullRect,
                                                     border != null ? border.Value : Vector4.zero );
@@ -135,6 +135,22 @@ public static GameObject SpriteTex( Texture2D tex, Vector3 pos, Material mat = n
         sr.color = color != null ? color.Value : Color.white;
     }
     return imo.go;
+}
+
+static void DestroyGO( GameObject go ) {
+    if ( Application.isPlaying ) {
+        GameObject.Destroy( go );
+    } else {
+        GameObject.DestroyImmediate( go );
+    }
+}
+
+static void Destroy( UnityEngine.Object o ) {
+    if ( Application.isPlaying ) {
+        UnityEngine.Object.Destroy( o );
+    } else {
+        UnityEngine.Object.DestroyImmediate( o );
+    }
 }
 
 

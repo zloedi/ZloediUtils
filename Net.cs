@@ -307,6 +307,9 @@ public class Net {
     }
 
     public bool Init( int basePort ) {
+        if ( socket == null ) {
+            socket = new Socket( AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp );
+        }
         socket.Blocking = false;
         int port;
         for ( port = 0; port < 10; port++ ) {
