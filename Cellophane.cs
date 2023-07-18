@@ -427,6 +427,9 @@ static void CollectItems() {
                     }
                 };
             }
+            if ( cmd.name == "cellophane_on_register" ) {
+                cmd.ActionArgv( new string [] { cmd.name, type.Name }, null );
+            }
             cmds.Add(cmd);
         }
     }
@@ -560,7 +563,8 @@ public static string StripJSONTags( string str ) {
 }
 
 static List<string> _argvTokens = new List<string>();
-public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = false ) {
+public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = false,
+                                                                        bool keepQuotes = false ) {
     if ( string.IsNullOrEmpty( str ) ) {
         argv = new string[0];
         // spams on the console too
@@ -575,7 +579,7 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
 
     bool json = false;
 
-    void AddToken() {
+    void addToken() {
         if ( token.StartsWith( "<json>" ) ) {
             token = token.Substring( "<json>".Length );
             json = true;
@@ -588,7 +592,11 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
             json = false;
         }
         if ( comment < 2 && ! json && token.Length > 0 ) {
-            _argvTokens.Add( token );
+            if ( keepQuotes && quoted == 2 ) {
+                _argvTokens.Add( '"' + token + '"' );
+            } else {
+                _argvTokens.Add( token );
+            }
             token = "";
         }
     }
@@ -598,7 +606,7 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
         if ( json ) {
             token += ( char )c;
             if ( token.EndsWith( "</json>" ) ) {
-                AddToken();
+                addToken();
             }
         } else {
             if ( comment >= 2 ) {
@@ -609,30 +617,59 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
             } else if ( c == '"' ) {
                 quoted++;
                 if ( quoted == 2 ) {
-                    AddToken();
+                    addToken();
                     quoted = 0;
                 }
             } else if ( quoted == 0 && ( c == '\n' || c == '\r' || c == ' ' || c == '\t' ) ) {
-                AddToken();
+                addToken();
             } else if ( quoted == 0 && c == '=' ) {
-                AddToken();
+                addToken();
                 token = "=";
-                AddToken();
+                addToken();
             } else if ( quoted == 0 && c == ';' ) {
-                AddToken();
+                addToken();
                 token = ";";
-                AddToken();
+                addToken();
             } else if ( quoted == 0 && c == '/' ) {
                 comment++;
             } else {
                 token += ( char )c;
                 if ( token.StartsWith( "<json>" ) ) {
-                    AddToken();
+                    addToken();
                 }
             }
         }
     }
-    AddToken();
+    addToken();
+    argv = _argvTokens.ToArray();
+    return argv.Length > 0;
+}
+
+// bare minimum tokenizer -- no quotes, no json, no comments
+public static bool GetArgvBare( string str, out string [] argv ) {
+    _argvTokens.Clear();
+    string token = "";
+
+    void addToken() {
+        if ( token.Length > 0 ) {
+            _argvTokens.Add( token );
+            token = "";
+        }
+    }
+
+    for ( int i = 0; i < str.Length; i++ ) {
+        int c = str[i];
+        if ( c == '\n' || c == '\r' || c == ' ' || c == '\t' ) {
+            addToken();
+        } else if ( c == ';' ) {
+            addToken();
+            token = ";";
+            addToken();
+        } else {
+            token += ( char )c;
+        }
+    }
+    addToken();
     argv = _argvTokens.ToArray();
     return argv.Length > 0;
 }
@@ -641,6 +678,28 @@ public static bool GetArgv( string str, out string [] argv, bool keepJsonTags = 
 public static bool SimpleCommandsSplit( string str, out string [] cmds ) {
     cmds = str.Split( new []{';'}, StringSplitOptions.RemoveEmptyEntries ); 
     return cmds.Length > 0;
+}
+
+// handles properly ';' inside tags and quotes
+static List<string> _splitCmds = new List<string>();
+public static bool SplitCommands( string str, out string [] cmds ) {
+    _splitCmds.Clear();
+    if ( GetArgv( str, out string [] argv, keepJsonTags: true, keepQuotes: true ) ) {
+        string cmd = argv[0];
+        for ( int i = 1; i < argv.Length; i++ ) {
+            if ( argv[i] == ";" ) {
+                _splitCmds.Add( cmd + ';' );
+                cmd = string.Empty;
+            } else {
+                cmd += $" {argv[i]}";
+            }
+        }
+        _splitCmds.Add( cmd );
+        cmds = _splitCmds.ToArray();
+        return cmds.Length > 0;
+    }
+    cmds = new string[0];
+    return false;
 }
 
 // handles properly ';' inside tags and quotes

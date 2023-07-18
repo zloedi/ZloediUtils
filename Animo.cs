@@ -19,7 +19,7 @@ public class Crossfade {
     public float [] weight = new float[2];
     public int [] state = new int[2];
     public int [] time = new int[2];
-    public bool switchEvent;
+    public bool overflow;
 }
 
 public static Action<string> Log = (s) => {};
@@ -86,8 +86,6 @@ public static void CrossfadeToState( Crossfade cf, int state ) {
 
     cf.chan++;
 
-    cf.switchEvent = true;
-
 #if false
     Qonsole.Log( "switch to " + state + " chan: " + cf.chan );
 #endif
@@ -138,7 +136,7 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
     
     // c[0] crossfades into c[1] -- it means the c[1] is the potentially looped remaining clip
     // if the target clip is overflowed, we should notify the caller to handle single shots
-    bool result = cf.time[c[1]] + transition >= src.duration[cf.state[c[1]]];
+    cf.overflow = cf.time[c[1]] + transition >= src.duration[cf.state[c[1]]];
 
     // keep the rollover/clamp AFTER the overflow check
     if ( clamp ) {
@@ -151,7 +149,7 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
     // on no-loop animations overflow while transitioning
     cf.time[c[0]] = Mathf.Min( cf.time[c[0]], src.duration[cf.state[c[0]]] );
 
-    return result;
+    return cf.overflow;
 }
 
 public static void Begin() {

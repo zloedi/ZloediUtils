@@ -30,6 +30,26 @@ static Hexes() {
 #endif
 }
 
+
+public static void Neighbours( Vector2Int hxc,
+                            out Vector2Int n0,
+                            out Vector2Int n1,
+                            out Vector2Int n2,
+                            out Vector2Int n3,
+                            out Vector2Int n4,
+                            out Vector2Int n5 ) {
+    n0 = new Vector2Int( hxc.x + 0, hxc.y - 1 );
+    n1 = new Vector2Int( hxc.x - 0, hxc.y + 1 );
+    n2 = new Vector2Int( hxc.x + 1, hxc.y - 0 );
+    n3 = new Vector2Int( hxc.x - 1, hxc.y + 0 );
+    n4 = new Vector2Int( hxc.x + 1, hxc.y - 1 );
+    n5 = new Vector2Int( hxc.x - 1, hxc.y + 1 );
+}
+
+public static Vector3Int AxialToCubeInt( int q, int r ) {
+    return new Vector3Int( q, -q - r, r ); 
+}
+
 public static Vector3 AxialToCube( float q, float r ) {
     return new Vector3( q, -q - r, r ); 
 }

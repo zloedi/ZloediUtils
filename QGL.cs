@@ -31,6 +31,9 @@ class LateText {
     public Color color;
 }
 
+//class LateTextNokia : LateText {
+//}
+
 class LateImage {
     public int context;
     public float x, y, w, h;
@@ -445,8 +448,8 @@ static void AddCenteredText( List<LateText> texts, string str, Vector2 sz, float
                                                             Color? color = null, float scale = 1 ) {
     var txt = new LateText {
         context = _context,
-        x = ( int )( x - sz.x / 2f ),
-        y = ( int )( y - sz.y / 2f ),
+        x = Mathf.Round( x - ( int )sz.x / 2 ),
+        y = Mathf.Round( y - ( int )sz.y / 2 ),
         scale = scale,
         str = str,
         color = color == null ? Color.green : color.Value,
@@ -506,25 +509,36 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
 }
 
 public static void LatePrintFlush( int n ) {
-    SetFontTexture();
+    //SetFontTexture();
+    //GL.Begin( GL.QUADS );
+    //for ( int i = start; i < start + n; i++ ) {
+    //    var s = _lates[i] as LateText;
+    //    if ( s.context == _context ) {
+    //        DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
+    //    }
+    //}
+    //GL.End();
+
+    SetTexture( NokiaFont.GetTexture() );
     GL.Begin( GL.QUADS );
     for ( int i = 0; i < n; i++ ) {
         var s = _lates[i] as LateText;
         if ( s.context == _context ) {
-            DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
+            DrawTextNokia( s.str, s.x, s.y, s.color, s.scale );
         }
     }
     GL.End();
 
-    //SetTexture( NokiaFont.GetTexture() );
-    //GL.Begin( GL.QUADS );
-    //for ( int i = 0; i < n; i++ ) {
-    //    var s = _lates[i] as LateText;
-    //    if ( s.context == _context ) {
-    //        DrawTextNokia( s.str, s.x, s.y, s.color, s.scale );
+    //void removeTexts( List<LateText> texts ) {
+    //    for ( int i = texts.Count - 1; i >= 0; i-- ) {
+    //        if ( texts[i].context == _context ) {
+    //            texts.RemoveAt( i );
+    //        }
     //    }
     //}
-    //GL.End();
+
+    //removeTexts( _texts );
+    //removeTexts( _textsNokia );
 }
 
 public static void LatePrintFlush() {
@@ -680,7 +694,23 @@ public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
     };
 
     _lines.Add( ln );
-    //_lates.Add( ln );
+    _lates.Add( ln );
+}
+
+public static void LateDrawLineFlush( int n ) {
+    SetWhiteTexture();
+    GL.Begin( GL.LINES);
+    for ( int i = 0; i < n; i++ ) {
+        var l = _lates[i] as LateLine;
+        if ( l.context == _context ) {
+            GL.Color( l.color );
+            for ( int j = 0; j < l.line.Count - 1; j++ ) {
+                GL.Vertex( l.line[j + 0] );
+                GL.Vertex( l.line[j + 1] );
+            }
+        }
+    }
+    GL.End();
 }
 
 public static void LateDrawLineFlush() {
@@ -746,10 +776,9 @@ public static void FlushLates() {
 
             n = 0;
             for ( int i = 0; i < _lates.Count && _lates[i] is LateLine; i++, n++ ) { }
+            LateDrawLineFlush( n );
             _lates.RemoveRange( 0, n );
         }
-
-        LateDrawLineFlush();
 
         _texts.Clear();
         _textsNokia.Clear();
