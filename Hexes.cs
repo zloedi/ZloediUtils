@@ -277,11 +277,11 @@ static void GenerateHexWangs_kmd( string [] argv ) {
     Log( "Generated Hexagonal Wang Tiles Set." );
 }
 
-static void Log( string s ) {
+static void Log( string s, UnityEngine.Object o = null ) {
 #if HEXES_QONSOLE
-    Qonsole.Log( s );
+    Qonsole.Log( s, o );
 #else
-    Debug.Log( s );
+    Debug.Log( s, o );
 #endif
 }
 
