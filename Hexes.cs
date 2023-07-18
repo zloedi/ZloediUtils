@@ -200,7 +200,7 @@ static Vector2 ShearAndScale( int x, int y, int gridHeight, Vector2 sz ) {
     return pos;
 }
 
-static void GenerateHexWangs_kmd( string [] argv ) {
+static void WangsGenerate_cmd( string [] argv ) {
     Log( "Generating..." );
     string rootName = "HexWangsGenerated";
     GameObject root = null;
@@ -214,12 +214,13 @@ static void GenerateHexWangs_kmd( string [] argv ) {
     }
     root = new GameObject( rootName );
     MeshRenderer [] rends = GameObject.FindObjectsOfType<MeshRenderer>();
-    GameObject prism = null;
+    GameObject [] prism = new GameObject[2];
     GameObject wall = null;
     foreach ( var r in rends ) {
-        if ( r.gameObject.name.ToLowerInvariant().Contains( "prism" ) ) {
+        if ( r.gameObject.transform.parent.name.ToLowerInvariant().Contains( "prism" ) ) {
             Log( "Found prism mesh...", r.gameObject );
-            prism = r.gameObject;
+            prism[0] = r.gameObject.transform.parent.GetChild( 0 )?.gameObject;
+            prism[1] = r.gameObject.transform.parent.GetChild( 1 )?.gameObject;
             break;
         }
     }
@@ -232,16 +233,16 @@ static void GenerateHexWangs_kmd( string [] argv ) {
         }
     }
 #endif
-    if ( ! prism ) {
-        Log( "Needs a game object with 'prism' in its name, QUIT." );
+    if ( ! prism[0] || ! prism[1] ) {
+        Log( "Needs a game object with 'prism' in its name and two prism mesh children, QUIT." );
         return;
     }
     var colors = new Color[2] {
         new Color32(18, 159, 251, 255),
         new Color32(247, 255, 0, 255),
     };
-    Bounds bounds = prism.GetComponent<MeshRenderer>().bounds;
-    var dz = bounds.min.z - prism.transform.position.z;
+    Bounds bounds = prism[0].GetComponent<MeshRenderer>().bounds;
+    var dz = bounds.min.z - prism[0].transform.position.z;
     Vector3 tip = new Vector3( 0, 0, dz );
     Log( $"Tip position: {tip}" );
     for ( int i = 0; i < ( 1 << 6 ); i++ ) {
@@ -253,7 +254,10 @@ static void GenerateHexWangs_kmd( string [] argv ) {
         int z = -2 * ( i / maxSide );
         hex.transform.localPosition = new Vector3( x, 0, z );
         for ( int side = 0; side < 6; side++ ) {
-            GameObject hexPrism = GameObject.Instantiate( prism );
+            int mask = 1 << side;
+            bool bit = ( i & mask ) != 0;
+
+            GameObject hexPrism = GameObject.Instantiate( prism[bit ? 1 : 0] );
 
             hexPrism.name = side.ToString();
             hexPrism.transform.parent = hex.transform;
@@ -261,12 +265,6 @@ static void GenerateHexWangs_kmd( string [] argv ) {
 
             hexPrism.transform.RotateAround( hex.transform.position + tip, Vector3.up, 30 + 60 * side );
             hexPrism.transform.localPosition -= tip;
-
-            int mask = 1 << side;
-            bool bit = ( i & mask ) != 0;
-            var material = new Material( prism.GetComponent<MeshRenderer>().sharedMaterial );
-            material.color = colors[bit ? 1 : 0];
-            hexPrism.GetComponent<MeshRenderer>().material = material;
         }
         if ( wall ) {
             GameObject wi = GameObject.Instantiate( wall );
@@ -277,11 +275,50 @@ static void GenerateHexWangs_kmd( string [] argv ) {
     Log( "Generated Hexagonal Wang Tiles Set." );
 }
 
-static void Log( string s ) {
+static void WangsAssignWalls_cmd( string [] argv ) {
+    Transform [] trans = GameObject.FindObjectsOfType<Transform>( includeInactive: false );
+    Transform [] walls = new Transform[64];
+    Transform root = null;
+
+    foreach ( var t in trans ) {
+        if ( ! root && t.name == "HexWangsGenerated" ) {
+            root = t;
+        }
+
+        if ( t.name.ToLowerInvariant().Contains( "wall_basic" )
+                                                    && t.parent.parent.name == "HexWangsWalls" ) {
+            int.TryParse( t.parent.name, out int idx );
+            walls[idx & 63] = t;
+        }
+    }
+
+    if ( ! root ) {
+        Log( "Can't find root called HexWangsGenerated." );
+    }
+
+    for ( int i = 0; i < 64; i++ ) {
+
+        if ( ! walls[i] ) {
+            Log( $"Missing wall {i}" );
+            continue;
+        }
+
+        Transform hex = root.GetChild( i );
+
+        if ( hex ) {
+            GameObject wall = GameObject.Instantiate( walls[i].gameObject );
+            wall.name = "wall_basic_" + i.ToString( "D2" );
+            wall.transform.parent = hex;
+            wall.transform.localPosition = walls[i].localPosition;
+        }
+    }
+}
+
+static void Log( string s, UnityEngine.Object o = null ) {
 #if HEXES_QONSOLE
-    Qonsole.Log( s );
+    Qonsole.Log( s, o );
 #else
-    Debug.Log( s );
+    Debug.Log( s, o );
 #endif
 }
 
