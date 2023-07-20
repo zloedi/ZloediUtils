@@ -126,6 +126,7 @@ static void CreateBootstrapObject() {
 
 public static bool Active;
 public static bool Started;
+public static bool ConsumeEditorInputOnce;
 
 [Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
 static int QonOverlayPercent_kvar = 0;
@@ -274,14 +275,14 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     return true;
 }
 
-static void InternalCommand( string cmd ) {
+static void InternalCommand( string cmd, object context = null ) {
     Action<string[],object> action;
     if ( ! _internalCommands.TryGetValue( cmd, out action ) ) {
         if ( ! Cellophane.TryFindCommand( cmd, out action ) ) {
             return;
         }
     }
-    action( null, null );
+    action( null, context );
 }
 
 static void Clear_kmd( string [] argv ) {
@@ -426,7 +427,9 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
 
     bool notRunning = ! Application.isPlaying || paused;
 
-    if ( Active && notRunning ) {
+    InternalCommand( "qonsole_on_editor_event" );
+
+    if ( ( Active || ConsumeEditorInputOnce ) && notRunning ) {
         if ( Event.current.button == 0 ) {
             var controlID = GUIUtility.GetControlID( FocusType.Passive );
             if ( Event.current.type == EventType.MouseDown ) {
@@ -446,7 +449,9 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
             Vector2 mouse = Event.current.mousePosition * pixelsPerPoint;
             QUI.Begin( mouse.x, mouse.y );
         }
+        ConsumeEditorInputOnce = false;
         onRepaint( camera );
+        InternalCommand( "qonsole_on_editor_repaint" );
         QGL.LatePrint( "qonsole is running", Screen.width - 100, QGL.ScreenHeight() - 100 );
     }
     OnGUIInternal();
@@ -456,7 +461,7 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
             QUI.End( skipUnityUI: true );
         }
     }
-    if ( Active
+    if ( ( Active || ConsumeEditorInputOnce )
             && Event.current.type != EventType.Repaint
             && Event.current.type != EventType.Layout ) {
         Event.current.Use();
