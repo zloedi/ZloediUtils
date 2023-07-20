@@ -429,12 +429,12 @@ public static string StoreConfig() {
     return cfg;
 }
 
-private static void Execute( KeyCode key, string cmdLine ) {
+private static bool Execute( KeyCode key, string cmdLine ) {
     //Log( "Execute key binding: " + key + " " + cmdLine );
-    Cellophane.TryExecuteString( cmdLine );
+    return Cellophane.TryExecuteString( cmdLine );
 }
 
-public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyUp = KeyCode.None,
+public static bool TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyUp = KeyCode.None,
                                                                     KeyCode keyHold = KeyCode.None,
                                                                     string context = "" ) {
 #if KEYBINDS_LEGACY
@@ -453,25 +453,28 @@ public static void TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyU
         }
     }
 #else
+    bool result = false;
     string cmd;
 
     if ( GetCmd( keyDown, context, out cmd ) ) {
         if ( cmd[0] != '-' && cmd[0] != '+' ) {
-            Execute( keyDown, cmd );
+            if ( Execute( keyDown, cmd ) ) result = true;
         }
     }
 
     if ( GetCmd( keyHold, context, out cmd ) ) {
         if ( cmd[0] == '+' ) {
-            Execute( keyHold, cmd.Substring( 1 ) );
+            if ( Execute( keyHold, cmd.Substring( 1 ) ) ) result = true;
         }
     }
 
     if ( GetCmd( keyUp, context, out cmd ) ) {
         if ( cmd[0] == '-' ) {
-            Execute( keyUp, cmd.Substring( 1 ) );
+            if ( Execute( keyUp, cmd.Substring( 1 ) ) ) result = true;
         }
     }
+
+    return result;
 #endif
 }
 

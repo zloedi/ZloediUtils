@@ -572,9 +572,10 @@ public static void LatePrintFlush() {
     removeTexts( _textsNokia );
 }
 
-public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h ) {
+public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h,
+                                                                            Color? color = null ) {
     Vector2 pt = WorldToScreenPos( worldPos );
-    LateBlit( tex, pt.x, pt.y, w, h );
+    LateBlit( tex, pt.x - w / 2, pt.y - h / 2, w, h, color: color );
     return pt;
 }
 
