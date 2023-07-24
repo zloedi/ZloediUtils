@@ -509,16 +509,17 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
 }
 
 public static void LatePrintFlush( int n ) {
-    //SetFontTexture();
-    //GL.Begin( GL.QUADS );
-    //for ( int i = start; i < start + n; i++ ) {
-    //    var s = _lates[i] as LateText;
-    //    if ( s.context == _context ) {
-    //        DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
-    //    }
-    //}
-    //GL.End();
-
+#if true
+    SetFontTexture();
+    GL.Begin( GL.QUADS );
+    for ( int i = 0; i < n; i++ ) {
+        var s = _lates[i] as LateText;
+        if ( s.context == _context ) {
+            DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
+        }
+    }
+    GL.End();
+#else
     SetTexture( NokiaFont.GetTexture() );
     GL.Begin( GL.QUADS );
     for ( int i = 0; i < n; i++ ) {
@@ -528,17 +529,7 @@ public static void LatePrintFlush( int n ) {
         }
     }
     GL.End();
-
-    //void removeTexts( List<LateText> texts ) {
-    //    for ( int i = texts.Count - 1; i >= 0; i-- ) {
-    //        if ( texts[i].context == _context ) {
-    //            texts.RemoveAt( i );
-    //        }
-    //    }
-    //}
-
-    //removeTexts( _texts );
-    //removeTexts( _textsNokia );
+#endif
 }
 
 public static void LatePrintFlush() {
@@ -576,6 +567,12 @@ public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, f
                                                                             Color? color = null ) {
     Vector2 pt = WorldToScreenPos( worldPos );
     LateBlit( tex, pt.x - w / 2, pt.y - h / 2, w, h, color: color );
+    return pt;
+}
+
+public static Vector2 LateBlitWorld( Vector3 worldPos, float w, float h, Color? color = null ) {
+    Vector2 pt = WorldToScreenPos( worldPos );
+    LateBlit( null, pt.x - w / 2, pt.y - h / 2, w, h, color: color );
     return pt;
 }
 
