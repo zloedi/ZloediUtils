@@ -279,6 +279,10 @@ static void PrintSuggestions( int maxToPrint, string hilight = null,
     }
 }
 
+public static string FtoA( float f ) {
+    return Convert.ToString( f, CultureInfo.InvariantCulture ); 
+}
+
 public static bool AtoF( string a, out float f ) {
     return float.TryParse( a, NumberStyles.Any, CultureInfo.InvariantCulture, out f );
 }
