@@ -754,7 +754,7 @@ public static void Begin() {
 }
 
 public static void FlushLates() {
-#if true
+#if false
         LateBlitFlush();
         LatePrintFlush();
         LateDrawLineFlush();
