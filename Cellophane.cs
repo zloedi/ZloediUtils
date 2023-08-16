@@ -69,8 +69,8 @@ class Variable : Named {
     public Action<string> SetValue_f;
 }
 
-static Command [] _commands;
-static Variable [] _variables;
+static Command [] _commands = new Command[0];
+static Variable [] _variables = new Variable[0];
 static int [] _orderedDist;
 static string [] _allNames;
 static List<string> _history = new List<string>();
@@ -79,8 +79,7 @@ static List<string> _history = new List<string>();
 // contain the match candidate
 const int AutocompleteBorderDist = 10000;
 
-public const BindingFlags BFS = BindingFlags.NonPublic | BindingFlags.Public 
-                                                        | BindingFlags.Static;
+public const BindingFlags BFS = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
 
 static void History_kmd( string [] argv ) {
     foreach ( var h in _history ) {
