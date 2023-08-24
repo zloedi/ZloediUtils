@@ -79,8 +79,6 @@ static List<string> _history = new List<string>();
 // contain the match candidate
 const int AutocompleteBorderDist = 10000;
 
-public const BindingFlags BFS = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
-
 static void History_kmd( string [] argv ) {
     foreach ( var h in _history ) {
         Log("  " + h);
@@ -126,23 +124,6 @@ static bool ValidSuffixVar( string name ) {
 
 static bool ValidSuffixCmd( string name ) {
     return name.EndsWith( "_cmd" ) || name.EndsWith( "_kmd" );
-}
-
-public static string NormalizeName( string name, int n = 0 ) {
-    n = n == 0 ? name.Length : n;
-    List<char> chars = new List<char>();
-    for (int i = 0; i < n - 1; i++) {
-        char curr = name[i];
-        char next = name[i + 1];
-        chars.Add(curr);
-        if ( curr != '_' 
-                && ! Char.IsUpper( curr )
-                && Char.IsUpper( next ) ) {
-            chars.Add( '_' );
-        }
-    }
-    chars.Add( name[n - 1] );
-    return new string( chars.ToArray() ).ToLowerInvariant();
 }
 
 static string NormalizeNameVar( string varName ) {
@@ -276,19 +257,6 @@ static void PrintSuggestions( int maxToPrint, string hilight = null,
             Log( str );
         }
     }
-}
-
-public static string FtoA( float f ) {
-    return Convert.ToString( f, CultureInfo.InvariantCulture ); 
-}
-
-public static bool AtoF( string a, out float f ) {
-    return float.TryParse( a, NumberStyles.Any, CultureInfo.InvariantCulture, out f );
-}
-
-public static float AtoF( string a ) {
-    float.TryParse( a, NumberStyles.Any, CultureInfo.InvariantCulture, out float f );
-    return f;
 }
 
 static void CollectItems() {
@@ -440,8 +408,6 @@ static void CollectItems() {
     vars.Sort((a,b) => string.Compare(a.name, b.name));
     _variables = vars.ToArray();
 
-    //cmds.Add( new Command{name = "ls", rawName = nameof( List_kmd ), ActionArgv = List_kmd} );
-    //cmds.Add(new Command{Name = "?", rawName = nameof( Help_kmd ), ActionArgv = Help_kmd} );
     cmds.Sort( ( a,b ) => string.Compare( a.name, b.name ) );
     _commands = cmds.ToArray();
 
@@ -478,9 +444,44 @@ static bool TryFindCommand( string str, out Command c ) {
 
 // == Public API ==
 
+public const BindingFlags BFS = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Static;
+
 public static bool UseColor = false;
 public static Action<string> Log = (s) => {};
 public static Action<string> Error = (s) => {};
+
+// optionally fill this from the app before reading the config
+public static int ConfigVersion_kvar;
+
+public static string NormalizeName( string name, int n = 0 ) {
+    n = n == 0 ? name.Length : n;
+    List<char> chars = new List<char>();
+    for (int i = 0; i < n - 1; i++) {
+        char curr = name[i];
+        char next = name[i + 1];
+        chars.Add(curr);
+        if ( curr != '_' 
+                && ! Char.IsUpper( curr )
+                && Char.IsUpper( next ) ) {
+            chars.Add( '_' );
+        }
+    }
+    chars.Add( name[n - 1] );
+    return new string( chars.ToArray() ).ToLowerInvariant();
+}
+
+public static string FtoA( float f ) {
+    return Convert.ToString( f, CultureInfo.InvariantCulture ); 
+}
+
+public static bool AtoF( string a, out float f ) {
+    return float.TryParse( a, NumberStyles.Any, CultureInfo.InvariantCulture, out f );
+}
+
+public static float AtoF( string a ) {
+    float.TryParse( a, NumberStyles.Any, CultureInfo.InvariantCulture, out float f );
+    return f;
+}
 
 public static bool TryFindCommand( string str, out Action<string[],object> action ) {
     if ( TryFindCommand( str, out Command c ) ) {
@@ -795,9 +796,6 @@ public static string [] GetHistory( string currentCmd ) {
     }
     return res.ToArray();
 }
-
-// optionally fill this from the app before reading the config
-public static int ConfigVersion_kvar;
 
 public static void ReadConfig( string val, bool skipVersionCheck = false ) {
     Log( "Parsing config..." );
