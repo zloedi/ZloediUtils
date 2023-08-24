@@ -1,5 +1,5 @@
 // define this to have Unity UI API support
-//#define QUI_USE_UNITY_UI
+#define QUI_USE_UNITY_UI
 
 using System;
 using System.Collections.Generic;
