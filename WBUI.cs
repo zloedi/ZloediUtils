@@ -1,12 +1,10 @@
-#if UNITY_2021_1_OR_NEWER && QUI_USE_UNITY_UI
+#if UNITY_2021_1_OR_NEWER
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
-#if QUI_USE_UNITY_UI
 using UnityEngine.UI;
-#endif
 
 // Combines WrapBox and QUI into an Immediate mode UI library on top of Unity UI.
 // It handles layout/anchoring and scaling using WrapBoxes.
@@ -55,8 +53,6 @@ public static QUI.WidgetResult ClickRect( WrapBox wbox, int handle = 0,
     handle = Hash( wbox, handle, lineNumber, caller );
     return QUI.ClickRect_wg( wbox.x, wbox.y, wbox.w, wbox.h, handle: handle );
 }
-
-#if QUI_USE_UNITY_UI
 
 public static void MeasuredText_wg( string content, WrapBox wbox, int handle,
                                             out float measureW, out float measureH,
@@ -166,8 +162,6 @@ public static void DisableScissor( int handle = 0, [CallerLineNumber] int lineNu
     handle = Hash( handle, lineNumber, caller );
     QUI.DisableScissor_wg( handle );
 }
-
-#endif // Use unity UI
 
 
 }
