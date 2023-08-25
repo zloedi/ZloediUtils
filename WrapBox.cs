@@ -153,6 +153,7 @@ public struct WrapBox {
         return TopLeft( W, H );
     }
 
+    // make a copy then move down
     public WrapBox CopyMoveDown( int i ) {
         var copy = new WrapBox( x, y, w, h, GetId( i ) );
         y += h;
