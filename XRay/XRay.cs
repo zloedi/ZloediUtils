@@ -126,7 +126,7 @@ public static bool CanHaveObstructMaterial( Renderer rend ) {
         return false;
     }
 
-    if ( ! rend is MeshRenderer ) {
+    if ( ! ( rend is MeshRenderer || rend is SkinnedMeshRenderer ) ) {
         return false;
     }
 
@@ -141,7 +141,7 @@ public static bool CanHaveObstructMaterial( Renderer rend ) {
     return true;
 }
 
-public static void Tick( IList<Component> actors ) {
+public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
     if ( ! Enabled_cvar ) {
         return;
     }
@@ -161,7 +161,7 @@ public static void Tick( IList<Component> actors ) {
         // FIXME: should remove older mats if changes factions
         // FIXME: ShouldSetupXRayFor is broken, and actors should
         // be filtered on camera clip tests/mask-draw 
-        var xrayMat = GetXRayActorMaterial( a, ( iactor & 1 ) != 0 );
+        var xrayMat = GetXRayActorMaterial( a, isHostile[iactor] );
         if ( ShouldSetupXRayFor( a ) ) {
             Renderer [] rs = a.GetComponentsInChildren<Renderer>();
             foreach ( var r in rs ) {
