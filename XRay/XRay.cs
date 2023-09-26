@@ -15,27 +15,32 @@ public static Action<string> Log = s => Debug.Log( s );
 public static Action<string> Error = s => Debug.LogError( s );
 
 public static bool Enabled_cvar = false;
+public static bool ShowStats_cvar = false;
+public static bool SkipDrawMeshes_cvar = false;
+public static bool SkipCollisionTests_cvar = false;
 
 public static Material XRayPassObstruct;
 public static Material XRayPassActorFriendly;
 public static Material XRayPassActorHostile;
 
 static Vector3 _eye => Camera.main ? Camera.main.transform.position : Vector3.zero;
+static HashSet<Renderer> _rendsWithXRay = new HashSet<Renderer>();
+static HashSet<Component> _actorsWithXRay = new HashSet<Component>();
+static HashSet<Renderer> _seethroughObjects = new HashSet<Renderer>();
+static Dictionary<Component,bool> _hostile = new Dictionary<Component,bool>();
+static int _numDrawnMeshes = 0;
 
 public static void DrawMeshes( Camera camera, Renderer rend, Material material, 
                                                     MaterialPropertyBlock [] mpb, int layer = -1 ) {
     MeshFilter [] filters = rend.GetComponents<MeshFilter>();
-    if ( filters.Length == 0 ) {
-        Qonsole.Log( "no filters." );
-    }
 
     if ( layer == -1 ) {
         layer = rend.gameObject.layer;
     }
+
     foreach ( var f in filters ) {
         Mesh mesh = f.sharedMesh;
         if ( mesh ) {
-            //Qonsole.Log( f.gameObject.name + ": " + mesh.subMeshCount );
             for ( int i = 0; i < mesh.subMeshCount; i++ ) {
                 // FIXME: use DrawMeshInstanced
                 Graphics.DrawMesh(
@@ -49,6 +54,7 @@ public static void DrawMeshes( Camera camera, Renderer rend, Material material,
                         castShadows: false,
                         receiveShadows: false,
                         useLightProbes: false);
+                _numDrawnMeshes++;
             }
         } else {
 #if UNITY_EDITOR
@@ -59,7 +65,7 @@ public static void DrawMeshes( Camera camera, Renderer rend, Material material,
 }
 
 
-static Material GetXRayActorMaterial( Component a, bool hostile ) {
+static Material GetXRayActorMaterial( bool hostile ) {
     return hostile ? XRayPassActorHostile : XRayPassActorFriendly;
 }
 
@@ -72,15 +78,12 @@ static bool IsVisibleFromCamera( GameObject go ) {
     return false;
 }
 
-static bool CanHaveXRayMaterial(Renderer r) 
-{
+static bool CanHaveXRayMaterial(Renderer r) {
     return r.shadowCastingMode != ShadowCastingMode.Off 
             && (r is MeshRenderer || r is SkinnedMeshRenderer);
             // this check is redundant, since doesn't cast shadow
             //&& r.sharedMaterial != XRayPassActor);
 }
-
-static HashSet<Renderer> _rendsWithXRay = new HashSet<Renderer>();
 
 static bool IsXRayProxy(Renderer r) {
     foreach ( var m in r.sharedMaterials ) {
@@ -91,12 +94,11 @@ static bool IsXRayProxy(Renderer r) {
     return false;
 }
 
-static bool ShouldSetupXRayFor(Renderer renderer)
-{
-    if (_rendsWithXRay.Contains(renderer)) {
+static bool ShouldSetupXRayFor( Renderer renderer ) {
+    if ( _rendsWithXRay.Contains( renderer ) ) {
         return false;
     }
-    if (! CanHaveXRayMaterial(renderer)) {
+    if ( ! CanHaveXRayMaterial(renderer)) {
         return false;
     }
     // look for xray material in child renderers
@@ -109,8 +111,8 @@ static bool ShouldSetupXRayFor(Renderer renderer)
     return true;
 }
 
-static bool ShouldSetupXRayFor( bool actor ) {
-    return true;
+static bool ShouldSetupXRayFor( Component actor ) {
+    return ! _actorsWithXRay.Contains( actor );
 }
 
 static Renderer GetValidObstructRenderer( Collider c ) {
@@ -155,14 +157,18 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
         return;
     }
 
+    _seethroughObjects.Clear();
+    int totalNumColliders = 0;
     Collider [] colBuffer = new Collider[256];
+
     for ( int iactor = 0; iactor < actors.Count; iactor++ ) {
-        var a = actors[iactor];
+        Component a = actors[iactor];
         // FIXME: should remove older mats if changes factions
         // FIXME: ShouldSetupXRayFor is broken, and actors should
         // be filtered on camera clip tests/mask-draw 
-        var xrayMat = GetXRayActorMaterial( a, isHostile[iactor] );
+        Material xrayMat = GetXRayActorMaterial( isHostile[iactor] );
         if ( ShouldSetupXRayFor( a ) ) {
+            _hostile[a] = isHostile[iactor];
             Renderer [] rs = a.GetComponentsInChildren<Renderer>();
             foreach ( var r in rs ) {
                 if ( ShouldSetupXRayFor( r ) ) {
@@ -190,6 +196,31 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
                     _rendsWithXRay.Add(r);
                 }
             }
+            _actorsWithXRay.Add( a );
+        }
+
+        if ( ! _hostile.TryGetValue( a, out bool hostile ) || hostile != isHostile[iactor] ) {
+            _hostile[a] = isHostile[iactor];
+            Renderer [] rs = a.GetComponentsInChildren<Renderer>();
+            foreach ( var r in rs ) {
+                if ( ! _rendsWithXRay.Contains( r ) ) {
+                    continue;
+                }
+                Log( $"Rebinding materials on {r} to {xrayMat}..." );
+
+#if true
+                r.sharedMaterials = null;
+                Material [] mats = new Material[r.sharedMaterials.Length];
+                for ( int j = 0; j < mats.Length; j++ ) {
+                    mats[j] = xrayMat;
+                }
+                r.sharedMaterials = mats;
+#else
+                for ( int i = 0; i < r.sharedMaterials.Length; i++ ) {
+                    r.sharedMaterials[i] = xrayMat;
+                }
+#endif
+            }
         }
 
         if ( IsVisibleFromCamera( a.gameObject ) ) {
@@ -201,8 +232,12 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
             Vector3 lookat = a.transform.position + new Vector3(0, radius, 0);
             Vector3 v = (lookat - _eye).normalized;
             lookat -= v * radius;
-            int numColliders = Physics.OverlapCapsuleNonAlloc( _eye, lookat, radius, colBuffer,
+            int numColliders = 0;
+            if ( ! SkipCollisionTests_cvar ) {
+                numColliders = Physics.OverlapCapsuleNonAlloc( _eye, lookat, radius, colBuffer,
                                                                                             -1 );
+            }
+
             if ( numColliders > 0 ) {
                 //DebugEx.DrawSphere(_eye, radius);
                 Debug.DrawLine(_eye, lookat, Color.green, duration: 0);
@@ -213,14 +248,30 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
                 //DebugEx.DrawSphere(lookat, radius);
             }
 
-            // draw the obstructions as mask in the stencil
             for ( int i = 0; i < numColliders; i++ ) {
                 Renderer r = GetValidObstructRenderer( colBuffer[i] );
-                if ( r && Camera.main ) {
-                    DrawMeshes( Camera.main, r, XRayPassObstruct, null );
+                if ( r ) {
+                    _seethroughObjects.Add( r );
                 }
             }
+
+            totalNumColliders += numColliders;
         }
+    }
+
+    if ( Camera.main && ! SkipDrawMeshes_cvar ) {
+        // draw the obstructions as mask in the stencil
+        _numDrawnMeshes = 0;
+        foreach ( var r in _seethroughObjects ) {
+            DrawMeshes( Camera.main, r, XRayPassObstruct, null );
+        }
+    }
+
+    if ( ShowStats_cvar ) {
+        Log( $"Num seethrough objects: {_seethroughObjects.Count}" );
+        Log( $"Num colliders hit: {totalNumColliders}" );
+        Log( $"Num drawn meshes: {_numDrawnMeshes}" );
+        Log( "\n" );
     }
 }
 

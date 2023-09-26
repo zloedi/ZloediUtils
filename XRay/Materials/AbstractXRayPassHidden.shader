@@ -44,8 +44,15 @@ SubShader {
             void frag(v2f v, out fixed4 res : SV_Target) {
 				float b = sin(_Time.w);
 				float normBlink = 0.5 * (b + 1);
-				float normInterlace = frac(v.vertex.y / 3.0);
-				res = (0.2 + normInterlace) * (0.8 + normBlink * 0.5) * _FillColor;
+#if 1
+				float normInterlaceY = frac(v.vertex.y / 3.0);
+				res = (0.2 + normInterlaceY) * (0.8 + normBlink * 0.5) * _FillColor;
+#else
+				float normInterlaceX = frac(v.vertex.x / 3.0);
+                if ( normInterlaceX < 0.5f ) clip( -1.0 ); 
+                if ( normInterlaceY < 0.5f ) clip( -1.0 ); 
+                res = _FillColor;
+#endif
             }
 		ENDCG
 	}
