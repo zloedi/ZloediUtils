@@ -203,14 +203,13 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
             _hostile[a] = isHostile[iactor];
             Renderer [] rs = a.GetComponentsInChildren<Renderer>();
             foreach ( var r in rs ) {
-                if ( ! _rendsWithXRay.Contains( r ) ) {
+                if ( ! IsXRayProxy( r ) ) {
                     continue;
                 }
                 Log( $"Rebinding materials on {r} to {xrayMat}..." );
-
 #if true
-                r.sharedMaterials = null;
                 Material [] mats = new Material[r.sharedMaterials.Length];
+                r.sharedMaterials = new Material[0];
                 for ( int j = 0; j < mats.Length; j++ ) {
                     mats[j] = xrayMat;
                 }
