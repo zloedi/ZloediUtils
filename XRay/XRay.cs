@@ -18,15 +18,17 @@ public static bool Enabled_cvar = false;
 public static bool ShowStats_cvar = false;
 public static bool SkipDrawMeshes_cvar = false;
 public static bool SkipCollisionTests_cvar = false;
+public static bool SkipCloth_cvar = false;
 
 public static Material XRayPassObstruct;
 public static Material XRayPassActorFriendly;
 public static Material XRayPassActorHostile;
 
+public static HashSet<Renderer> seethroughObjects = new HashSet<Renderer>();
+
 static Vector3 _eye => Camera.main ? Camera.main.transform.position : Vector3.zero;
 static HashSet<Renderer> _rendsWithXRay = new HashSet<Renderer>();
 static HashSet<Component> _actorsWithXRay = new HashSet<Component>();
-static HashSet<Renderer> _seethroughObjects = new HashSet<Renderer>();
 static Dictionary<Component,bool> _hostile = new Dictionary<Component,bool>();
 static int _numDrawnMeshes = 0;
 
@@ -79,10 +81,19 @@ static bool IsVisibleFromCamera( GameObject go ) {
 }
 
 static bool CanHaveXRayMaterial(Renderer r) {
-    return r.shadowCastingMode != ShadowCastingMode.Off 
-            && (r is MeshRenderer || r is SkinnedMeshRenderer);
-            // this check is redundant, since doesn't cast shadow
-            //&& r.sharedMaterial != XRayPassActor);
+    if ( r.shadowCastingMode == ShadowCastingMode.Off ) {
+        return false;
+    }
+
+    if ( ! ( r is MeshRenderer || r is SkinnedMeshRenderer ) ) {
+        return false;
+    }
+
+    if ( SkipCloth_cvar && r.GetComponent<Cloth>() ) {
+        return false;
+    }
+    
+    return true;
 }
 
 static bool IsXRayProxy(Renderer r) {
@@ -143,6 +154,7 @@ public static bool CanHaveObstructMaterial( Renderer rend ) {
     return true;
 }
 
+public static Collider [] _colBuffer = new Collider[256];
 public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
     if ( ! Enabled_cvar ) {
         return;
@@ -157,9 +169,8 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
         return;
     }
 
-    _seethroughObjects.Clear();
+    seethroughObjects.Clear();
     int totalNumColliders = 0;
-    Collider [] colBuffer = new Collider[256];
 
     for ( int iactor = 0; iactor < actors.Count; iactor++ ) {
         Component a = actors[iactor];
@@ -189,7 +200,13 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
                     cloneR.enabled = true;
                     var comps = clone.GetComponents<Component>();
                     foreach ( var c in comps ) {
-                        if (! ( c is Transform || c is Renderer || c is MeshFilter ) ) {
+                        if ( c is Cloth ) {
+                            if ( SkipCloth_cvar ) {
+                                UnityEngine.Object.Destroy( c );
+                            } else {
+                                Log( $"Keeping cloth on {r.gameObject}." ); 
+                            }
+                        } else if ( ! ( c is Transform || c is Renderer || c is MeshFilter ) ) {
                             UnityEngine.Object.Destroy(c);
                         }
                     }
@@ -233,7 +250,7 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
             lookat -= v * radius;
             int numColliders = 0;
             if ( ! SkipCollisionTests_cvar ) {
-                numColliders = Physics.OverlapCapsuleNonAlloc( _eye, lookat, radius, colBuffer,
+                numColliders = Physics.OverlapCapsuleNonAlloc( _eye, lookat, radius, _colBuffer,
                                                                                             -1 );
             }
 
@@ -248,9 +265,9 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
             }
 
             for ( int i = 0; i < numColliders; i++ ) {
-                Renderer r = GetValidObstructRenderer( colBuffer[i] );
+                Renderer r = GetValidObstructRenderer( _colBuffer[i] );
                 if ( r ) {
-                    _seethroughObjects.Add( r );
+                    seethroughObjects.Add( r );
                 }
             }
 
@@ -261,13 +278,13 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
     if ( Camera.main && ! SkipDrawMeshes_cvar ) {
         // draw the obstructions as mask in the stencil
         _numDrawnMeshes = 0;
-        foreach ( var r in _seethroughObjects ) {
+        foreach ( var r in seethroughObjects ) {
             DrawMeshes( Camera.main, r, XRayPassObstruct, null );
         }
     }
 
     if ( ShowStats_cvar ) {
-        Log( $"Num seethrough objects: {_seethroughObjects.Count}" );
+        Log( $"Num seethrough objects: {seethroughObjects.Count}" );
         Log( $"Num colliders hit: {totalNumColliders}" );
         Log( $"Num drawn meshes: {_numDrawnMeshes}" );
         Log( "\n" );
