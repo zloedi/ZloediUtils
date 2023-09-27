@@ -19,6 +19,7 @@ public static bool ShowStats_cvar = false;
 public static bool SkipDrawMeshes_cvar = false;
 public static bool SkipCollisionTests_cvar = false;
 public static bool SkipCloth_cvar = false;
+public static bool Verbose_cvar = false;
 
 public static Material XRayPassObstruct;
 public static Material XRayPassActorFriendly;
@@ -74,10 +75,14 @@ static Material GetXRayActorMaterial( bool hostile ) {
 // FIXME: no such thing in unity?
 static bool IsVisibleFromCamera( GameObject go ) {
     Renderer [] rs = go.GetComponentsInChildren<Renderer>();
+    bool vis = false;
     foreach ( var r in rs ) {
-        return r.enabled && r.isVisible && ! IsXRayProxy(r);
+        if ( r.enabled && r.isVisible && ! IsXRayProxy( r ) ) {
+            vis = true;
+            break;
+        }
     }
-    return false;
+    return vis;
 }
 
 static bool CanHaveXRayMaterial(Renderer r) {
@@ -115,7 +120,7 @@ static bool ShouldSetupXRayFor( Renderer renderer ) {
     // look for xray material in child renderers
     foreach (Transform t in renderer.transform) {
         var r = t.GetComponent<Renderer>();
-        if (r && IsXRayProxy(r)) {
+        if ( r && IsXRayProxy( r ) ) {
             return false;
         }
     }
@@ -180,10 +185,23 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
         Material xrayMat = GetXRayActorMaterial( isHostile[iactor] );
         if ( ShouldSetupXRayFor( a ) ) {
             _hostile[a] = isHostile[iactor];
+
             Renderer [] rs = a.GetComponentsInChildren<Renderer>();
+            if ( rs.Length == 0 ) {
+                continue;
+            }
+
+            if ( Verbose_cvar ) {
+                Log( $"Setting up XRay on actor {a}" );
+            }
+
+            _actorsWithXRay.Add( a );
+
             foreach ( var r in rs ) {
                 if ( ShouldSetupXRayFor( r ) ) {
-                    Log( "Setting up XRay shader on " + r );
+                    if ( Verbose_cvar ) {
+                        Log( "Setting up XRay on renderer " + r );
+                    }
                     var clone = GameObject.Instantiate( r.gameObject );
                     clone.name = xrayMat.name;
                     clone.transform.parent = r.gameObject.transform;
@@ -203,7 +221,7 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
                         if ( c is Cloth ) {
                             if ( SkipCloth_cvar ) {
                                 UnityEngine.Object.Destroy( c );
-                            } else {
+                            } else if ( Verbose_cvar ) {
                                 Log( $"Keeping cloth on {r.gameObject}." ); 
                             }
                         } else if ( ! ( c is Transform || c is Renderer || c is MeshFilter ) ) {
@@ -213,7 +231,6 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
                     _rendsWithXRay.Add(r);
                 }
             }
-            _actorsWithXRay.Add( a );
         }
 
         if ( ! _hostile.TryGetValue( a, out bool hostile ) || hostile != isHostile[iactor] ) {
@@ -223,7 +240,10 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
                 if ( ! IsXRayProxy( r ) ) {
                     continue;
                 }
-                Log( $"Rebinding materials on {r} to {xrayMat}..." );
+
+                if ( Verbose_cvar ) {
+                    Log( $"Rebinding materials on {r} to {xrayMat}..." );
+                }
 #if true
                 Material [] mats = new Material[r.sharedMaterials.Length];
                 r.sharedMaterials = new Material[0];
@@ -266,7 +286,7 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
 
             for ( int i = 0; i < numColliders; i++ ) {
                 Renderer r = GetValidObstructRenderer( _colBuffer[i] );
-                if ( r ) {
+                if ( r && r.isVisible ) {
                     seethroughObjects.Add( r );
                 }
             }
