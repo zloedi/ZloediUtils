@@ -17,38 +17,35 @@ static int _context;
 static Camera _camera;
 static bool _invertedY;
 
-class LateLine {
+class Late {
     public int context;
-    public List<Vector2> line;
     public Color color;
 }
 
-class LateText {
-    public int context;
+class LateLine : Late {
+    public List<Vector2> line;
+}
+
+class LateText : Late {
     public float x, y;
     public float scale;
     public string str;
-    public Color color;
 }
 
-//class LateTextNokia : LateText {
-//}
-
-class LateImage {
-    public int context;
+class LateImage : Late {
     public float x, y, w, h;
-    public Color color;
     public Texture texture;
     public Material material;
 }
 
 // these are postponed and drawn after all geometry in scene
+// FIXME: methinks these are obsolete, _lates are used instead
 static List<LateText> _texts = new List<LateText>();
 static List<LateText> _textsNokia = new List<LateText>();
 static List<LateImage> _images = new List<LateImage>();
 static List<LateLine> _lines = new List<LateLine>();
 
-static List<object> _lates = new List<object>();
+static List<Late> _lates = new List<Late>();
 
 static void BlitSlow( Texture texture, Vector2 srcPos, Vector2 srcSize, Vector3 dstPos,
                                 Vector3 dstSize, Color? color = null, Material material = null) { 
@@ -508,30 +505,6 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
     AddText( _textsNokia, str, x, y, color, scale );
 }
 
-public static void LatePrintFlush( int n ) {
-#if true
-    SetFontTexture();
-    GL.Begin( GL.QUADS );
-    for ( int i = 0; i < n; i++ ) {
-        var s = _lates[i] as LateText;
-        if ( s.context == _context ) {
-            DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
-        }
-    }
-    GL.End();
-#else
-    SetTexture( NokiaFont.GetTexture() );
-    GL.Begin( GL.QUADS );
-    for ( int i = 0; i < n; i++ ) {
-        var s = _lates[i] as LateText;
-        if ( s.context == _context ) {
-            DrawTextNokia( s.str, s.x, s.y, s.color, s.scale );
-        }
-    }
-    GL.End();
-#endif
-}
-
 public static void LatePrintFlush() {
     SetFontTexture();
     GL.Begin( GL.QUADS );
@@ -622,19 +595,6 @@ public static void LateBlitFlush() {
     }
 }
 
-public static void LateBlitFlush( int n ) {
-    for ( int i = 0; i < n; i++ ) {
-        var img = _lates[i] as LateImage;
-        if ( img.context == _context ) {
-            Vector2 srcPos = new Vector2( 0, 0 );
-            Vector2 srcSize = new Vector2( img.texture.width, img.texture.height );
-            Vector2 dstPos = new Vector2( img.x, img.y );
-            Vector2 dstSize = new Vector2( img.w, img.h );
-            BlitSlow( img.texture, srcPos, srcSize, dstPos, dstSize, img.color, img.material );
-        }
-    }
-}
-
 public static void LateDrawLineLoopWorld( IList<Vector3> worldLine, Color? color = null ) {
     List<Vector2> l = new List<Vector2>();
     foreach ( var p in worldLine ) {
@@ -695,22 +655,6 @@ public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
     _lates.Add( ln );
 }
 
-public static void LateDrawLineFlush( int n ) {
-    SetWhiteTexture();
-    GL.Begin( GL.LINES);
-    for ( int i = 0; i < n; i++ ) {
-        var l = _lates[i] as LateLine;
-        if ( l.context == _context ) {
-            GL.Color( l.color );
-            for ( int j = 0; j < l.line.Count - 1; j++ ) {
-                GL.Vertex( l.line[j + 0] );
-                GL.Vertex( l.line[j + 1] );
-            }
-        }
-    }
-    GL.End();
-}
-
 public static void LateDrawLineFlush() {
     SetWhiteTexture();
     GL.Begin( GL.LINES);
@@ -759,23 +703,68 @@ public static void FlushLates() {
         LatePrintFlush();
         LateDrawLineFlush();
 #else
-        while ( _lates.Count > 0 ) {
-            int n;
+        for ( int li = 0; li < _lates.Count; ) {
 
-            n = 0;
-            for ( int i = 0; i < _lates.Count && _lates[i] is LateText ; i++, n++ ) { }
-            LatePrintFlush( n );
-            _lates.RemoveRange( 0, n );
+            while ( _lates[li].context != _context ) {
+                li++;
+            }
 
-            n = 0;
-            for ( int i = 0; i < _lates.Count && _lates[i] is LateImage; i++, n++ ) { }
-            LateBlitFlush( n );
-            _lates.RemoveRange( 0, n );
+            int start;
 
-            n = 0;
-            for ( int i = 0; i < _lates.Count && _lates[i] is LateLine; i++, n++ ) { }
-            LateDrawLineFlush( n );
-            _lates.RemoveRange( 0, n );
+            // == texts ==
+
+            for ( start = li; li < _lates.Count && _lates[li] is LateText; li++ )
+            {}
+
+            if ( start < li ) {
+                SetFontTexture();
+                GL.Begin( GL.QUADS );
+                for ( int i = start; i < li; i++ ) {
+                    var lt = ( LateText )_lates[i];
+                    DrawTextWithOutline( lt.str, lt.x, lt.y, lt.color, lt.scale );
+                }
+                GL.End();
+            }
+
+            // == images ==
+
+            for ( start = li; li < _lates.Count && _lates[li] is LateImage; li++ )
+            {}
+
+            for ( int i = start; i < li; i++ ) {
+                var img = ( LateImage )_lates[i];
+                Vector2 srcPos = new Vector2( 0, 0 );
+                Vector2 srcSize = new Vector2( img.texture.width, img.texture.height );
+                Vector2 dstPos = new Vector2( img.x, img.y );
+                Vector2 dstSize = new Vector2( img.w, img.h );
+                BlitSlow( img.texture, srcPos, srcSize, dstPos, dstSize, img.color,
+                                                                                img.material );
+            }
+
+            // == lines ==
+
+            for ( start = li; li < _lates.Count && _lates[li] is LateLine; li++ )
+            {}
+
+            if ( start < li ) {
+                SetWhiteTexture();
+                GL.Begin( GL.LINES);
+                for ( int i = start; i < li; i++ ) {
+                    var l = ( LateLine )_lates[i];
+                    GL.Color( l.color );
+                    for ( int j = 0; j < l.line.Count - 1; j++ ) {
+                        GL.Vertex( l.line[j + 0] );
+                        GL.Vertex( l.line[j + 1] );
+                    }
+                }
+                GL.End();
+            }
+        }
+
+        for ( int li = _lates.Count - 1; li >= 0; li-- ) {
+            if ( _lates[li].context == _context ) {
+                _lates.RemoveAt( li );
+            }
         }
 
         _texts.Clear();
