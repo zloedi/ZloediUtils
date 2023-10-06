@@ -7,11 +7,16 @@ using UnityEditor;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
-using TVox = System.Int32;
+using TVox = System.Byte;
 
 public static class Boxify
 {
     public static readonly Vector3 VoxelHalf = Vector3.one * 0.5f;
+
+    public delegate void LogDelegate( string s, UnityEngine.Object o = null );
+
+    public static LogDelegate Log = (s,o)=>{};
+    public static LogDelegate Error = (s,o)=>{};
  
     public class PerfTimerLogger : IDisposable
     {
@@ -27,12 +32,6 @@ public static class Boxify
 #endif
         }
 
-        string _message;
-        Stopwatch _timer;
-        bool _skipLogging;
-        UnityEngine.Object _obj;
-        Action<float> _onDispose;
-     
         public void Dispose()
         {
 #if UNITY_EDITOR
@@ -40,7 +39,7 @@ public static class Boxify
             this._timer.Stop();
             long ns = this._timer.ElapsedTicks * nanosecPerTick;
             if (! _skipLogging) {
-                Debug.Log(
+                Log(
                     string.Format("{0} - Elapsed Milliseconds: {1}", this._message, ns / 1000000.0f),
                     _obj
                 );
@@ -69,7 +68,7 @@ public static class Boxify
             for (int i = _futures.Count - 1; i >= 0; i--) {
                 Future f = _futures[i];
                 if (f.TriggerTime <= Time.time) {
-                    Debug.Log("Execute future, Time: " + Time.time);
+                    Log( "Execute future, Time: " + Time.time );
                     f.Action();
                     _futures.RemoveAt(i);
                 }
@@ -294,8 +293,8 @@ public static class Boxify
             1,
         };
 
-        //Debug.Log("Rend Min: " + minmaxScaled[0].ToString("F4"));
-        //Debug.Log("Rend Max: " + minmaxScaled[1].ToString("F4"));
+        //Log("Rend Min: " + minmaxScaled[0].ToString("F4"));
+        //Log("Rend Max: " + minmaxScaled[1].ToString("F4"));
 
         Vector3Int [] result = new Vector3Int[2];
 
@@ -305,13 +304,13 @@ public static class Boxify
         for (int i = 0; i < 2; i++) {
             Vector3 vRound = minmaxRounded[i];
             Vector3 vScale = minmaxScaled[i];
-            //Debug.Log(minmaxs[i] + " Scale: " + vScale.ToString("F4"));
-            //Debug.Log(minmaxs[i] + " Round: " + vRound.ToString("F4"));
+            //Log(minmaxs[i] + " Scale: " + vScale.ToString("F4"));
+            //Log(minmaxs[i] + " Round: " + vRound.ToString("F4"));
             for (int j = 0; j < 3; j++) {
                 float sj = vScale[j];
                 float rj = vRound[j];
                 float e = sj - rj;
-                //Debug.Log("Error " + xyz[j] + ": " + Mathf.Abs(e));
+                //Log("Error " + xyz[j] + ": " + Mathf.Abs(e));
                 if ( e * e < aeSqr ) {
                     result[i][j] = (int)Mathf.Floor(rj - minmaxBump[i]);
                 } else {
@@ -384,15 +383,15 @@ public static class Boxify
     private static bool AllocateGrid(Renderer [] rends, float voxelSize, 
                                     out Vector3Int min, out Vector3Int max, out TVox [] grid) 
     {
-        if (GetBoundsOfRenderers(rends, voxelSize, out min, out max)) {
-            Debug.Log("Grid min: " + min);
-            Debug.Log("Grid max: " + max);
+        if ( GetBoundsOfRenderers( rends, voxelSize, out min, out max ) ) {
+            Log("Grid min: " + min);
+            Log("Grid max: " + max);
             Vector3Int sz = MinMaxToSize(min, max);
             grid = new TVox [sz.x * sz.y * sz.z];
-            Debug.Log("Allocated grid with size " + sz.x + "," + sz.y + "," + sz.z);
+            Log("Allocated grid with size " + sz.x + "," + sz.y + "," + sz.z);
             return true;
         }
-        Debug.Log("No renderers to boxify in selection.");
+        Log( "No renderers to boxify in selection." );
         grid = null;
         return false;
     }
@@ -795,14 +794,13 @@ public static class Boxify
 
     public static Vector3Int MinMaxToSize(Vector3Int min, Vector3Int max)
     {
-        return new Vector3Int(max.x - min.x + 1,
+        return new Vector3Int( max.x - min.x + 1,
                                 max.y - min.y + 1,
-                                max.z - min.z + 1);
+                                max.z - min.z + 1 );
     }
 
-    private static void CreateCubes(float voxelSize, Vector3Int gridMin, Vector3Int gridMax, TVox [] grid, 
-                                            bool keepColliders = false)
-    {
+    public static void CreateCubes( float voxelSize, Vector3Int gridMin, Vector3Int gridMax,
+                                                        TVox [] grid, bool keepColliders = false) {
         var root = new GameObject().transform;
         root.name = "Cubes";
         root.transform.position = (Vector3)gridMin * voxelSize;
@@ -814,8 +812,8 @@ public static class Boxify
                 for(vi.x = 0; vi.x < gridSz.x; vi.x++) {
                     int idx = vi.x + vi.y * gridSz.x + vi.z * gridSz.x * gridSz.y;
                     TVox vxl = grid[idx];
-                    if (IsSolid(vxl)) {
-                        CreateCube(vi, voxelSize, root, keepColliders);
+                    if ( IsSolid( vxl ) ) {
+                        CreateCube( vi, voxelSize, root, keepColliders );
                         //var c = CreateCube(vi, voxelSize, root, keepColliders);
                         //mpb.SetColor("_Color", Color.white);
                         //c.GetComponent<Renderer>().SetPropertyBlock(mpb);
@@ -823,6 +821,34 @@ public static class Boxify
                 }
             }
         }
+    }
+
+    public static bool CreateTexture3D( float voxelSize, Vector3Int gridMin, Vector3Int gridMax,
+                                                                TVox [] grid, out Texture3D tex ) {
+        Vector3Int gridSz = MinMaxToSize( gridMin, gridMax );
+        tex = new Texture3D( gridSz.x, gridSz.y, gridSz.z, TextureFormat.ARGB32, mipChain: false );
+        if ( tex == null ) {
+            return false;
+        }
+
+        Vector3Int vi = Vector3Int.zero;
+        for(vi.z = 0; vi.z < gridSz.z; vi.z++) {
+            for(vi.y = 0; vi.y < gridSz.y; vi.y++) {
+                for(vi.x = 0; vi.x < gridSz.x; vi.x++) {
+                    int idx = vi.x + vi.y * gridSz.x + vi.z * gridSz.x * gridSz.y;
+                    TVox vxl = grid[idx];
+                    if ( IsSolid( vxl ) ) {
+                        tex.SetPixel( vi.x, vi.y, vi.z, Color.white );
+                    } else {
+                        tex.SetPixel( vi.x, vi.y, vi.z, Color.clear );
+                    }
+                }
+            }
+        }
+        tex.Apply();
+        Log( $"Created texture 3d: {tex}", tex );
+
+        return true;
     }
 
     private static bool TraceShellAndFill(MeshRenderer [] rends, float voxelSize, out TVox [] grid, 
@@ -843,12 +869,13 @@ public static class Boxify
         return false;
     }
 
-    private static bool TraceShell(Renderer [] rends, float voxelSize, out TVox [] grid, out Vector3Int gridMin, 
-                                    out Vector3Int gridMax, out int numTrianglesProcessed, out int numBoxesFilled)
-    {
+    public static bool TraceShell( Renderer [] rends, float voxelSize, out TVox [] grid,
+                                                    out Vector3Int gridMin, out Vector3Int gridMax,
+                                                    out int numTrianglesProcessed,
+                                                    out int numBoxesFilled ) {
         numBoxesFilled = 0;
         numTrianglesProcessed = 0;
-        if (AllocateGrid(rends, voxelSize, out gridMin, out gridMax, out grid)) {
+        if ( AllocateGrid(rends, voxelSize, out gridMin, out gridMax, out grid)) {
             foreach (var r in rends) {
                 int ntp, nbc;
                 Insert(r, voxelSize, gridMin, gridMax, grid, out ntp, out nbc);
@@ -860,7 +887,6 @@ public static class Boxify
         return false;
     }
 
-#if UNITY_EDITOR
     private static bool HasNaN(Vector3 v)
     {
         return float.IsNaN(v.x)
@@ -875,11 +901,6 @@ public static class Boxify
         return rs;
     }
 
-    public static MeshRenderer [] GetRenderers()
-    {
-        return GetRenderers(Selection.activeTransform);
-    }
-
     private static void Validate(MeshRenderer [] rends)
     {
         foreach(var r in rends) {
@@ -891,7 +912,7 @@ public static class Boxify
     {
         MeshFilter [] filters = rend.GetComponents<MeshFilter>();
         if (filters.Length == 0) {
-            Debug.LogError("Boxify: Renderer has no mesh filters " + rend, rend);
+            Error("Boxify: Renderer has no mesh filters " + rend, rend);
             return false;
         }
         foreach (var f in filters) {
@@ -905,7 +926,7 @@ public static class Boxify
                         int idx = tris[i + j];
                         Vector3 v = verts[idx];
                         if (HasNaN(v)) {
-                            Debug.LogError("Boxify: There is a NaN vertex in " + rend + " at index " + idx, rend);
+                            Error("Boxify: There is a NaN vertex in " + rend + " at index " + idx, rend);
                             return false;
                         }
                     }
@@ -915,9 +936,14 @@ public static class Boxify
         return true;
     }
 
-    public static bool BoxifyGeometry(Transform root, float voxelSize, bool fill, bool createVisuals, 
-                                                                                out TVox [] grid)
+#if UNITY_EDITOR
+    public static MeshRenderer [] GetRenderers()
     {
+        return GetRenderers(Selection.activeTransform);
+    }
+
+    public static bool BoxifyGeometry( Transform root, float voxelSize, bool fill,
+                                                            bool createVisuals, out TVox [] grid ) {
         var t = Time.realtimeSinceStartup;
         Vector3Int min, max;
         int numBoxesFilled = 0;
@@ -932,14 +958,14 @@ public static class Boxify
         }
         if (result) {
             float total = Time.realtimeSinceStartup - t;
-            Debug.Log("Boxify took " + total * 1000 + " milliseconds.");
-            Debug.Log("Num triangles processed: " + numTrianglesProcessed);
-            Debug.Log("Num boxes lit: " + numBoxesFilled);
+            Log("Boxify took " + total * 1000 + " milliseconds.");
+            Log("Num triangles processed: " + numTrianglesProcessed);
+            Log("Num boxes lit: " + numBoxesFilled);
             if (createVisuals) {
                 CreateCubes(voxelSize, min, max, grid);
             }
         } else {
-            Debug.Log("There were errors.");
+            Log("There were errors.");
         }
         return result;
     }
