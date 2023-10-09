@@ -396,6 +396,10 @@ public static class Boxify
         return false;
     }
 
+    private static Color32 [] AllocateColors( TVox [] grid ) {
+        return new Color32 [grid.Length];
+    }
+
     private static bool AllocateGrid(Transform [] objects, float voxelSize, out Vector3Int min, 
                                         out Vector3Int max, out TVox [] grid) 
     {
@@ -443,19 +447,32 @@ public static class Boxify
 #endif
     }
 
-    private static bool IsSolid(TVox voxel)
-    {
+    private static bool IsSolid(TVox voxel) {
         return voxel != 0;
     }
 
-    private static bool IsHollow(TVox voxel)
-    {
-        return ! IsSolid(voxel);
+    private static bool IsHollow(TVox voxel) {
+        return voxel == 0;
     }
 
-    private static void TurnSolid(ref TVox voxel)
-    {
+    private static void TurnSolid(ref TVox voxel) {
         voxel = 1;
+    }
+
+    private static Color SampleTexture( Vector3 p, Vector3 a, Vector3 b, Vector3 c,
+                                            Vector2 aUV, Vector2 bUV, Vector2 cUV, Texture2D tex ) {
+        Vector3 n = Vector3.Cross( a - c, b - c ).normalized;
+        float dt = Vector3.Dot( p - c, n );
+        Vector3 projected = p - n * dt;
+        Vector2 uv = UVForPoint( projected, a, b, c, aUV, bUV, cUV );
+        float w = tex.width;
+        float h = tex.height;
+        Color cl = tex.GetPixel( ( int )( uv.x * w ), ( int )( uv.y * h ) );
+        float cr = Mathf.GammaToLinearSpace( cl.r );
+        float cg = Mathf.GammaToLinearSpace( cl.g );
+        float cb = Mathf.GammaToLinearSpace( cl.b );
+        cl = new Color( cr, cg, cb, 1 );
+        return cl;
     }
 
     // FIXME: use in fracture too
@@ -464,11 +481,30 @@ public static class Boxify
         return new Vector3Int((int)v.x, (int)v.y, (int)v.z);
     }
 
-    // assumes local to grid a, b and c
-    private static int TraceTriangle( Vector3Int gridSz, Vector3 a, Vector3 b, Vector3 c,
-                                                                                    TVox [] grid ) {
-        int numBoxesCreated = 0;
+    // Compute barycentric coordinates (u, v, w) for
+    // point p with respect to triangle (a, b, c)
+    static void Barycentric( Vector3 p, Vector3 a, Vector3 b, Vector3 c,
+                                                        out float u, out float v, out float w ) {
+        Vector3 v0 = b - a, v1 = c - a, v2 = p - a;
+        float d00 = Vector3.Dot( v0, v0 );
+        float d01 = Vector3.Dot( v0, v1 );
+        float d11 = Vector3.Dot( v1, v1 );
+        float d20 = Vector3.Dot( v2, v0 );
+        float d21 = Vector3.Dot( v2, v1 );
+        float denom = d00 * d11 - d01 * d01;
+        v = ( d11 * d20 - d01 * d21 ) / denom;
+        w = ( d00 * d21 - d01 * d20 ) / denom;
+        u = 1.0f - v - w;
+    }
 
+    static Vector2 UVForPoint( Vector3 p, Vector3 a, Vector3 b, Vector3 c,
+                                                        Vector2 aUV, Vector2 bUV, Vector2 cUV ) {
+        Barycentric( p, a, b, c, out float u, out float v, out float w );
+        return aUV * u  + bUV * v + cUV * w;
+    }
+
+    static void GetTriangleBounds( Vector3Int gridSz, Vector3 a, Vector3 b, Vector3 c,
+                                                        out Vector3Int min, out Vector3Int max ) {
         float minX = Mathf.Min(a.x, Mathf.Min(b.x, c.x));
         float minY = Mathf.Min(a.y, Mathf.Min(b.y, c.y));
         float minZ = Mathf.Min(a.z, Mathf.Min(b.z, c.z));
@@ -477,8 +513,8 @@ public static class Boxify
         float maxY = Mathf.Max(a.y, Mathf.Max(b.y, c.y));
         float maxZ = Mathf.Max(a.z, Mathf.Max(b.z, c.z));
 
-        Vector3Int min = Vector3Int.FloorToInt(new Vector3(minX, minY, minZ));
-        Vector3Int max = Vector3Int.FloorToInt(new Vector3(maxX, maxY, maxZ));
+        min = Vector3Int.FloorToInt(new Vector3(minX, minY, minZ));
+        max = Vector3Int.FloorToInt(new Vector3(maxX, maxY, maxZ));
 
         //BoundsInGrid( new Vector3( minX, minY, minZ ), new Vector3( maxX, maxY, maxZ ),
         //                                                   gridMin, voxelSize, out min, out max );
@@ -490,15 +526,22 @@ public static class Boxify
         max.x = Mathf.Clamp( max.x, 0, gridSz.x - 1 );
         max.y = Mathf.Clamp( max.y, 0, gridSz.y - 1 );
         max.z = Mathf.Clamp( max.z, 0, gridSz.z - 1 );
+    }
+
+    // assumes local to grid a, b and c
+    private static int TraceTriangle( Vector3Int gridSz, Vector3 a, Vector3 b, Vector3 c,
+                                                                                    TVox [] grid ) {
+        int numBoxesCreated = 0;
+        GetTriangleBounds( gridSz, a, b, c, out Vector3Int min, out Vector3Int max );
 
         //Qonsole.Log( "triangle min: " + min );
         //Qonsole.Log( "triangle max: " + max );
         //Qonsole.Log( "===" );
 
         Vector3Int vi = Vector3Int.zero;
-        for(vi.z = min.z; vi.z <= max.z; vi.z++) {
-            for(vi.y = min.y; vi.y <= max.y; vi.y++) {
-                for(vi.x = min.x; vi.x <= max.x; vi.x++) {
+        for( vi.z = min.z; vi.z <= max.z; vi.z++ ) {
+            for( vi.y = min.y; vi.y <= max.y; vi.y++ ) {
+                for( vi.x = min.x; vi.x <= max.x; vi.x++ ) {
                     int idx = GridIdx(vi, gridSz);
                     if ( IsHollow( grid[idx] ) ) {
                         if ( IntersectsBox( a, b, c, vi + VoxelHalf, VoxelHalf ) ) {
@@ -520,9 +563,36 @@ public static class Boxify
         return numBoxesCreated;
     }
 
+    private static int TraceTriangleWithColor( Vector3Int gridSz, Vector3 a, Vector3 b, Vector3 c,
+                                    Vector2 aUV, Vector2 bUV, Vector2 cUV, 
+                                    TVox [] grid, Color32 [] colors, Texture2D tex, Color color ) {
+        int numBoxesCreated = 0;
+        GetTriangleBounds( gridSz, a, b, c, out Vector3Int min, out Vector3Int max );
+
+        Vector3Int vi = Vector3Int.zero;
+        for( vi.z = min.z; vi.z <= max.z; vi.z++ ) {
+            for( vi.y = min.y; vi.y <= max.y; vi.y++ ) {
+                for( vi.x = min.x; vi.x <= max.x; vi.x++ ) {
+                    int idx = GridIdx(vi, gridSz);
+                    if ( IsHollow( grid[idx] ) ) {
+                        Vector3 boxCenter = vi + VoxelHalf;
+                        if ( IntersectsBox( a, b, c, boxCenter, VoxelHalf ) ) {
+                            numBoxesCreated++;
+                            TurnSolid( ref grid[idx] );
+                            colors[idx]
+                                = color * SampleTexture( boxCenter, a, b, c, aUV, bUV, cUV, tex );
+                        }
+                    }
+                }
+            }
+        }
+
+        return numBoxesCreated;
+    }
+
     public static void GetTriangle(float voxelSize, Transform rendTransform, 
                                     int i, List<int> tris, 
-                                    Vector3 [] verts, 
+                                    List<Vector3> verts, 
                                     Vector3 gridMinf,
                                     Vector3Int localRendMin, Vector3Int localRendMax, 
                                     out Vector3 a, out Vector3 b, out Vector3 c)
@@ -545,6 +615,9 @@ public static class Boxify
         c = ClampVertexToRendBox(c, localRendMin, localRendMax);
     }
 
+    static List<int> _tris = new List<int>();
+    static List<Vector3> _verts = new List<Vector3>();
+    static List<Vector2> _uvs = new List<Vector2>();
     private static bool Insert(Renderer rend, float voxelSize, Vector3Int gridMin, 
                                 Vector3Int gridMax, TVox [] grid, out int numTrianglesProcessed, 
                                 out int numBoxesCreated)
@@ -571,19 +644,98 @@ public static class Boxify
         //Qonsole.Log("Local Renderer Min: " + localRendMin.ToString("F4"));
         //Qonsole.Log("Local Renderer Max: " + localRendMax.ToString("F4"));
 
-        foreach (var f in filters) {
+        foreach ( var f in filters ) {
             Mesh mesh = f.sharedMesh;
-            if (mesh) {
-                // FIXME: use mesh.gettriangles?
-                List<int> tris = new List<int>(mesh.triangles);
-                int n = tris.Count;
-                numTrianglesProcessed += n / 3;
-                Vector3 [] verts = mesh.vertices;
-                for (int i = 0; i < n; i += 3) {
-                    Vector3 a, b, c;
-                    GetTriangle(voxelSize, rend.transform, i, tris, verts, gridMinf, 
-                                    localRendMin, localRendMax, out a, out b, out c);
-                    numBoxesCreated += TraceTriangle(gridSz, a, b, c, grid);
+            if ( mesh ) {
+                mesh.GetVertices( _verts );
+                for ( int sub = 0; sub < mesh.subMeshCount; sub++ ) {
+                    mesh.GetTriangles( _tris, sub );
+                    int n = _tris.Count;
+                    numTrianglesProcessed += n / 3;
+                    for ( int i = 0; i < n; i += 3 ) {
+                        GetTriangle( voxelSize, rend.transform, i, _tris, _verts, gridMinf, 
+                                                    localRendMin, localRendMax,
+                                                    out Vector3 a, out Vector3 b, out Vector3 c );
+                        numBoxesCreated += TraceTriangle( gridSz, a, b, c, grid );
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    private static bool InsertWithColor( Renderer rend, float voxelSize, Vector3Int gridMin, 
+                                        Vector3Int gridMax, TVox [] grid, Color32 [] colors,
+                                        out int numTrianglesProcessed, out int numBoxesCreated ) {
+        numTrianglesProcessed = 0;
+        numBoxesCreated = 0;
+
+        MeshFilter [] filters = rend.GetComponents<MeshFilter>();
+        if (filters.Length == 0) {
+            return false;
+        }
+
+        Vector3Int gridSz = MinMaxToSize( gridMin, gridMax );
+        Vector3 gridMinf = gridMin;
+
+        Vector3Int localRendMin, localRendMax;
+        BoundsInGrid( rend.bounds.min, rend.bounds.max, gridMin, gridSz, voxelSize, 
+                                                            out localRendMin, out localRendMax );
+        var mats = rend.sharedMaterials;
+
+        foreach ( var f in filters ) {
+            Mesh mesh = f.sharedMesh;
+            if ( mesh ) {
+                mesh.GetVertices( _verts );
+                mesh.GetUVs( 0, _uvs );
+                int mcount = Mathf.Min( mesh.subMeshCount, mats.Length );
+                for ( int sub = 0; sub < mcount; sub++ ) {
+                    Texture2D tex = mats[sub].GetTexture( "_MainTex" ) as Texture2D;
+                    Color color = Color.white;
+                    if ( mats[sub].HasProperty( "_Color" ) ) {
+                        color = mats[sub].GetColor( "_Color" );
+                        //color = mats[sub].GetColor( "_SpecColor" );
+                    }
+
+                    if ( ! tex ) {
+                        Log( $"No texture on {mesh.name}({sub})" );
+                        // FIXME: should just trace with solid color
+                        continue;
+                        //tex = mats[0].GetTexture( "_MainTex" ) as Texture2D;
+                        //if ( ! tex ) {
+                        //    Error( $"No texture on {mesh.name}({sub})" );
+                        //    continue;
+                        //}
+                    }
+
+                    if ( tex && ! tex.isReadable ) {
+                        Error( $"Couldn't sample texture {tex}, it's read-only" );
+                        continue;
+                    }
+#if false
+                    if ( ! tex.isReadable ) {
+                        var origTexPath = AssetDatabase.GetAssetPath( tex );
+                        ti = ( TextureImporter )AssetImporter.GetAtPath( texPath );
+                        ti.isReadable = true;
+                        ti.SaveAndReimport();
+                        if ( ! tex.isReadable ) {
+                            continue;
+                        }
+                    }
+#endif
+                    mesh.GetTriangles( _tris, sub );
+                    int n = _tris.Count;
+                    numTrianglesProcessed += n / 3;
+                    for ( int i = 0; i < n; i += 3 ) {
+                        GetTriangle( voxelSize, rend.transform, i, _tris, _verts, gridMinf, 
+                                                    localRendMin, localRendMax,
+                                                    out Vector3 a, out Vector3 b, out Vector3 c );
+                        Vector2 aUV = _uvs[_tris[i + 0]];
+                        Vector2 bUV = _uvs[_tris[i + 1]];
+                        Vector2 cUV = _uvs[_tris[i + 2]];
+                        numBoxesCreated += TraceTriangleWithColor( gridSz, a, b, c, aUV, bUV, cUV,
+                                                                        grid, colors, tex, color );
+                    }
                 }
             }
         }
@@ -823,7 +975,7 @@ public static class Boxify
         }
     }
 
-    public static bool CreateTexture3D( float voxelSize, Vector3Int gridMin, Vector3Int gridMax,
+    public static bool CreateTexture3DMono( float voxelSize, Vector3Int gridMin, Vector3Int gridMax,
                                                                 TVox [] grid, out Texture3D tex ) {
         Vector3Int gridSz = MinMaxToSize( gridMin, gridMax );
         tex = new Texture3D( gridSz.x, gridSz.y, gridSz.z, TextureFormat.ARGB32, mipChain: false );
@@ -846,7 +998,21 @@ public static class Boxify
             }
         }
         tex.Apply();
-        Log( $"Created texture 3d: {tex}", tex );
+        Log( $"Created Mono texture 3d: {tex}", tex );
+
+        return true;
+    }
+
+    public static bool CreateTexture3DColor( float voxelSize, Vector3Int gridMin,
+                                        Vector3Int gridMax, Color32 [] colors, out Texture3D tex ) {
+        Vector3Int gridSz = MinMaxToSize( gridMin, gridMax );
+        tex = new Texture3D( gridSz.x, gridSz.y, gridSz.z, TextureFormat.ARGB32, mipChain: false );
+        if ( tex == null ) {
+            return false;
+        }
+        tex.SetPixels32( colors, 0 );
+        tex.Apply();
+        Log( $"Created Color texture 3d: {tex}", tex );
 
         return true;
     }
@@ -884,6 +1050,29 @@ public static class Boxify
             }
             return true;
         }
+        return false;
+    }
+
+    public static bool TraceShellWithColor( Renderer [] rends, float voxelSize,
+                                                    out TVox [] grid, out Color32 [] colors,
+                                                    out Vector3Int gridMin, out Vector3Int gridMax,
+                                                    out int numTrianglesProcessed,
+                                                    out int numBoxesFilled ) {
+        numBoxesFilled = 0;
+        numTrianglesProcessed = 0;
+        if ( AllocateGrid(rends, voxelSize, out gridMin, out gridMax, out grid)) {
+            colors = AllocateColors( grid );
+            foreach (var r in rends) {
+                int ntp, nbc;
+                InsertWithColor( r, voxelSize, gridMin, gridMax, grid, colors, out ntp, out nbc );
+                numTrianglesProcessed += ntp;
+                numBoxesFilled += nbc;
+            }
+            Log( "Traced shell into colors." );
+            return true;
+        }
+        Log( "Failed to allocate grid." );
+        colors = null;
         return false;
     }
 
