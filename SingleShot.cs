@@ -24,6 +24,7 @@ public static void Add( Action<float> tick = null,
                          Action done = null, 
                          // optional postpone in seconds
                          float postpone = 0 ) {
+    tick = tick == null ? dummy => {} : tick;
     AddMs( dt => tick( dt / 1000f ), ( int )( duration * 1000f ), done,
                                                         ( int )( postpone * 1000f ) );
 }
@@ -35,6 +36,7 @@ public static void AddMs( Action<int> tick = null,
                          Action done = null, 
                          // optional postpone in milliseconds
                          int postpone = 0 ) {
+    tick = tick == null ? dummy => {} : tick;
     AddConditionalMs( dt => { tick( dt ); return true; }, duration, done, postpone );
 }
 
@@ -45,6 +47,7 @@ public static void AddConditional( Func<float,bool> tick = null,
                          Action done = null, 
                          // optional postpone in milliseconds
                          float postpone = 0 ) {
+    tick = tick == null ? dummy => true : tick;
     AddConditionalMs( dt => tick( dt / 1000f ), ( int )( duration * 1000f ), done,
                                                                     ( int )( postpone * 1000f ) );
 }
