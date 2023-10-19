@@ -91,6 +91,7 @@ public static void CrossfadeToState( Crossfade cf, int state ) {
 #endif
 }
 
+// returns true if the entire clip was played (overflown)
 public static bool UpdateState( int dt, int source, Crossfade cf, int state, bool clamp = false,
                                                         int transition = 266, float speed = 1 ) {
     int [] c = {

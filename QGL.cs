@@ -143,6 +143,9 @@ public static float ScreenHeight() {
 
 public static bool Start( bool invertedY = false ) {
     Shader shader = Shader.Find( "GLSprites" );
+    if ( ! shader ) {
+        shader = Shader.Find( "GUI/Text Shader" );
+    }
     if ( shader ) {
         _material = new Material( shader );
         _material.hideFlags = HideFlags.HideAndDontSave;
