@@ -2,24 +2,6 @@
 #define HAS_UNITY
 #endif
 
-// persistent history, browse previously issued commands (in previous app runs) using up/down arrows
-// persistent cvars stored in config file in the app config directory
-// versioned config files -- changing the config version resets all vars to defaults
-// works in the editor window too, if the game is paused or not ran, setup vars before running the game
-// no dependencies in the code that uses it, no need of attributes, code using it compiles without qonsole
-// can modify cvars from inside code and still be persistent
-// doesn't need any Unity assets; drawn using GL calls and font bytes are part of the source code
-// supports custom config files by command line param: "--cfg=zloedi.cfg"; custom config files don't get erased/reset on config version change (the defaults do)
-// separate configs ingame and inside Unity editor: qon_default.cfg vs qon_default_ed.cfg
-// autocompletes partial commands, not only start-of-command
-// can do multiple commands one after the other example:
-//           open_all_doors ; kill_all_enemies ; spawn_monster living Ally 9 12 ; spawn_monster cityguard 8 10 ; teleport bru
-// can repeat commands by prepending a number i.e. "3clear"
-// colorized output
-// config file supports arbitrary commands
-// var descriptions stored as comments in the config file
-// and more...
-
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -49,7 +31,7 @@ using QObject = System.Object;
 using static Qonche;
 
 // you need to import the Qonsole source files inside the Unity editor for the Qonsole to work inside the Scene window
-// OR do setup the Editor parts in a script inside Unity
+// OR if you work in an outside assembly, setup the Editor parts in a script inside Unity
 #if UNITY_EDITOR && QONSOLE_BOOTSTRAP && QONSOLE_BOOTSTRAP_EDITOR
 using UnityEditor;
 
@@ -128,6 +110,30 @@ public static bool Active;
 public static bool Started;
 public static bool ConsumeEditorInputOnce;
 
+public const string featuresDescription = @"Features:
+. Persistent history, browse previously issued commands (in previous app runs) using up/down arrows.
+    Tries to match previous commands by the string on the prompt.
+. Persistent variables stored in config file in the app config directory.
+. Versioned config files -- changing the config version resets all vars to defaults.
+. Works in the Editor (Scene) window too, if the game is paused or not running, setup vars before running the game.
+. No dependencies in the code that uses it, no need of attributes, code using it compiles without Qonsole.
+. Can modify persistent console variables from within code.
+. Doesn't need any Unity assets; drawn using GL calls and font bytes are part of the source code.
+. Supports custom config files by command line param: [ff9000]--cfg=zloedi.cfg[-].
+    Custom config files don't get erased/reset on config version change (the defaults do).
+. Separate configs in Build and inside Unity Editor: qon_default.cfg vs qon_default_ed.cfg
+. Autocompletes partial commands, not only start-of-command.
+. Supports multiple commands chained together; example:
+      [ff9000]] open_all_doors ; kill_all_enemies ; spawn_monster living Ally 9 12 ; spawn_monster cityguard 8 10 ; teleport player 6 6[-]
+. Repeat commands by prepending a number i.e. [ff9000]] 3clear[-].
+. Colorized output.
+. Config file supports arbitrary commands.
+. Variable descriptions stored as comments in the config file.
+. Hook on different events (Start, Update, Done) by defining Qonsole commands with no dependencies.
+    and more...
+    
+";
+
 [Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
 static int QonOverlayPercent_kvar = 0;
 [Description( "Show the Qonsole output to the system (unity) log too." )]
@@ -136,7 +142,7 @@ static bool QonPrintToSystemLog_kvar = true;
 static float QonScale_kvar = 1;
 static float QonScale => Mathf.Clamp( QonScale_kvar, 1, 100 );
 [Description( "Show the Qonsole in the editor: 0 -- no, 1 -- yes, 2 -- editor only." )]
-public static float QonShowInEditor_kvar = 0;
+public static float QonShowInEditor_kvar = 1;
 [Description( "Alpha blend value of the Qonsole background." )]
 public static float QonAlpha_kvar = 0.65f;
 [Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
@@ -147,17 +153,19 @@ public static bool QonInvertPlayY = true;
 public static bool QonInvertPlayY => QonInvertPlayY_kvar;
 #endif
 
-// stuff to be executed before the .cfg file is loaded
-public static Func<string> onPreLoadCfg_f = () => "echo executed before loading the cfg";
-// stuff to be executed after the .cfg file is loaded
+// OBSOLETE, USE COMMANDS INSTEAD: stuff to be executed before the .cfg file is loaded
+public static Func<string> onPreLoadCfg_f = () => "";
+// OBSOLETE, USE COMMANDS INSTEAD: stuff to be executed after the .cfg file is loaded
 public static Func<string> onPostLoadCfg_f = () => "";
 // provide additional string to be appended to the .cfg file on flush/store
 public static Func<string> onStoreCfg_f;
-// called inside the Update pump (optionally with QUI setup) if QONSOLE_BOOTSTRAP is defined
+// OBSOLETE, USE COMMANDS INSTEAD: called inside the Update pump (optionally with QUI setup) if QONSOLE_BOOTSTRAP is defined
 public static Action tick_f = () => {};
+// OBSOLETE, USE COMMANDS INSTEAD: 
 public static Action onStart_f = () => {};
+// OBSOLETE, USE COMMANDS INSTEAD: 
 public static Action onDone_f = () => {};
-// called inside OnGUI if QONSOLE_BOOTSTRAP is defined
+// OBSOLETE, USE COMMANDS INSTEAD: called inside OnGUI if QONSOLE_BOOTSTRAP is defined
 public static Action onGUI_f = () => {};
 
 #if HAS_UNITY
@@ -336,6 +344,8 @@ static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
 
 // some stuff need to be initialized before the Start() Unity callback
 public static void Init( int configVersion = -1 ) {
+    Log( featuresDescription );
+
     string fnameCfg = null, fnameHistory;
 
     string[] args = System.Environment.GetCommandLineArgs ();
