@@ -149,6 +149,7 @@ public static bool Start( bool invertedY = false ) {
     if ( shader ) {
         _material = new Material( shader );
         _material.hideFlags = HideFlags.HideAndDontSave;
+        _lates.Clear();
         SetContext( null, invertedY: invertedY );
         return true;
     }
@@ -708,9 +709,8 @@ public static void FlushLates() {
 #else
         for ( int li = 0; li < _lates.Count; ) {
 
-            while ( _lates[li].context != _context ) {
-                li++;
-            }
+            for ( ; li < _lates.Count && _lates[li].context != _context; li++ )
+            {}
 
             int start;
 

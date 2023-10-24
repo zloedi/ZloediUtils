@@ -129,6 +129,7 @@ public const string featuresDescription = @"Features:
 . Colorized output.
 . Config file supports arbitrary commands.
 . Variable descriptions stored as comments in the config file.
+. Overlay display -- the last emitted lines could be shown on top of the window and fade out with time
 . Hook on different events (Start, Update, Done) by defining Qonsole commands with no dependencies.
     and more...
     

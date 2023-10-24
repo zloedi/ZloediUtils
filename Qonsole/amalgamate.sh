@@ -39,4 +39,4 @@ cat \
     /tmp/__8.cs /tmp/_dm \
     /tmp/__9.cs /tmp/_dm \
     /tmp/_ft \
-> /tmp/QonsoleAmalgamated.cs
+> ~/work/github/QonsoleAmalgamated/QonsoleAmalgamated.cs
