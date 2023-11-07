@@ -711,23 +711,28 @@ static List<string> _exeTokens = new List<string>();
 public static bool TryExecuteString( string str, object context = null, bool silent = false,
                                                                     bool keepJsonTags = false ) {
     if ( GetArgv( str, out string [] argv, keepJsonTags: keepJsonTags ) ) {
-        _exeTokens.Clear();
-        for ( int i = 0; i < argv.Length; i++ ) {
-            if ( argv[i] == ";" ) {
-                if ( _exeTokens.Count > 0 ) {
-                    TryExecute( _exeTokens.ToArray(), context, silent );
-                    _exeTokens.Clear();
-                }
-            } else {
-                _exeTokens.Add( argv[i] );
-            }
-        }
-        if ( _exeTokens.Count > 0 ) {
-            TryExecute( _exeTokens.ToArray(), context, silent );
-        }
+        TryExecuteArgv( argv, context, silent, keepJsonTags );
         return true;
     }
     return false;
+}
+
+public static void TryExecuteArgv( string [] argv, object context = null, bool silent = false,
+                                                                    bool keepJsonTags = false ) {
+    _exeTokens.Clear();
+    for ( int i = 0; i < argv.Length; i++ ) {
+        if ( argv[i] == ";" ) {
+            if ( _exeTokens.Count > 0 ) {
+                TryExecute( _exeTokens.ToArray(), context, silent );
+                _exeTokens.Clear();
+            }
+        } else {
+            _exeTokens.Add( argv[i] );
+        }
+    }
+    if ( _exeTokens.Count > 0 ) {
+        TryExecute( _exeTokens.ToArray(), context, silent );
+    }
 }
 
 public static bool TryExecute( string [] argv, object context = null, bool silent = false ) {
