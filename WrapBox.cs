@@ -160,6 +160,12 @@ public struct WrapBox {
         return copy;
     }
 
+    public WrapBox CopyMoveUp( int i ) {
+        var copy = new WrapBox( x, y, w, h, GetId( i ) );
+        y -= h;
+        return copy;
+    }
+
     public WrapBox CopyMoveRight( int i ) {
         var copy = new WrapBox( x, y, w, h, GetId( i ) );
         x += w;

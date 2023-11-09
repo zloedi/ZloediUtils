@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 public static class SingleShot {
 
+public const float PostponeFrameSec = 0.001f;
 
 class ActionItem {
     public Func<int,bool> tick;
@@ -80,8 +81,8 @@ public static void TickMs( int deltaTime ) {
     for ( int i = _list.Count - 1; i >= 0; i-- ) {
         ActionItem item = _list[i];
 
-        item.postpone -= deltaTime;
         if ( item.postpone > 0 ) {
+            item.postpone -= deltaTime;
             continue;
         }
 
