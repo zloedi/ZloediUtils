@@ -667,17 +667,14 @@ static void RenderGL( bool skip = false ) {
     //QGL.LateDrawLineFlush();
 
     if ( ! skip ) {
-        int maxH = ( int )QGL.ScreenHeight();
-        int cW = ( int )( _textDx * QonScale );
-        int cH = ( int )( _textDy * QonScale );
-        int conW = Screen.width / cW;
-        int conH = maxH / cH;
+        GetSize( out int conW, out int conH );
 
         if ( Active ) {
             QGL.SetWhiteTexture();
             GL.Begin( GL.QUADS );
             GL.Color( new Color( 0, 0, 0, QonAlpha_kvar ) );
-            QGL.DrawSolidQuad( new Vector2( 0, 0 ), new Vector2( Screen.width, maxH ) );
+            QGL.DrawSolidQuad( new Vector2( 0, 0 ),
+                                                new Vector2( Screen.width, QGL.ScreenHeight() ) );
             GL.End();
         } else {
             int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
@@ -900,6 +897,15 @@ public static float LineHeight() {
     return _textDy * QonScale;
 }
 
+public static void GetSize( out int conW, out int conH ) {
+#if HAS_UNITY
+    int maxH = ( int )QGL.ScreenHeight();
+    int cW = ( int )( _textDx * QonScale );
+    int cH = ( int )( _textDy * QonScale );
+    conW = Screen.width / cW;
+    conH = maxH / cH;
+#endif // TODO: sdl?
+}
 
 #if SDL
 
