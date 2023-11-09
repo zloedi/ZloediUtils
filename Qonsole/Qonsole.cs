@@ -195,10 +195,6 @@ static int _drawCharStartY;
 static float _overlayAlpha = 1;
 // the colorization stack for nested tags
 static List<Color> _drawCharColorStack = new List<Color>(){ Color.white };
-// the internal commands have a different path of execution
-// to avoid recursion of Cellophane.TryExecute
-static Dictionary<string,Action<string[],object>> _internalCommands =
-                                                new Dictionary<string,Action<string[],object>>();
 static Action<string> _oneShotCmd_f;
 static string [] _history;
 static int _historyItem;
@@ -284,14 +280,13 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     return true;
 }
 
+// the internal commands have a different path of execution
+// to avoid recursion of Cellophane.TryExecute
 static void InternalCommand( string cmd, object context = null ) {
     Action<string[],object> action;
-    if ( ! _internalCommands.TryGetValue( cmd, out action ) ) {
-        if ( ! Cellophane.TryFindCommand( cmd, out action ) ) {
-            return;
-        }
+    if ( Cellophane.TryFindCommand( cmd, out action ) ) {
+        action( null, context );
     }
-    action( null, context );
 }
 
 static void Clear_kmd( string [] argv ) {
@@ -786,17 +781,19 @@ public static void Error( object o ) {
 }
 
 public static void Error( string s, QObject o = null ) {
-    s = "ERROR: " + s;
+    string serr = "ERROR: " + s;
     Action fade = OverlayGetFade();
 
     // lump together colorization and overlay fade
-    QON_PrintAndAct( s, (x,y) => {
+    QON_PrintAndAct( serr, (x,y) => {
         DrawCharColorPush( Color.red );
         fade();
     } );
     QON_PrintAndAct( "\n", (x,y)=>DrawCharColorPop() );
 
-    PrintToSystemLog( s, o );
+    PrintToSystemLog( serr, o );
+
+    InternalCommand( "qonsole_on_error", s );
 }
 
 // this will ignore color tags
