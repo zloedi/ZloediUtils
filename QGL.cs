@@ -32,6 +32,12 @@ class LateText : Late {
     public string str;
 }
 
+class LateTextNokia : Late {
+    public float x, y;
+    public float scale;
+    public string str;
+}
+
 class LateImage : Late {
     public float x, y, w, h;
     public Texture texture;
@@ -501,12 +507,31 @@ public static void LatePrintNokia( string str, Vector2Int xy, Color? color = nul
 public static void LatePrintNokia( string str, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
     Vector2 sz = MeasureStringNokia( str, scale );
-    AddCenteredText( _textsNokia, str, sz, x, y, color, scale );
+
+    var txt = new LateTextNokia {
+        context = _context,
+        x = Mathf.Round( x - ( int )sz.x / 2 ),
+        y = Mathf.Round( y - ( int )sz.y / 2 ),
+        scale = scale,
+        str = str,
+        color = color == null ? Color.green : color.Value,
+    };
+
+    _lates.Add( txt );
 }
 
 public static void LatePrintNokia_tl( string str, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
-    AddText( _textsNokia, str, x, y, color, scale );
+    var txt = new LateTextNokia {
+        context = _context,
+        x = ( int )x,
+        y = ( int )y,
+        scale = scale,
+        str = str,
+        color = color == null ? Color.green : color.Value,
+    };
+
+    _lates.Add( txt );
 }
 
 public static void LatePrintFlush() {
@@ -725,6 +750,21 @@ public static void FlushLates() {
                 for ( int i = start; i < li; i++ ) {
                     var lt = ( LateText )_lates[i];
                     DrawTextWithOutline( lt.str, lt.x, lt.y, lt.color, lt.scale );
+                }
+                GL.End();
+            }
+
+            // == nokia texts ==
+
+            for ( start = li; li < _lates.Count && _lates[li] is LateTextNokia; li++ )
+            {}
+
+            if ( start < li ) {
+                SetTexture( NokiaFont.GetTexture() );
+                GL.Begin( GL.QUADS );
+                for ( int i = start; i < li; i++ ) {
+                    var ltn = ( LateTextNokia )_lates[i];
+                    DrawTextNokia( ltn.str, ltn.x, ltn.y, ltn.color, ltn.scale );
                 }
                 GL.End();
             }
