@@ -86,29 +86,32 @@ public static Vector2Int AxialRound( Vector2 hex ) {
 }
 
 // actually from square grid
-public static Vector2Int ScreenToHex( Vector2 screenPos ) {
+// it uses the 'pointy-top-half-height' as base size, thus the *= sqrt_3
+public static Vector2Int ScreenToHex( Vector2 screenPos, float size = 1 ) {
+    screenPos /= size;
     screenPos *= SQRT_3;
-    var q = SQRT_3/3f * screenPos.x  -  1f/3f * screenPos.y;
-    var r =                            2f/3f * screenPos.y;
+    var q = SQRT_3/3f * screenPos.x - 1f/3f * screenPos.y;
+    var r =                           2f/3f * screenPos.y;
     return AxialRound( new Vector2( q, r ) );
 }
 
 // actually to square grid
-public static Vector2 HexToScreen( int q, int r ) {
+// it uses the 'pointy-top-half-height' as base size, thus the /= sqrt_3
+public static Vector2 HexToScreen( int q, int r, float size = 1 ) {
 #if false
-    float x = SQRT_3 * q + SQRT_3/2f * r;
-    float y =                3f/2f * r;
+    float x = size * ( SQRT_3 * q + SQRT_3/2f * r );
+    float y = size * (                  3f/2f * r );
     return new Vector2( x / SQRT_3, y / SQRT_3 );
 #else
-    float x = q + 1/2f * r;
-    float y =    3f/2f * r;
+    float x = size * ( q + 1/2f * r );
+    float y = size * (    3f/2f * r );
     return new Vector2( x, y / SQRT_3 );
 #endif
 }
 
 // actually to square grid
-public static Vector2 HexToScreen( Vector2Int hex ) {
-    return HexToScreen( hex.x, hex.y );
+public static Vector2 HexToScreen( Vector2Int hex, float size = 1 ) {
+    return HexToScreen( hex.x, hex.y, size );
 }
 
 public static Vector2Int OddRToAxial( int col, int row ) {
