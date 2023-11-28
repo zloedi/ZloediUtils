@@ -27,6 +27,7 @@ public const float SQRT_3 = 1.73205080757f;
 static Hexes() {
 #if HAS_UNITY
     CreateHexTexture();
+    CreateHexRegularTexture();
 #endif
 }
 
@@ -136,6 +137,7 @@ public static int hexSpriteWidth;
 public static int hexSpriteHeight;
 public static float hexSpriteAspect;
 public static Texture2D hexSprite;
+public static Texture2D hexSpriteRegular;
 
 #if false
     str += "       @@       ";
@@ -194,6 +196,51 @@ public static void CreateHexTexture() {
         }
     }
     hexSprite.Apply();
+}
+
+public static void CreateHexRegularTexture() { 
+    string str = "";
+    string
+
+      sz = "                ";
+
+    str += "       @@       ";
+    str += "     @@@@@@     ";
+    str += "   @@@@@@@@@@   ";
+    str += " @@@@@@@@@@@@@@ ";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += " @@@@@@@@@@@@@@ ";
+    str += "   @@@@@@@@@@   ";
+    str += "     @@@@@@     ";
+    str += "       @@       ";
+
+    hexSpriteWidth = sz.Length;
+    hexSpriteHeight = str.Length / hexSpriteWidth;
+    hexSpriteAspect = ( float )hexSpriteWidth / hexSpriteHeight;
+
+    hexSpriteRegular = new Texture2D( hexSpriteWidth, hexSpriteHeight,
+                                                                textureFormat: TextureFormat.RGBA32, 
+                                                                mipChain: false, 
+                                                                linear: false); 
+    hexSpriteRegular.filterMode = FilterMode.Point;
+    for ( int y = 0, i = 0; y < hexSpriteHeight; y++ ) {
+        for ( int x = 0; x < hexSpriteWidth; x++, i++ ) {
+            int alpha = str[i] != ' ' ? 0xff : 0;
+            hexSpriteRegular.SetPixel( x, y, new Color32( 0xff, 0xff, 0xff, ( byte )alpha ) );
+        }
+    }
+    hexSpriteRegular.Apply();
+
+    Log( "Created regular gex texture." );
 }
 
 static Vector2 ShearAndScale( int x, int y, int gridHeight, Vector2 sz ) {
@@ -393,7 +440,7 @@ public static void PrintList( IList<Vector2Int> list, string logText = null, flo
         Qonsole.Log( logText );
     }
 
-    if ( ! hexSprite ) {
+    if ( ! hexSprite) {
         CreateHexTexture();
     }
 
