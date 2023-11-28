@@ -326,6 +326,33 @@ static void Log( string s, UnityEngine.Object o = null ) {
 }
 
 #if HEXES_QONSOLE
+const float _hexPts30 = ( float )( Math.PI * 2f / 12f );
+const float _hexPts60 = ( float )( Math.PI * 2f / 6f );
+static Vector2 [] _hexPts = new Vector2[6] {
+    new Vector2 { x = Mathf.Cos( 0 * _hexPts60 ), y = Mathf.Sin( 0 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 1 * _hexPts60 ), y = Mathf.Sin( 1 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 2 * _hexPts60 ), y = Mathf.Sin( 2 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 3 * _hexPts60 ), y = Mathf.Sin( 3 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 4 * _hexPts60 ), y = Mathf.Sin( 4 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 5 * _hexPts60 ), y = Mathf.Sin( 5 * _hexPts60 ) },
+};
+static Vector2 [] _hexPtsPointy = new Vector2[6] {
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 0 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 0 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 1 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 1 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 2 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 2 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 3 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 3 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 4 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 4 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 5 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 5 * _hexPts60 ) },
+};
+static Vector2 [] _hexPtsBuf = new Vector2[6];
+public static void DrawHexWithLines( Vector2 screenPos, float diameter, Color c ) {
+    float r = diameter / SQRT_3;
+    for ( int i = 0; i < 6; i++ ) {
+        _hexPtsBuf[i] = _hexPtsPointy[i] * r + screenPos;
+    }
+    QGL.LateDrawLineLoop( _hexPtsBuf, color: c );
+}
+
 public static void DrawGLHex( Vector2 screenPos, int x, int y, int gridHeight, Vector2 sz,
                                                                             float consoleAlpha,
                                                                             Color? color = null ) {
