@@ -137,6 +137,9 @@ public static int hexSpriteWidth;
 public static int hexSpriteHeight;
 public static float hexSpriteAspect;
 public static Texture2D hexSprite;
+
+public static int hexSpriteRegularWidth;
+public static int hexSpriteRegularHeight;
 public static Texture2D hexSpriteRegular;
 
 #if false
@@ -223,17 +226,17 @@ public static void CreateHexRegularTexture() {
     str += "     @@@@@@     ";
     str += "       @@       ";
 
-    hexSpriteWidth = sz.Length;
-    hexSpriteHeight = str.Length / hexSpriteWidth;
-    hexSpriteAspect = ( float )hexSpriteWidth / hexSpriteHeight;
+    hexSpriteRegularWidth = sz.Length;
+    hexSpriteRegularHeight = str.Length / hexSpriteRegularWidth;
+    hexSpriteAspect = ( float )hexSpriteRegularWidth / hexSpriteRegularHeight;
 
-    hexSpriteRegular = new Texture2D( hexSpriteWidth, hexSpriteHeight,
+    hexSpriteRegular = new Texture2D( hexSpriteRegularWidth, hexSpriteRegularHeight,
                                                                 textureFormat: TextureFormat.RGBA32, 
                                                                 mipChain: false, 
                                                                 linear: false); 
     hexSpriteRegular.filterMode = FilterMode.Point;
-    for ( int y = 0, i = 0; y < hexSpriteHeight; y++ ) {
-        for ( int x = 0; x < hexSpriteWidth; x++, i++ ) {
+    for ( int y = 0, i = 0; y < hexSpriteRegularHeight; y++ ) {
+        for ( int x = 0; x < hexSpriteRegularWidth; x++, i++ ) {
             int alpha = str[i] != ' ' ? 0xff : 0;
             hexSpriteRegular.SetPixel( x, y, new Color32( 0xff, 0xff, 0xff, ( byte )alpha ) );
         }
