@@ -578,8 +578,12 @@ public static Vector2 LateBlitWorld( Vector3 worldPos, float w, float h, Color? 
     return pt;
 }
 
+public static void LateBlit( Texture tex, Vector2 xy, Vector2 sz, Color? color = null ) {
+    LateBlit( tex, xy, sz.x, sz.y, color );
+}
+
 public static void LateBlit( Vector2 xy, Vector2 sz, Color? color = null ) {
-    LateBlit( null, xy, sz.x, sz.y, color );
+    LateBlit( null, xy, sz, color );
 }
 
 public static void LateBlit( Texture tex, Vector2 xy, float w, float h, Color? color = null ) {
