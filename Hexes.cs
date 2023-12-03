@@ -47,6 +47,10 @@ public static void Neighbours( Vector2Int hxc,
     n5 = new Vector2Int( hxc.x + 0, hxc.y - 1 );
 }
 
+public static Vector3Int AxialToCubeInt( Vector2Int axial ) {
+    return AxialToCubeInt( axial.x, axial.y );
+}
+
 public static Vector3Int AxialToCubeInt( int q, int r ) {
     return new Vector3Int( q, -q - r, r ); 
 }
@@ -84,6 +88,16 @@ public static Vector3 CubeRound( Vector3 cube ) {
 
 public static Vector2Int AxialRound( Vector2 hex ) {
     return CubeToAxial( CubeRound( AxialToCube( hex ) ) );
+}
+
+public static int CubeDistance( Vector3Int a, Vector3Int b ) {
+    var vec = a - b;
+    return ( Mathf.Abs( vec.x ) + Mathf.Abs( vec.y ) + Mathf.Abs( vec.z ) ) / 2;
+}
+
+public static float CubeDistance( Vector3 a, Vector3 b ) {
+    var vec = a - b;
+    return ( Mathf.Abs( vec.x ) + Mathf.Abs( vec.y ) + Mathf.Abs( vec.z ) ) / 2f;
 }
 
 // actually from square grid
