@@ -100,6 +100,12 @@ public static float CubeDistance( Vector3 a, Vector3 b ) {
     return ( Mathf.Abs( vec.x ) + Mathf.Abs( vec.y ) + Mathf.Abs( vec.z ) ) / 2f;
 }
 
+public static int AxialDistance( Vector2Int a, Vector2Int b ) {
+    Vector3Int ca = AxialToCubeInt( a );
+    Vector3Int cb = AxialToCubeInt( b );
+    return CubeDistance( ca, cb );
+}
+
 // actually from square grid
 // it uses the 'pointy-top-half-height' as base size, thus the *= sqrt_3
 public static Vector2Int ScreenToHex( Vector2 screenPos, float size = 1 ) {
