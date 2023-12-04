@@ -143,7 +143,7 @@ public static bool FloodMap( int origin, int maxRange, int navMapPitch,
 }
 
 // call this to get a path between two nodes
-// origin is already store in context by Flood
+// origin is already stored in context by Flood
 public static bool TracePath( int target, int floodMapPitch, Context ctx, List<int> ioResult ) { 
     ioResult.Clear();
     target = Clamp( target, 0, ctx.floodMap.Length - 1 );
