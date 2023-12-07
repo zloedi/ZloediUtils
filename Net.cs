@@ -412,6 +412,9 @@ public static Action<int,string> onClientCommand_f = (zport,str) => {};
 public static Func<int,bool,List<byte>> onTick_f = (dt,needPacket)=>{ return Net.EMPTY_PACKET; };
 public static Action onExit_f = ()=>{};
 
+public static DateTime clockStartDate, clockDate, clockPrevDate;
+public static int clock, clockDelta;
+
 public static bool Init() {
     if ( ! net.Init( 0 ) ) {
         return false;
@@ -424,6 +427,7 @@ public static bool Init() {
 
     AppDomain.CurrentDomain.ProcessExit += new EventHandler( onProcessExit ); 
     Console.CancelKeyPress += new ConsoleCancelEventHandler( onProcessExit );
+    clockStartDate = DateTime.UtcNow;
 
     var ep = ( IPEndPoint )net.socket.LocalEndPoint;
     Log( $"Server initialized; Listening on port {ep.Port}" );
@@ -636,6 +640,14 @@ public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
 
     sendPending();
     return true;
+}
+
+public static void TickWithClocks( bool forceSendPacket ) {
+    clockDate = DateTime.UtcNow;
+    clock = ( int )( clockDate - clockStartDate ).TotalMilliseconds;
+    clockDelta = ( int )( clockDate - clockPrevDate ).TotalMilliseconds;
+    clockPrevDate = clockDate;
+    Tick( clockDelta, forceSendPacket );
 }
 
 public static void Tick( int deltaTime, bool forceSendPacket ) {
