@@ -599,7 +599,6 @@ public static bool Poll( out bool hadCommands, int microseconds = 0 ) {
 
                 // == actually client reliable command, not ACK ==
 
-
                 int relSeq = -deltaACK;
                 // make sure we get every reliable command, not just the last one
                 if ( relSeq - c.reliableSequence == 1 ) {
