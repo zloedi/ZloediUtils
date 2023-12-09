@@ -263,7 +263,7 @@ public static void CreateHexRegularTexture() {
     }
     hexSpriteRegular.Apply();
 
-    Log( "Created regular gex texture." );
+    Log( "Created regular hex texture." );
 }
 
 static Vector2 ShearAndScale( int x, int y, int gridHeight, Vector2 sz ) {
