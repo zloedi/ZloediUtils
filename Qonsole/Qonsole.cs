@@ -195,7 +195,7 @@ static int _drawCharStartY;
 static float _overlayAlpha = 1;
 // the colorization stack for nested tags
 static List<Color> _drawCharColorStack = new List<Color>(){ Color.white };
-static Action<string> _oneShotCmd_f;
+static bool _oneShot;
 static string [] _history;
 static int _historyItem;
 
@@ -488,41 +488,6 @@ public static void OnGUIInternal( bool skipRender = false ) {
             // Also can't see a way to acquire a string better than OnGUI
             // As a bonus -- no dependency on the legacy Input system
             if ( Event.current.type == EventType.KeyDown ) {
-                //if ( _oneShotCmd_f != null ) {
-                //    if ( Event.current.keyCode == KeyCode.LeftArrow ) {
-                //        QON_MoveLeft( 1 );
-                //    } else if ( Event.current.keyCode == KeyCode.RightArrow ) {
-                //        QON_MoveRight( 1 );
-                //    } else if ( Event.current.keyCode == KeyCode.Home ) {
-                //        QON_MoveLeft( 99999 );
-                //    } else if ( Event.current.keyCode == KeyCode.End ) {
-                //        QON_MoveRight( 99999 );
-                //    } else if ( Event.current.keyCode == KeyCode.Delete ) {
-                //        QON_Delete( 1 );
-                //    } else if ( Event.current.keyCode == KeyCode.Backspace ) {
-                //        QON_Backspace( 1 );
-                //    } else if ( Event.current.keyCode == KeyCode.Escape ) {
-                //        Log( "Canceled..." );
-                //        QON_EraseCommand();
-                //        Active = false;
-                //        _oneShotCmd_f = null;
-                //    } else {
-                //        char c = Event.current.character;
-                //        if ( c == '`' ) {
-                //        } else if ( c == '\t' ) {
-                //        } else if ( c == '\b' ) {
-                //        } else if ( c == '\n' || c == '\r' ) {
-                //            string cmd = QON_GetCommand();
-                //            QON_EraseCommand();
-                //            _oneShotCmd_f( cmd );
-                //            _oneShotCmd_f = null;
-                //            Active = false;
-                //        } else {
-                //            QON_InsertCommand( c.ToString() );
-                //        }
-                //    }
-                //} else 
-
                 if ( Event.current.keyCode == KeyCode.BackQuote ) {
                     Toggle();
                 } else if ( Event.current.keyCode == KeyCode.LeftArrow ) {
@@ -550,7 +515,7 @@ public static void OnGUIInternal( bool skipRender = false ) {
                         _history = null;
                     } else {
                         // just erase the prompt if no history
-                        QON_EraseCommand();
+                        EraseCommand();
                     }
                 } else if ( Event.current.keyCode == KeyCode.DownArrow
                             || Event.current.keyCode == KeyCode.UpArrow ) {
@@ -698,11 +663,19 @@ static void PrintToSystemLog( string s, QObject o ) {
 
 #endif // HAS_UNITY
 
+static void EraseCommand() {
+    QON_EraseCommand();
+    if ( _oneShot ) {
+        Active = false;
+        _oneShot = false;
+    }
+}
+
 static void OnEnter() {
     _history = null;
     string cmdClean, cmdRaw;
     QON_GetCommandEx( out cmdClean, out cmdRaw );
-    QON_EraseCommand();
+    EraseCommand();
     Log( cmdRaw );
     Cellophane.AddToHistory( cmdClean );
     TryExecute( cmdClean );
@@ -774,6 +747,9 @@ public static void TryExecuteLegacy( string cmdLine, object context = null ) {
 
 public static void Toggle() {
     Active = ! Active;
+    if ( ! Active ) {
+        _oneShot = false;
+    }
 }
 
 public static void Error( object o ) {
@@ -884,10 +860,10 @@ public static void Break( string str ) {
 #endif
 }
 
-public static void OneShotCmd( string fillCommandLine, Action<string> a ) {
+public static void OneShotCmd( string fillCommandLine ) {
     QON_SetCommand( fillCommandLine );
     Active = true;
-    _oneShotCmd_f = a;
+    _oneShot = true;
 }
 
 public static float LineHeight() {
@@ -956,7 +932,7 @@ public static bool SDLTick( IntPtr renderer, IntPtr window, bool skipRender = fa
 
                     case SDLK_PAGEUP:    QON_PageUp();           break;
                     case SDLK_PAGEDOWN:  QON_PageDown();         break;
-                    case SDLK_ESCAPE:    QON_EraseCommand();     break;
+                    case SDLK_ESCAPE:    EraseCommand();     break;
                     case SDLK_BACKQUOTE: Toggle();               break;
 
                     case SDLK_BACKSPACE: {
