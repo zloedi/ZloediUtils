@@ -200,7 +200,6 @@ public static bool TracePath( int target, int floodMapPitch, Context ctx, List<i
         target = neighbours[min & 7];
         ioResult.Add( target );
     }
-    //ioResult.Reverse( target );
     return target == ctx.origin;
 }
 
