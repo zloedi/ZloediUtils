@@ -32,20 +32,64 @@ class LateText : Late {
     public string str;
 }
 
+class LateTextNokia : Late {
+    public float x, y;
+    public float scale;
+    public string str;
+}
+
 class LateImage : Late {
-    public float x, y, w, h;
+    public float x, y, w, h, a;
     public Texture texture;
     public Material material;
 }
 
 // these are postponed and drawn after all geometry in scene
-// FIXME: methinks these are obsolete, _lates are used instead
-static List<LateText> _texts = new List<LateText>();
-static List<LateText> _textsNokia = new List<LateText>();
-static List<LateImage> _images = new List<LateImage>();
-static List<LateLine> _lines = new List<LateLine>();
-
 static List<Late> _lates = new List<Late>();
+
+static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
+                                    Vector3 dstPos, Vector3 dstSize, float angle, Color color ) { 
+    float y = _invertedY ? ScreenHeight() - dstPos.y : dstPos.y;
+    float tw = texW > 0 ? texW : 1;
+    float th = texH > 0 ? texH : 1;
+    float u0 = srcPos.x / tw;
+    float u1 = u0 + srcSize.x / tw;
+    float v0 = 1 - srcPos.y / th;
+    float v1 = v0 - srcSize.y / th;
+
+    GL.Color( color );
+    if ( angle != float.MaxValue ) {
+        float rad = angle * Mathf.Deg2Rad;
+        float sn = Mathf.Sin( rad );
+        float cs = Mathf.Cos( rad );
+        float dy = _invertedY ? -dstSize.y : +dstSize.y;
+        Vector2 pos = new Vector2( dstPos.x, y );
+        Vector2 rv = new Vector2( dstSize.x, dy );
+        Vector3 rotate( float rx, float ry ) {
+            rx *= rv.x * 0.5f;
+            ry *= rv.y * 0.5f;
+            return new Vector3( pos.x + rx * cs - ry * sn, pos.y + rx * sn + ry * cs, 0 );
+        }
+        GL.TexCoord( new Vector3( u0, v0, 0 ) );
+        GL.Vertex( rotate( -1, -1 ) );
+        GL.TexCoord( new Vector3( u1, v0, 0 ) );
+        GL.Vertex( rotate( 1, -1 ) );
+        GL.TexCoord( new Vector3( u1, v1, 0 ) );
+        GL.Vertex( rotate( 1, 1 ) );
+        GL.TexCoord( new Vector3( u0, v1, 0 ) );
+        GL.Vertex( rotate( -1, 1 ) );
+    } else {
+        float dy = _invertedY ? y - dstSize.y : y + dstSize.y;
+        GL.TexCoord( new Vector3( u0, v0, 0 ) );
+        GL.Vertex( new Vector3( dstPos.x, y, 0 ) );
+        GL.TexCoord( new Vector3( u1, v0, 0 ) );
+        GL.Vertex( new Vector3( dstPos.x + dstSize.x, y, 0 ) );
+        GL.TexCoord( new Vector3( u1, v1, 0 ) );
+        GL.Vertex( new Vector3( dstPos.x + dstSize.x, dy, 0 ) );
+        GL.TexCoord( new Vector3( u0, v1, 0 ) );
+        GL.Vertex( new Vector3( dstPos.x, dy, 0 ) );
+    }
+}
 
 static void BlitSlow( Texture texture, Vector2 srcPos, Vector2 srcSize, Vector3 dstPos,
                                 Vector3 dstSize, Color? color = null, Material material = null) { 
@@ -445,8 +489,8 @@ public static void LatePrint( object o, float x, float y, Color? color = null, f
     LatePrint( o.ToString(), x, y, color, scale );
 }
 
-static void AddCenteredText( List<LateText> texts, string str, Vector2 sz, float x, float y,
-                                                            Color? color = null, float scale = 1 ) {
+static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? color = null,
+                                                                                float scale = 1 ) {
     var txt = new LateText {
         context = _context,
         x = Mathf.Round( x - ( int )sz.x / 2 ),
@@ -456,12 +500,10 @@ static void AddCenteredText( List<LateText> texts, string str, Vector2 sz, float
         color = color == null ? Color.green : color.Value,
     };
 
-    texts.Add( txt );
     _lates.Add( txt );
 }
 
-static void AddText( List<LateText> texts, string str, float x, float y, Color? color = null,
-                                                                                float scale = 1 ) {
+static void AddText( string str, float x, float y, Color? color = null, float scale = 1 ) {
     var txt = new LateText {
         context = _context,
         x = ( int )x,
@@ -471,13 +513,12 @@ static void AddText( List<LateText> texts, string str, float x, float y, Color? 
         color = color == null ? Color.green : color.Value,
     };
 
-    texts.Add( txt );
     _lates.Add( txt );
 }
 
 public static void LatePrint( string str, float x, float y, Color? color = null, float scale = 1 ) {
     Vector2 sz = MeasureString( str, scale );
-    AddCenteredText( _texts, str, sz, x, y, color, scale );
+    AddCenteredText( str, sz, x, y, color, scale );
 }
 
 // top-left version of the late prints (which are centered)
@@ -490,7 +531,7 @@ public static void LatePrint_tl( object o, float x, float y, Color? color = null
 }
 
 public static void LatePrint_tl( string str, float x, float y, Color? color = null, float scale = 1 ) {
-    AddText( _texts, str, x, y, color, scale );
+    AddText( str, x, y, color, scale );
 }
 
 public static void LatePrintNokia( string str, Vector2Int xy, Color? color = null,
@@ -501,43 +542,31 @@ public static void LatePrintNokia( string str, Vector2Int xy, Color? color = nul
 public static void LatePrintNokia( string str, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
     Vector2 sz = MeasureStringNokia( str, scale );
-    AddCenteredText( _textsNokia, str, sz, x, y, color, scale );
+
+    var txt = new LateTextNokia {
+        context = _context,
+        x = Mathf.Round( x - ( int )sz.x / 2 ),
+        y = Mathf.Round( y - ( int )sz.y / 2 ),
+        scale = scale,
+        str = str,
+        color = color == null ? Color.green : color.Value,
+    };
+
+    _lates.Add( txt );
 }
 
 public static void LatePrintNokia_tl( string str, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
-    AddText( _textsNokia, str, x, y, color, scale );
-}
+    var txt = new LateTextNokia {
+        context = _context,
+        x = ( int )x,
+        y = ( int )y,
+        scale = scale,
+        str = str,
+        color = color == null ? Color.green : color.Value,
+    };
 
-public static void LatePrintFlush() {
-    SetFontTexture();
-    GL.Begin( GL.QUADS );
-    foreach ( var s in _texts ) {
-        if ( s.context == _context ) {
-            DrawTextWithOutline( s.str, s.x, s.y, s.color, s.scale );
-        }
-    }
-    GL.End();
-
-    SetTexture( NokiaFont.GetTexture() );
-    GL.Begin( GL.QUADS );
-    foreach ( var s in _textsNokia ) {
-        if ( s.context == _context ) {
-            DrawTextNokia( s.str, s.x, s.y, s.color, s.scale );
-        }
-    }
-    GL.End();
-
-    void removeTexts( List<LateText> texts ) {
-        for ( int i = texts.Count - 1; i >= 0; i-- ) {
-            if ( texts[i].context == _context ) {
-                texts.RemoveAt( i );
-            }
-        }
-    }
-
-    removeTexts( _texts );
-    removeTexts( _textsNokia );
+    _lates.Add( txt );
 }
 
 public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h,
@@ -553,50 +582,41 @@ public static Vector2 LateBlitWorld( Vector3 worldPos, float w, float h, Color? 
     return pt;
 }
 
-public static void LateBlit( Vector2 xy, Vector2 sz, Color? color = null ) {
-    LateBlit( null, xy, sz.x, sz.y, color );
+public static void LateBlit( Texture tex, Vector2 xy, Vector2 sz, float angle = float.MaxValue,
+                                                                            Color? color = null ) {
+    LateBlit( tex, xy, sz.x, sz.y, angle, color );
 }
 
-public static void LateBlit( Texture tex, Vector2 xy, float w, float h, Color? color = null ) {
-    LateBlit( tex, xy.x, xy.y, w, h, color );
+public static void LateBlit( Vector2 xy, Vector2 sz, float angle = float.MaxValue,
+                                                                            Color? color = null ) {
+    LateBlit( null, xy, sz, angle, color );
 }
 
-public static void LateBlit( float x, float y, float w, float h, Color? color = null ) {
-    LateBlit( null, x, y, w, h, color );
+public static void LateBlit( Texture tex, Vector2 xy, float w, float h,
+                                            float angle = float.MaxValue, Color? color = null ) {
+    LateBlit( tex, xy.x, xy.y, w, h, angle, color );
 }
 
-public static void LateBlit( Texture tex, float x, float y, float w, float h, Color? color = null,
-                                                                            Material mat = null ) {
+public static void LateBlit( float x, float y, float w, float h, float angle = float.MaxValue,
+                                                                            Color? color = null ) {
+    LateBlit( null, x, y, w, h, angle, color );
+}
+
+public static void LateBlit( Texture tex, float x, float y, float w, float h,
+                        float angle = float.MaxValue, Color? color = null, Material mat = null ) {
     var img = new LateImage {
         context = _context,
         x = x,
         y = y,
         w = w,
         h = h,
+        a = angle,
         color = color == null ? Color.white : color.Value,
         texture = tex != null ? tex : _texWhite,
         material = mat,
     };
     
-    _images.Add( img );
     _lates.Add( img );
-}
-
-public static void LateBlitFlush() {
-    foreach ( var i in _images ) {
-        if ( i.context == _context ) {
-            Vector2 srcPos = new Vector2( 0, 0 );
-            Vector2 srcSize = new Vector2( i.texture.width, i.texture.height );
-            Vector2 dstPos = new Vector2( i.x, i.y );
-            Vector2 dstSize = new Vector2( i.w, i.h );
-            BlitSlow( i.texture, srcPos, srcSize, dstPos, dstSize, i.color, i.material );
-        }
-    }
-    for ( int i = _images.Count - 1; i >= 0; i-- ) {
-        if ( _images[i].context == _context ) {
-            _images.RemoveAt( i );
-        }
-    }
 }
 
 public static void LateDrawLineLoopWorld( IList<Vector3> worldLine, Color? color = null ) {
@@ -655,28 +675,7 @@ public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
         color = color == null ? Color.white : color.Value,
     };
 
-    _lines.Add( ln );
     _lates.Add( ln );
-}
-
-public static void LateDrawLineFlush() {
-    SetWhiteTexture();
-    GL.Begin( GL.LINES);
-    foreach ( var l in _lines ) {
-        if ( l.context == _context ) {
-            GL.Color( l.color );
-            for ( int i = 0; i < l.line.Count - 1; i++ ) {
-                GL.Vertex( l.line[i + 0] );
-                GL.Vertex( l.line[i + 1] );
-            }
-        }
-    }
-    GL.End();
-    for ( int i = _lines.Count - 1; i >= 0; i-- ) {
-        if ( _lines[i].context == _context ) {
-            _lines.RemoveAt( i );
-        }
-    }
 }
 
 public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
@@ -702,87 +701,101 @@ public static void Begin() {
 }
 
 public static void FlushLates() {
-#if false
-        LateBlitFlush();
-        LatePrintFlush();
-        LateDrawLineFlush();
-#else
-        for ( int li = 0; li < _lates.Count; ) {
+    for ( int li = 0; li < _lates.Count; ) {
 
-            for ( ; li < _lates.Count && _lates[li].context != _context; li++ )
-            {}
+        for ( ; li < _lates.Count && _lates[li].context != _context; li++ )
+        {}
 
-            int start;
+        int start;
 
-            // == texts ==
+        // == texts ==
 
-            for ( start = li; li < _lates.Count && _lates[li] is LateText; li++ )
-            {}
+        for ( start = li; li < _lates.Count && _lates[li] is LateText; li++ )
+        {}
 
-            if ( start < li ) {
-                SetFontTexture();
-                GL.Begin( GL.QUADS );
-                for ( int i = start; i < li; i++ ) {
-                    var lt = ( LateText )_lates[i];
-                    DrawTextWithOutline( lt.str, lt.x, lt.y, lt.color, lt.scale );
-                }
-                GL.End();
+        if ( start < li ) {
+            SetFontTexture();
+            GL.Begin( GL.QUADS );
+            for ( int i = start; i < li; i++ ) {
+                var lt = ( LateText )_lates[i];
+                DrawTextWithOutline( lt.str, lt.x, lt.y, lt.color, lt.scale );
             }
+            GL.End();
+        }
 
-            // == images ==
+        // == nokia texts ==
 
-            for ( start = li; li < _lates.Count && _lates[li] is LateImage; li++ )
-            {}
+        for ( start = li; li < _lates.Count && _lates[li] is LateTextNokia; li++ )
+        {}
 
+        if ( start < li ) {
+            SetTexture( NokiaFont.GetTexture() );
+            GL.Begin( GL.QUADS );
+            for ( int i = start; i < li; i++ ) {
+                var ltn = ( LateTextNokia )_lates[i];
+                DrawTextNokia( ltn.str, ltn.x, ltn.y, ltn.color, ltn.scale );
+            }
+            GL.End();
+        }
+
+        // == images ==
+
+        for ( start = li; li < _lates.Count && _lates[li] is LateImage; li++ )
+        {}
+
+        if ( start < li ) {
+            Texture tex = ( ( LateImage )_lates[start] ).texture;
+            tex = tex != null ? tex : _texWhite;
+            SetTexture( tex );
+            GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
                 var img = ( LateImage )_lates[i];
-                Vector2 srcPos = new Vector2( 0, 0 );
+                if ( tex != img.texture ) {
+                    GL.End();
+                    tex = img.texture != null ? img.texture : _texWhite;
+                    SetTexture( tex );
+                    GL.Begin( GL.QUADS );
+                }
                 Vector2 srcSize = new Vector2( img.texture.width, img.texture.height );
                 Vector2 dstPos = new Vector2( img.x, img.y );
                 Vector2 dstSize = new Vector2( img.w, img.h );
-                BlitSlow( img.texture, srcPos, srcSize, dstPos, dstSize, img.color,
-                                                                                img.material );
+                ImageQuad( img.texture.width, img.texture.height, Vector2.zero, srcSize,
+                                                                dstPos, dstSize, img.a, img.color );
             }
+            GL.End();
+        }
 
-            // == lines ==
+        // == lines ==
 
-            for ( start = li; li < _lates.Count && _lates[li] is LateLine; li++ )
-            {}
+        for ( start = li; li < _lates.Count && _lates[li] is LateLine; li++ )
+        {}
 
-            if ( start < li ) {
-                SetWhiteTexture();
-                GL.Begin( GL.LINES);
-                for ( int i = start; i < li; i++ ) {
-                    var l = ( LateLine )_lates[i];
-                    GL.Color( l.color );
-                    for ( int j = 0; j < l.line.Count - 1; j++ ) {
-                        GL.Vertex( l.line[j + 0] );
-                        GL.Vertex( l.line[j + 1] );
-                    }
+        if ( start < li ) {
+            SetWhiteTexture();
+            GL.Begin( GL.LINES);
+            for ( int i = start; i < li; i++ ) {
+                var l = ( LateLine )_lates[i];
+                GL.Color( l.color );
+                for ( int j = 0; j < l.line.Count - 1; j++ ) {
+                    GL.Vertex( l.line[j + 0] );
+                    GL.Vertex( l.line[j + 1] );
                 }
-                GL.End();
             }
+            GL.End();
         }
+    }
 
-        for ( int li = _lates.Count - 1; li >= 0; li-- ) {
-            if ( _lates[li].context == _context ) {
-                _lates.RemoveAt( li );
-            }
+    for ( int li = _lates.Count - 1; li >= 0; li-- ) {
+        if ( _lates[li].context == _context ) {
+            _lates.RemoveAt( li );
         }
-
-        _texts.Clear();
-        _textsNokia.Clear();
-        _images.Clear();
-        _lines.Clear();
-#endif
+    }
 }
 
 public static void End( bool skipLateFlush = false ) {
     if ( ! skipLateFlush ) {
         if ( _material ) {
-            LateBlitFlush();
-            LatePrintFlush();
-            LateDrawLineFlush();
+            FlushLates();
         } else {
             Debug.LogError( "Can't find GL material. Should call QGL.Start()" );
         }

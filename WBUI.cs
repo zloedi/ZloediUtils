@@ -58,6 +58,44 @@ public static QUI.WidgetResult ClickRect( WrapBox wbox, int handle = 0,
     return QUI.ClickRect_wg( wbox.x, wbox.y, wbox.w, wbox.h, handle: handle );
 }
 
+#if QUI_USE_QGL
+public static void QGLText( string content, WrapBox wbox, int fontSize = 1, Color? color = null ) {
+    fontSize = Mathf.Max( fontSize, 1 );
+    Vector2Int sz = QGL.MeasureStringNokiaInt( content, scale: fontSize );
+    wbox = wbox.Center( sz.x, sz.y );
+    QGL.LatePrintNokia_tl( content, wbox.x, wbox.y, color: color, scale: fontSize );
+}
+
+public static void QGLTextOutlined( string content, WrapBox wbox, int fontSize = 1,
+                                                                            Color? color = null ) {
+    fontSize = Mathf.Max( fontSize, 1 );
+    Vector2Int sz = QGL.MeasureStringNokiaInt( content, scale: fontSize );
+    wbox = wbox.Center( sz.x, sz.y );
+
+    color = color != null ? color : Color.white;
+    
+    int [] offset = {
+        0, -1,
+        -1, -1,
+        -1, 0,
+        0, 1,
+        1, 1,
+        1, 0,
+        -1, 1,
+        1, -1,
+    };
+
+    var black = Color.black;
+    black.a = color.Value.a * color.Value.a * color.Value.a;
+    for ( int i = 0; i < offset.Length; i += 2 ) {
+        QGL.LatePrintNokia_tl( content, wbox.x + offset[i + 0] * fontSize,
+                                                                wbox.y + offset[i + 1] * fontSize,
+                                                                    color: black, scale: fontSize );
+    }
+    QGL.LatePrintNokia_tl( content, wbox.x, wbox.y, color: color, scale: fontSize );
+}
+#endif
+
 #if QUI_USE_UNITY_UI
 
 public static void MeasuredText_wg( string content, WrapBox wbox, int handle,

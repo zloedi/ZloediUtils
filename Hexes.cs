@@ -27,6 +27,7 @@ public const float SQRT_3 = 1.73205080757f;
 static Hexes() {
 #if HAS_UNITY
     CreateHexTexture();
+    CreateHexRegularTexture();
 #endif
 }
 
@@ -44,6 +45,10 @@ public static void Neighbours( Vector2Int hxc,
     n3 = new Vector2Int( hxc.x - 1, hxc.y + 1 );
     n4 = new Vector2Int( hxc.x - 1, hxc.y + 0 );
     n5 = new Vector2Int( hxc.x + 0, hxc.y - 1 );
+}
+
+public static Vector3Int AxialToCubeInt( Vector2Int axial ) {
+    return AxialToCubeInt( axial.x, axial.y );
 }
 
 public static Vector3Int AxialToCubeInt( int q, int r ) {
@@ -85,30 +90,49 @@ public static Vector2Int AxialRound( Vector2 hex ) {
     return CubeToAxial( CubeRound( AxialToCube( hex ) ) );
 }
 
+public static int CubeDistance( Vector3Int a, Vector3Int b ) {
+    var vec = a - b;
+    return ( Mathf.Abs( vec.x ) + Mathf.Abs( vec.y ) + Mathf.Abs( vec.z ) ) / 2;
+}
+
+public static float CubeDistance( Vector3 a, Vector3 b ) {
+    var vec = a - b;
+    return ( Mathf.Abs( vec.x ) + Mathf.Abs( vec.y ) + Mathf.Abs( vec.z ) ) / 2f;
+}
+
+public static int AxialDistance( Vector2Int a, Vector2Int b ) {
+    Vector3Int ca = AxialToCubeInt( a );
+    Vector3Int cb = AxialToCubeInt( b );
+    return CubeDistance( ca, cb );
+}
+
 // actually from square grid
-public static Vector2Int ScreenToHex( Vector2 screenPos ) {
+// it uses the 'pointy-top-half-height' as base size, thus the *= sqrt_3
+public static Vector2Int ScreenToHex( Vector2 screenPos, float size = 1 ) {
+    screenPos /= size;
     screenPos *= SQRT_3;
-    var q = SQRT_3/3f * screenPos.x  -  1f/3f * screenPos.y;
-    var r =                            2f/3f * screenPos.y;
+    var q = SQRT_3/3f * screenPos.x - 1f/3f * screenPos.y;
+    var r =                           2f/3f * screenPos.y;
     return AxialRound( new Vector2( q, r ) );
 }
 
 // actually to square grid
-public static Vector2 HexToScreen( int q, int r ) {
+// it uses the 'pointy-top-half-height' as base size, thus the /= sqrt_3
+public static Vector2 HexToScreen( int q, int r, float size = 1 ) {
 #if false
-    float x = SQRT_3 * q + SQRT_3/2f * r;
-    float y =                3f/2f * r;
+    float x = size * ( SQRT_3 * q + SQRT_3/2f * r );
+    float y = size * (                  3f/2f * r );
     return new Vector2( x / SQRT_3, y / SQRT_3 );
 #else
-    float x = q + 1/2f * r;
-    float y =    3f/2f * r;
+    float x = size * ( q + 1/2f * r );
+    float y = size * (    3f/2f * r );
     return new Vector2( x, y / SQRT_3 );
 #endif
 }
 
 // actually to square grid
-public static Vector2 HexToScreen( Vector2Int hex ) {
-    return HexToScreen( hex.x, hex.y );
+public static Vector2 HexToScreen( Vector2Int hex, float size = 1 ) {
+    return HexToScreen( hex.x, hex.y, size );
 }
 
 public static Vector2Int OddRToAxial( int col, int row ) {
@@ -133,6 +157,10 @@ public static int hexSpriteWidth;
 public static int hexSpriteHeight;
 public static float hexSpriteAspect;
 public static Texture2D hexSprite;
+
+public static int hexSpriteRegularWidth;
+public static int hexSpriteRegularHeight;
+public static Texture2D hexSpriteRegular;
 
 #if false
     str += "       @@       ";
@@ -191,6 +219,51 @@ public static void CreateHexTexture() {
         }
     }
     hexSprite.Apply();
+}
+
+public static void CreateHexRegularTexture() { 
+    string str = "";
+    string
+
+      sz = "                ";
+
+    str += "       @@       ";
+    str += "     @@@@@@     ";
+    str += "   @@@@@@@@@@   ";
+    str += " @@@@@@@@@@@@@@ ";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += "@@@@@@@@@@@@@@@@";
+    str += " @@@@@@@@@@@@@@ ";
+    str += "   @@@@@@@@@@   ";
+    str += "     @@@@@@     ";
+    str += "       @@       ";
+
+    hexSpriteRegularWidth = sz.Length;
+    hexSpriteRegularHeight = str.Length / hexSpriteRegularWidth;
+    hexSpriteAspect = ( float )hexSpriteRegularWidth / hexSpriteRegularHeight;
+
+    hexSpriteRegular = new Texture2D( hexSpriteRegularWidth, hexSpriteRegularHeight,
+                                                                textureFormat: TextureFormat.RGBA32, 
+                                                                mipChain: false, 
+                                                                linear: false); 
+    hexSpriteRegular.filterMode = FilterMode.Point;
+    for ( int y = 0, i = 0; y < hexSpriteRegularHeight; y++ ) {
+        for ( int x = 0; x < hexSpriteRegularWidth; x++, i++ ) {
+            int alpha = str[i] != ' ' ? 0xff : 0;
+            hexSpriteRegular.SetPixel( x, y, new Color32( 0xff, 0xff, 0xff, ( byte )alpha ) );
+        }
+    }
+    hexSpriteRegular.Apply();
+
+    Log( "Created regular hex texture." );
 }
 
 static Vector2 ShearAndScale( int x, int y, int gridHeight, Vector2 sz ) {
@@ -323,6 +396,33 @@ static void Log( string s, UnityEngine.Object o = null ) {
 }
 
 #if HEXES_QONSOLE
+const float _hexPts30 = ( float )( Math.PI * 2f / 12f );
+const float _hexPts60 = ( float )( Math.PI * 2f / 6f );
+static Vector2 [] _hexPts = new Vector2[6] {
+    new Vector2 { x = Mathf.Cos( 0 * _hexPts60 ), y = Mathf.Sin( 0 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 1 * _hexPts60 ), y = Mathf.Sin( 1 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 2 * _hexPts60 ), y = Mathf.Sin( 2 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 3 * _hexPts60 ), y = Mathf.Sin( 3 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 4 * _hexPts60 ), y = Mathf.Sin( 4 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( 5 * _hexPts60 ), y = Mathf.Sin( 5 * _hexPts60 ) },
+};
+static Vector2 [] _hexPtsPointy = new Vector2[6] {
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 0 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 0 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 1 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 1 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 2 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 2 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 3 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 3 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 4 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 4 * _hexPts60 ) },
+    new Vector2 { x = Mathf.Cos( _hexPts30 + 5 * _hexPts60 ), y = Mathf.Sin( _hexPts30 + 5 * _hexPts60 ) },
+};
+static Vector2 [] _hexPtsBuf = new Vector2[6];
+public static void DrawHexWithLines( Vector2 screenPos, float diameter, Color c ) {
+    float r = diameter / SQRT_3;
+    for ( int i = 0; i < 6; i++ ) {
+        _hexPtsBuf[i] = _hexPtsPointy[i] * r + screenPos;
+    }
+    QGL.LateDrawLineLoop( _hexPtsBuf, color: c );
+}
+
 public static void DrawGLHex( Vector2 screenPos, int x, int y, int gridHeight, Vector2 sz,
                                                                             float consoleAlpha,
                                                                             Color? color = null ) {
@@ -363,7 +463,7 @@ public static void PrintList( IList<Vector2Int> list, string logText = null, flo
         Qonsole.Log( logText );
     }
 
-    if ( ! hexSprite ) {
+    if ( ! hexSprite) {
         CreateHexTexture();
     }
 
