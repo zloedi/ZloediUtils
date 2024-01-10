@@ -436,7 +436,9 @@ private static bool Execute( KeyCode key, string cmdLine ) {
 
 public static bool TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyUp = KeyCode.None,
                                                                     KeyCode keyHold = KeyCode.None,
-                                                                    string context = "" ) {
+                                                                    string context = null ) {
+    context = context == null ? "" : context;
+
 #if KEYBINDS_LEGACY
     string cmd;
     foreach ( var key in keys ) {
