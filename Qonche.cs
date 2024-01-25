@@ -200,6 +200,11 @@ public static string QON_GetCommand() {
     return System.Text.Encoding.UTF8.GetString( outBuf, 0, outBuf.Length );
 }
 
+public static string QON_GetCommand( out int cursor ) {
+    cursor = qon_cursor - QON_PROMPT.Length;
+    return QON_GetCommand();
+}
+
 public static void QON_GetCommandEx( out string cmdClean, out string cmdRaw ) {
     int cmdBufLen;
     byte [] outBuf = QON_GetCommandBuf( out cmdBufLen );
