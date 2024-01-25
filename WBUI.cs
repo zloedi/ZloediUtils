@@ -66,11 +66,17 @@ public static void QGLText( string content, WrapBox wbox, int fontSize = 1, Colo
     QGL.LatePrintNokia_tl( content, wbox.x, wbox.y, color: color, scale: fontSize );
 }
 
-public static void QGLTextOutlined( string content, WrapBox wbox, int fontSize = 1,
-                                                                            Color? color = null ) {
+public static void QGLTextOutlined( string content, WrapBox wbox, int align = 0,
+                                                    int fontSize = 1, Color? color = null ) {
     fontSize = Mathf.Max( fontSize, 1 );
     Vector2Int sz = QGL.MeasureStringNokiaInt( content, scale: fontSize );
-    wbox = wbox.Center( sz.x, sz.y );
+    if ( align == 1 ) {
+        wbox = wbox.TopLeft( sz.x, sz.y );
+    } else if ( align == 2 ) {
+        wbox = wbox.BottomLeft( sz.x, sz.y );
+    } else {
+        wbox = wbox.Center( sz.x, sz.y );
+    }
 
     color = color != null ? color : Color.white;
     

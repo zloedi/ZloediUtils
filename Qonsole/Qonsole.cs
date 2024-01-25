@@ -532,9 +532,33 @@ public static void OnGUIInternal( bool skipRender = false ) {
                     char c = Event.current.character;
                     if ( c == '`' ) {
                     } else if ( c == '\t' ) {
-                        string cmd = QON_GetCommand();
-                        string autocomplete = Cellophane.Autocomplete( cmd );
-                        QON_SetCommand( autocomplete );
+                        string cmd = QON_GetCommand( out int cursor );
+
+                        // cursor may be behind last char
+                        cursor = Mathf.Min( cursor, cmd.Length - 1 );
+
+                        // skip to first token
+                        while ( cursor > 0 && cmd[cursor] == ' ' ) {
+                            cursor--;
+                        }
+
+                        string cmdpre = "";
+                        string cmdsuf = cmd;
+
+                        for ( int i = cursor; i >= 0; i-- ) {
+                            if ( cmd[i] == ' ' ) {
+                                cmdpre = cmd.Substring( 0, i );
+                                cmdsuf = cmd.Substring( i );
+                                break;
+                            }
+                        }
+
+                        cmdsuf = Cellophane.Autocomplete( cmdsuf );
+                        if ( cmdpre.Length > 0 ) {
+                            QON_SetCommand( cmdpre + ' ' + cmdsuf );
+                        } else {
+                            QON_SetCommand( cmdsuf );
+                        }
                     } else if ( c == '\b' ) {
                     } else if ( c == '\n' || c == '\r' ) {
                         OnEnter();

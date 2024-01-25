@@ -403,7 +403,8 @@ public static void Bind_kmd( string [] argv ) {
     }
 }
 
-private static bool GetCmd( KeyCode k, string context, out string cmd ) {
+public static bool GetCmd( KeyCode k, string context, out string cmd ) {
+    context = context == null ? "" : context;
     string [] ctxCommands;
     if ( _bindContext.TryGetValue( context, out ctxCommands ) ) {
         cmd = ctxCommands[_keyToIndex[k]];
@@ -436,7 +437,7 @@ private static bool Execute( KeyCode key, string cmdLine ) {
 
 public static bool TryExecuteBinds( KeyCode keyDown = KeyCode.None, KeyCode keyUp = KeyCode.None,
                                                                     KeyCode keyHold = KeyCode.None,
-                                                                    string context = "" ) {
+                                                                    string context = null ) {
 #if KEYBINDS_LEGACY
     string cmd;
     foreach ( var key in keys ) {
