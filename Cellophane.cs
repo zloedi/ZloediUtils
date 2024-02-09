@@ -552,7 +552,7 @@ public static void AddToHistory( string str ) {
     if ( ! string.IsNullOrEmpty( str ) ) {
         if ( _history.Count == 0 || str != _history[_history.Count - 1] ) {
             _history.Add( str );
-            if ( _history.Count > 128 ) {
+            if ( _history.Count > 256 ) {
                 _history.RemoveAt( 0 );
             }
         }
