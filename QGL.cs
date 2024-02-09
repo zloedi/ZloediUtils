@@ -39,7 +39,13 @@ class LateTextNokia : Late {
 }
 
 class LateImage : Late {
-    public float x, y, w, h, a;
+    // dest rect
+    public float x, y, w, h;
+    // src rect
+    public float sx, sy, sw, sh;
+    // orientation
+    public float ox, oy;
+
     public Texture texture;
     public Material material;
 }
@@ -48,27 +54,25 @@ class LateImage : Late {
 static List<Late> _lates = new List<Late>();
 
 static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
-                                    Vector3 dstPos, Vector3 dstSize, float angle, Color color ) { 
+                            Vector3 dstPos, Vector3 dstSize, Vector2 dir, Color color ) { 
     float y = _invertedY ? ScreenHeight() - dstPos.y : dstPos.y;
     float tw = texW > 0 ? texW : 1;
     float th = texH > 0 ? texH : 1;
     float u0 = srcPos.x / tw;
     float u1 = u0 + srcSize.x / tw;
-    float v0 = 1 - srcPos.y / th;
-    float v1 = v0 - srcSize.y / th;
+    float v0 = srcPos.y / th;
+    float v1 = v0 + srcSize.y / th;
 
     GL.Color( color );
-    if ( angle != float.MaxValue ) {
-        float rad = angle * Mathf.Deg2Rad;
-        float sn = Mathf.Sin( rad );
-        float cs = Mathf.Cos( rad );
-        float dy = _invertedY ? -dstSize.y : +dstSize.y;
+    if ( dir.x != float.MaxValue && dir.y != float.MaxValue ) {
         Vector2 pos = new Vector2( dstPos.x, y );
+        float dy = _invertedY ? -dstSize.y : +dstSize.y;
         Vector2 rv = new Vector2( dstSize.x, dy );
         Vector3 rotate( float rx, float ry ) {
             rx *= rv.x * 0.5f;
             ry *= rv.y * 0.5f;
-            return new Vector3( pos.x + rx * cs - ry * sn, pos.y + rx * sn + ry * cs, 0 );
+            return new Vector3( pos.x + rx * dir.x - ry * dir.y,
+                                                            pos.y + rx * dir.y + ry * dir.x, 0 );
         }
         GL.TexCoord( new Vector3( u0, v0, 0 ) );
         GL.Vertex( rotate( -1, -1 ) );
@@ -572,45 +576,66 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
 public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h,
                                                                             Color? color = null ) {
     Vector2 pt = WorldToScreenPos( worldPos );
-    LateBlit( tex, pt.x - w / 2, pt.y - h / 2, w, h, color: color );
+    LateBlitComplete( tex, pt.x - w / 2, pt.y - h / 2, w, h, color: color );
     return pt;
 }
 
 public static Vector2 LateBlitWorld( Vector3 worldPos, float w, float h, Color? color = null ) {
     Vector2 pt = WorldToScreenPos( worldPos );
-    LateBlit( null, pt.x - w / 2, pt.y - h / 2, w, h, color: color );
+    LateBlitComplete( null, pt.x - w / 2, pt.y - h / 2, w, h, color: color );
     return pt;
 }
 
 public static void LateBlit( Texture tex, Vector2 xy, Vector2 sz, float angle = float.MaxValue,
                                                                             Color? color = null ) {
-    LateBlit( tex, xy, sz.x, sz.y, angle, color );
+    LateBlit( tex, xy, sz.x, sz.y, angle: angle, color: color );
 }
 
 public static void LateBlit( Vector2 xy, Vector2 sz, float angle = float.MaxValue,
                                                                             Color? color = null ) {
-    LateBlit( null, xy, sz, angle, color );
+    LateBlit( null, xy, sz, angle: angle, color: color );
 }
 
 public static void LateBlit( Texture tex, Vector2 xy, float w, float h,
                                             float angle = float.MaxValue, Color? color = null ) {
-    LateBlit( tex, xy.x, xy.y, w, h, angle, color );
+    LateBlit( tex, xy.x, xy.y, w, h, angle: angle, color: color );
 }
 
-public static void LateBlit( float x, float y, float w, float h, float angle = float.MaxValue,
-                                                                            Color? color = null ) {
-    LateBlit( null, x, y, w, h, angle, color );
+public static void LateBlit( float x, float y, float w = float.MaxValue, float h = float.MaxValue,
+                                            float angle = float.MaxValue, Color? color = null ) {
+    LateBlit( null, x, y, w, h, angle: angle, color: color );
 }
 
-public static void LateBlit( Texture tex, float x, float y, float w, float h,
+public static void LateBlit( Texture tex, float x, float y,
+                        float w = float.MaxValue, float h = float.MaxValue,
                         float angle = float.MaxValue, Color? color = null, Material mat = null ) {
+    float rad = angle * Mathf.Deg2Rad;
+    float sn = Mathf.Sin( rad );
+    float cs = Mathf.Cos( rad );
+    LateBlitComplete( tex, x, y, w, h, ox: cs, oy: sn, color: color, mat: mat );
+}
+
+public static void LateBlitComplete( Texture tex, float x, float y,
+                                            float w = float.MaxValue, float h = float.MaxValue,
+                                            float sx = 0, float sy = 0, float sw = 0, float sh = 0,
+                                            float ox = float.MaxValue, float oy = float.MaxValue,
+                                            Color? color = null, Material mat = null ) {
     var img = new LateImage {
         context = _context,
+
         x = x,
         y = y,
-        w = w,
-        h = h,
-        a = angle,
+        w = w != float.MaxValue ? w : tex.width,
+        h = h != float.MaxValue ? h : tex.height,
+
+        sx = sx,
+        sy = sy,
+        sw = sw > 0 ? sw : tex.width,
+        sh = sh > 0 ? sh : tex.height,
+
+        ox = ox,
+        oy = oy,
+
         color = color == null ? Color.white : color.Value,
         texture = tex != null ? tex : _texWhite,
         material = mat,
@@ -756,11 +781,13 @@ public static void FlushLates() {
                     SetTexture( tex );
                     GL.Begin( GL.QUADS );
                 }
-                Vector2 srcSize = new Vector2( img.texture.width, img.texture.height );
+                Vector2 srcPos = new Vector2( img.sx, img.sy );
+                Vector2 srcSize = new Vector2( img.sw, img.sh );
                 Vector2 dstPos = new Vector2( img.x, img.y );
                 Vector2 dstSize = new Vector2( img.w, img.h );
-                ImageQuad( img.texture.width, img.texture.height, Vector2.zero, srcSize,
-                                                                dstPos, dstSize, img.a, img.color );
+                Vector2 dir = new Vector2( img.ox, img.oy );
+                ImageQuad( img.texture.width, img.texture.height, srcPos, srcSize,
+                                                            dstPos, dstSize, dir, img.color );
             }
             GL.End();
         }
