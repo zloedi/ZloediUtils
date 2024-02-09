@@ -48,7 +48,6 @@ public static int RegisterAnimationSource( GameObject go ) {
     return sourcesList.Count - 1;
 }
 
-
 public static void PrintStates( int source ) {
     var src = sourcesList[source];
     var str = "";

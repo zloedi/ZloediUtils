@@ -132,7 +132,7 @@ public const string featuresDescription = @"Features:
 . Overlay display -- the last emitted lines could be shown on top of the window and fade out with time
 . Hook on different events (Start, Update, Done) by defining Qonsole commands with no dependencies.
     and more...
-    
+. Autocomplete the token under the cursor, not only at the start of prompt.
 ";
 
 [Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
