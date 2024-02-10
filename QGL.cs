@@ -596,7 +596,8 @@ public static void LateBlit( Vector2 xy, Vector2 sz, float angle = float.MaxValu
     LateBlit( null, xy, sz, angle: angle, color: color );
 }
 
-public static void LateBlit( Texture tex, Vector2 xy, float w, float h,
+public static void LateBlit( Texture tex, Vector2 xy,
+                                            float w = float.MaxValue, float h = float.MaxValue,
                                             float angle = float.MaxValue, Color? color = null ) {
     LateBlit( tex, xy.x, xy.y, w, h, angle: angle, color: color );
 }
@@ -609,10 +610,14 @@ public static void LateBlit( float x, float y, float w = float.MaxValue, float h
 public static void LateBlit( Texture tex, float x, float y,
                         float w = float.MaxValue, float h = float.MaxValue,
                         float angle = float.MaxValue, Color? color = null, Material mat = null ) {
-    float rad = angle * Mathf.Deg2Rad;
-    float sn = Mathf.Sin( rad );
-    float cs = Mathf.Cos( rad );
-    LateBlitComplete( tex, x, y, w, h, ox: cs, oy: sn, color: color, mat: mat );
+    if ( angle != float.MaxValue ) {
+        float rad = angle * Mathf.Deg2Rad;
+        float sn = Mathf.Sin( rad );
+        float cs = Mathf.Cos( rad );
+        LateBlitComplete( tex, x, y, w, h, ox: cs, oy: sn, color: color, mat: mat );
+    } else {
+        LateBlitComplete( tex, x, y, w, h, color: color, mat: mat );
+    }
 }
 
 public static void LateBlitComplete( Texture tex, float x, float y,
@@ -620,6 +625,7 @@ public static void LateBlitComplete( Texture tex, float x, float y,
                                             float sx = 0, float sy = 0, float sw = 0, float sh = 0,
                                             float ox = float.MaxValue, float oy = float.MaxValue,
                                             Color? color = null, Material mat = null ) {
+    tex = tex != null ? tex : _texWhite;
     var img = new LateImage {
         context = _context,
 
@@ -637,7 +643,7 @@ public static void LateBlitComplete( Texture tex, float x, float y,
         oy = oy,
 
         color = color == null ? Color.white : color.Value,
-        texture = tex != null ? tex : _texWhite,
+        texture = tex,
         material = mat,
     };
     
