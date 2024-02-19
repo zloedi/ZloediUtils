@@ -265,7 +265,7 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     }
 
     if ( isCursor ) {
-        c = ( _totalTime & 256 ) != 0 ? c : _cursorChar;
+        c = Application.isPlaying && ( _totalTime & 256 ) != 0 ? c : _cursorChar;
     }
 
     if ( c == ' ' ) {
@@ -533,11 +533,13 @@ public static void OnGUIInternal( bool skipRender = false ) {
                     if ( c == '`' ) {
                     } else if ( c == '\t' ) {
                         string cmd = QON_GetCommand( out int cursor );
+                        int oldlen = cmd.Length;
+                        int oldc = cursor;
 
-                        // cursor may be behind last char
+                        // cursor may be behind last char, snap it to command
                         cursor = Mathf.Min( cursor, cmd.Length - 1 );
 
-                        // skip to first token
+                        // move back to first token
                         while ( cursor > 0 && cmd[cursor] == ' ' ) {
                             cursor--;
                         }
@@ -555,10 +557,12 @@ public static void OnGUIInternal( bool skipRender = false ) {
 
                         cmdsuf = Cellophane.Autocomplete( cmdsuf );
                         if ( cmdpre.Length > 0 ) {
-                            QON_SetCommand( cmdpre + ' ' + cmdsuf );
+                            cursor = QON_SetCommand( cmdpre + ' ' + cmdsuf );
                         } else {
-                            QON_SetCommand( cmdsuf );
+                            cursor = QON_SetCommand( cmdsuf );
                         }
+                        int dlen = QON_GetCommand().Length - oldlen;
+                        QON_MoveLeft( cursor - oldc - dlen );
                     } else if ( c == '\b' ) {
                     } else if ( c == '\n' || c == '\r' ) {
                         OnEnter();
