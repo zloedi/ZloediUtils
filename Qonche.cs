@@ -189,9 +189,11 @@ public static void QON_EraseCommand() {
     QON_Delete( QON_MAX_CMD );
 }
 
-public static void QON_SetCommand( string str ) {
+public static int QON_SetCommand( string str ) {
     QON_EraseCommand();
     QON_InsertCommand( str );
+    int cursor = qon_cursor - QON_PROMPT.Length;
+    return cursor;
 }
 
 public static string QON_GetCommand() {
