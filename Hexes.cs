@@ -13,8 +13,9 @@ using System.Collections.Generic;
 
 #if HAS_UNITY
 using UnityEngine;
-#else
+#elif SDL
 using GalliumMath;
+using SDLPorts;
 #endif
 
 
@@ -25,10 +26,8 @@ public const float SQRT_3 = 1.73205080757f;
 
 // we really hope this goes on the main thread
 static Hexes() {
-#if HAS_UNITY
     CreateHexTexture();
     CreateHexRegularTexture();
-#endif
 }
 
 
@@ -151,7 +150,7 @@ public static Vector2Int EvenRToAxial( int col, int row ) {
 // == hexes visual stuff ==
 
 
-#if HAS_UNITY
+#if HAS_UNITY || SDL
 
 public static int hexSpriteWidth;
 public static int hexSpriteHeight;
@@ -273,6 +272,8 @@ static Vector2 ShearAndScale( int x, int y, int gridHeight, Vector2 sz ) {
     return pos;
 }
 
+#if HAS_UNITY
+
 static void WangsGenerate_cmd( string [] argv ) {
     Log( "Generating..." );
     string rootName = "HexWangsGenerated";
@@ -387,11 +388,23 @@ static void WangsAssignWalls_cmd( string [] argv ) {
     }
 }
 
-static void Log( string s, UnityEngine.Object o = null ) {
+static void Log( string s, UnityEngine.Object o ) {
 #if HEXES_QONSOLE
     Qonsole.Log( s, o );
 #else
     Debug.Log( s, o );
+#endif
+}
+
+#endif // HAS_UNITY
+
+static void Log( string s ) {
+#if HEXES_QONSOLE
+    Qonsole.Log( s );
+#elif HAS_UNITY
+    Debug.Log( s );
+#else
+    System.Console.Write( s );
 #endif
 }
 

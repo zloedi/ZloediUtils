@@ -15,17 +15,16 @@ using System.IO;
 //#define QONSOLE_KEYBINDS // if this is defined, use the KeyBinds inside the Qonsole loop
 
 #if HAS_UNITY
+
 using UnityEngine;
 using QObject = UnityEngine.Object;
-#else
-using System.Runtime.InteropServices;
-using static AppleFont;
-using static SDL2.SDL;
-using static SDL2.SDL.SDL_BlendMode;
-using static SDL2.SDL.SDL_EventType;
-using static SDL2.SDL.SDL_Keycode;
+
+#elif SDL
+
 using GalliumMath;
+using SDLPorts;
 using QObject = System.Object;
+
 #endif
 
 using static Qonche;
@@ -53,7 +52,7 @@ public static class QonsoleEditorSetup {
 }
 #endif
 
-#if QONSOLE_BOOTSTRAP
+#if HAS_UNITY && QONSOLE_BOOTSTRAP
 
 public class QonsoleBootstrap : MonoBehaviour {
     public static void TrySetupQonsole() {
@@ -93,6 +92,7 @@ public static class Qonsole {
 
 
 #if HAS_UNITY && QONSOLE_BOOTSTRAP
+
 [RuntimeInitializeOnLoadMethod]
 static void CreateBootstrapObject() {
     QonsoleBootstrap[] components = GameObject.FindObjectsOfType<QonsoleBootstrap>();
@@ -104,6 +104,10 @@ static void CreateBootstrapObject() {
         Debug.Log( "Already have QonsoleBootstrap" );
     }
 }
+
+// the Unity editor (QGL) repaint callback
+public static Action<Camera> onEditorRepaint_f = c => {};
+
 #endif
 
 public static bool Active;
@@ -169,23 +173,18 @@ public static Action onDone_f = () => {};
 // OBSOLETE, USE COMMANDS INSTEAD: called inside OnGUI if QONSOLE_BOOTSTRAP is defined
 public static Action onGUI_f = () => {};
 
-#if HAS_UNITY
 // we hope it is the main thread?
 public static readonly int ThreadID = System.Threading.Thread.CurrentThread.ManagedThreadId;
-// the Unity editor (QGL) repaint callback
-public static Action<Camera> onEditorRepaint_f = c => {};
 static bool _isEditor => Application.isEditor;
-static string _dataPath => Application.persistentDataPath;
+static string _dataPath =>
+#if HAS_UNITY
+    Application.persistentDataPath;
+#else
+    System.IO.Path.GetDirectoryName( System.Reflection.Assembly.GetEntryAssembly().Location );
+#endif
 static float _textDx => QGL.TextDx;
 static float _textDy => QGL.TextDy;
 static int _cursorChar => QGL.GetCursorChar();
-#else
-static bool _isEditor = false;
-static string _dataPath = "./";
-static int _textDx = AppleFont.APPLEIIF_CW + 1;
-static int _textDy = AppleFont.APPLEIIF_CH + 3;
-static int _cursorChar => 127;
-#endif
 
 static int _totalTime;
 static string _historyPath;
@@ -236,21 +235,6 @@ static Action OverlayGetFade() {
     };
 }
 
-static void RenderBegin() {
-#if HAS_UNITY
-    _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
-#else
-    _totalTime = ( int )SDL_GetTicks();
-#endif
-}
-
-static void RenderEnd() {
-    _overlayAlpha = 1;
-    _drawCharStartY = 0;
-    _drawCharColorStack.Clear();
-    _drawCharColorStack.Add( Color.white );
-}
-
 static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color color,
                                                                         out Vector2 screenPos ) {
     color = Color.white;
@@ -278,6 +262,74 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     screenPos = QoncheToScreen( x, y );
 
     return true;
+}
+
+static void Autocomplete() {
+    string cmd = QON_GetCommand( out int cursor );
+    int oldlen = cmd.Length;
+    int oldc = cursor;
+
+    // cursor may be behind last char, snap it to command
+    cursor = Mathf.Min( cursor, cmd.Length - 1 );
+
+    // move back to first token
+    while ( cursor > 0 && cmd[cursor] == ' ' ) {
+        cursor--;
+    }
+
+    string cmdpre = "";
+    string cmdsuf = cmd;
+
+    for ( int i = cursor; i >= 0; i-- ) {
+        if ( cmd[i] == ' ' ) {
+            cmdpre = cmd.Substring( 0, i );
+            cmdsuf = cmd.Substring( i );
+            break;
+        }
+    }
+
+    cmdsuf = Cellophane.Autocomplete( cmdsuf );
+    if ( cmdpre.Length > 0 ) {
+        cursor = QON_SetCommand( cmdpre + ' ' + cmdsuf );
+    } else {
+        cursor = QON_SetCommand( cmdsuf );
+    }
+    int dlen = QON_GetCommand().Length - oldlen;
+    QON_MoveLeft( cursor - oldc - dlen );
+}
+
+static void HandleEnter() {
+    //_history = null;
+    string cmdClean, cmdRaw;
+    QON_GetCommandEx( out cmdClean, out cmdRaw );
+    EraseCommand();
+    Log( cmdRaw );
+    Cellophane.AddToHistory( cmdClean );
+    TryExecute( cmdClean );
+    FlushConfig();
+}
+
+static void HandleEscape() {
+    if ( _history != null ) {
+        // cancel history, store last typed-in command
+        QON_SetCommand( _history[0] );
+        _history = null;
+    } else {
+        // just erase the prompt if no history
+        EraseCommand();
+    }
+}
+
+static void HandleUpOrDownArrow( bool down ) {
+    string cmd = QON_GetCommand();
+    if ( _history == null ) {
+        _history = Cellophane.GetHistory( cmd );
+        _historyItem = _history.Length * 100;
+    }
+    _historyItem += down ? 1 : -1;
+    if ( _historyItem >= 0 ) {
+        QON_SetCommand( _history[_historyItem % _history.Length] );
+    }
 }
 
 // the internal commands have a different path of execution
@@ -331,12 +383,58 @@ static void Exit_kmd( string [] argv ) {
     }
     Application.Quit();
 #else
+    OnApplicationQuit();
     Environment.Exit( 1 );
     // ...
 #endif
 }
 
 static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
+
+public static void RenderGL( bool skip = false ) {
+    _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
+
+    QGL.Begin();
+
+    QGL.FlushLates();
+
+    if ( ! skip ) {
+        GetSize( out int conW, out int conH );
+
+        QGL.LatePrint( conW + "," + conH, 300, 100 );
+
+        if ( Active ) {
+            QGL.SetWhiteTexture();
+            GL.Begin( GL.QUADS );
+            GL.Color( new Color( 0, 0, 0, QonAlpha_kvar ) );
+            QGL.DrawSolidQuad( new Vector2( 0, 0 ),
+                                                new Vector2( Screen.width, QGL.ScreenHeight() ) );
+            GL.End();
+        } else {
+            int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
+            conH = conH * percent / 100;
+        }
+
+        QGL.SetFontTexture();
+        GL.Begin( GL.QUADS );
+        QON_DrawChar = drawChar;
+        QON_DrawEx( conW, conH, ! Active, 0 );
+        GL.End();
+    }
+
+    QGL.End( skipLateFlush: true );
+
+    _overlayAlpha = 1;
+    _drawCharStartY = 0;
+    _drawCharColorStack.Clear();
+    _drawCharColorStack.Add( Color.white );
+
+    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
+        if ( DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
+            QGL.DrawScreenCharWithOutline( c, screenPos.x, screenPos.y, color, QonScale );
+        }
+    }
+}
 
 // some stuff need to be initialized before the Start() Unity callback
 public static void Init( int configVersion = -1 ) {
@@ -509,63 +607,18 @@ public static void OnGUIInternal( bool skipRender = false ) {
                 } else if ( Event.current.keyCode == KeyCode.PageDown ) {
                     QON_PageDown();
                 } else if ( Event.current.keyCode == KeyCode.Escape ) {
-                    if ( _history != null ) {
-                        // cancel history, store last typed-in command
-                        QON_SetCommand( _history[0] );
-                        _history = null;
-                    } else {
-                        // just erase the prompt if no history
-                        EraseCommand();
-                    }
+                    HandleEscape();
                 } else if ( Event.current.keyCode == KeyCode.DownArrow
                             || Event.current.keyCode == KeyCode.UpArrow ) {
-                    string cmd = QON_GetCommand();
-                    if ( _history == null ) {
-                        _history = Cellophane.GetHistory( cmd );
-                        _historyItem = _history.Length * 100;
-                    }
-                    _historyItem += Event.current.keyCode == KeyCode.DownArrow ? 1 : -1;
-                    if ( _historyItem >= 0 ) {
-                        QON_SetCommand( _history[_historyItem % _history.Length] );
-                    }
+                    HandleUpOrDownArrow( Event.current.keyCode == KeyCode.DownArrow );
                 } else {
                     char c = Event.current.character;
                     if ( c == '`' ) {
                     } else if ( c == '\t' ) {
-                        string cmd = QON_GetCommand( out int cursor );
-                        int oldlen = cmd.Length;
-                        int oldc = cursor;
-
-                        // cursor may be behind last char, snap it to command
-                        cursor = Mathf.Min( cursor, cmd.Length - 1 );
-
-                        // move back to first token
-                        while ( cursor > 0 && cmd[cursor] == ' ' ) {
-                            cursor--;
-                        }
-
-                        string cmdpre = "";
-                        string cmdsuf = cmd;
-
-                        for ( int i = cursor; i >= 0; i-- ) {
-                            if ( cmd[i] == ' ' ) {
-                                cmdpre = cmd.Substring( 0, i );
-                                cmdsuf = cmd.Substring( i );
-                                break;
-                            }
-                        }
-
-                        cmdsuf = Cellophane.Autocomplete( cmdsuf );
-                        if ( cmdpre.Length > 0 ) {
-                            cursor = QON_SetCommand( cmdpre + ' ' + cmdsuf );
-                        } else {
-                            cursor = QON_SetCommand( cmdsuf );
-                        }
-                        int dlen = QON_GetCommand().Length - oldlen;
-                        QON_MoveLeft( cursor - oldc - dlen );
+                        Autocomplete();
                     } else if ( c == '\b' ) {
                     } else if ( c == '\n' || c == '\r' ) {
-                        OnEnter();
+                        HandleEnter();
                     } else {
                         _history = null;
                         QON_InsertCommand( c.ToString() );
@@ -637,51 +690,7 @@ static void PrintToSystemLog( string s, QObject o ) {
     Application.SetStackTraceLogType( LogType.Log, oldType );
 }
 
-static void RenderGL( bool skip = false ) {
-    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
-        if ( DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
-            QGL.DrawScreenCharWithOutline( c, screenPos.x, screenPos.y, color, QonScale );
-        }
-    }
-
-    RenderBegin();
-
-    QGL.Begin();
-
-    QGL.FlushLates();
-
-    //QGL.LateBlitFlush();
-    //QGL.LatePrintFlush();
-    //QGL.LateDrawLineFlush();
-
-    if ( ! skip ) {
-        GetSize( out int conW, out int conH );
-
-        if ( Active ) {
-            QGL.SetWhiteTexture();
-            GL.Begin( GL.QUADS );
-            GL.Color( new Color( 0, 0, 0, QonAlpha_kvar ) );
-            QGL.DrawSolidQuad( new Vector2( 0, 0 ),
-                                                new Vector2( Screen.width, QGL.ScreenHeight() ) );
-            GL.End();
-        } else {
-            int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
-            conH = conH * percent / 100;
-        }
-
-        QGL.SetFontTexture();
-        GL.Begin( GL.QUADS );
-        QON_DrawChar = drawChar;
-        QON_DrawEx( conW, conH, ! Active, 0 );
-        GL.End();
-    }
-
-    QGL.End( skipLateFlush: true );
-
-    RenderEnd();
-}
-
-#else // if not HAS_UNITY
+#else // HAS_UNITY
 
 static void PrintToSystemLog( string s, QObject o ) {
     if ( QonPrintToSystemLog_kvar ) {
@@ -697,17 +706,6 @@ static void EraseCommand() {
         Active = false;
         _oneShot = false;
     }
-}
-
-static void OnEnter() {
-    _history = null;
-    string cmdClean, cmdRaw;
-    QON_GetCommandEx( out cmdClean, out cmdRaw );
-    EraseCommand();
-    Log( cmdRaw );
-    Cellophane.AddToHistory( cmdClean );
-    TryExecute( cmdClean );
-    FlushConfig();
 }
 
 public static void Update() {
@@ -741,7 +739,6 @@ public static void OnApplicationQuit() {
 // == public API ==
 
 public static void Start() {
-#if HAS_UNITY
     if ( QGL.Start( invertedY: QonInvertPlayY ) ) {
         Started = true;
         Log( "Qonsole Started." );
@@ -750,11 +747,6 @@ public static void Start() {
     } else {
         Started = false;
     }
-#else
-    Started = true;
-    Log( "Qonsole Started." );
-    onStart_f();
-#endif
 }
 
 public static void TryExecute( string cmdLine, object context = null, bool keepJsonTags = false ) {
@@ -795,7 +787,7 @@ public static void Error( string s, QObject o = null ) {
     } );
     QON_PrintAndAct( "\n", (x,y)=>DrawCharColorPop() );
 
-    PrintToSystemLog( serr, o );
+    PrintToSystemLog( serr + '\n', o );
 
     InternalCommand( "qonsole_on_error", s );
 }
@@ -820,14 +812,10 @@ public static void PrintAndAct( string s, Action<Vector2,float> a ) {
             float alpha = Active ? 1 : _overlayAlpha;
             if ( alpha > 0 ) {
                 Vector2 screenPos = QoncheToScreen( x, y );
-#if HAS_UNITY
                 GL.End();
                 a( screenPos, alpha );
                 QGL.SetFontTexture();
                 GL.Begin( GL.QUADS );
-#else
-                a( screenPos, alpha );
-#endif
             }
         } );
     } else {
@@ -899,165 +887,62 @@ public static float LineHeight() {
 }
 
 public static void GetSize( out int conW, out int conH ) {
-#if HAS_UNITY
     int maxH = ( int )QGL.ScreenHeight();
     int cW = ( int )( _textDx * QonScale );
     int cH = ( int )( _textDy * QonScale );
     conW = Screen.width / cW;
     conH = maxH / cH;
-#endif // TODO: sdl?
 }
 
 #if SDL
 
-static IntPtr x_renderer;
-static IntPtr x_window;
-
-static void SDLDrawChar( int c, int x, int y, int w, int h, Color32 col ) {
-    int idx = c & ( APPLEIIF_ROWS * APPLEIIF_CLMS - 1 );
-    var tex = AppleFont.GetTexture( x_renderer );
-    SDL_SetTextureAlphaMod( tex, 0xff );
-    SDL_SetTextureBlendMode( tex, SDL_BLENDMODE_BLEND );
-    SDL_Rect src = new SDL_Rect {
-        x = idx % APPLEIIF_CLMS * APPLEIIF_CW,
-        y = idx / APPLEIIF_CLMS * APPLEIIF_CH,
-        w = APPLEIIF_CW,
-        h = APPLEIIF_CH,
-    };
-    SDL_SetTextureColorMod( tex, col.r, col.g, col.b );
-    SDL_Rect dst = new SDL_Rect { x = x, y = y, w = w, h = h };
-    SDL_RenderCopy( x_renderer, tex, ref src, ref dst );
+public static void HandleSDLTextInput( string txt ) {
+    if ( Active && txt.Length > 0 && txt[0] != '`' && txt[0] != '~' ) {
+        QON_InsertCommand( txt );
+    }
 }
 
-public static void SDLDone() {
-    OnApplicationQuit();
+public static void HandleSDLKeyDown( KeyCode kc ) {
+    if ( ! Active && kc == KeyCode.BackQuote ) {
+        Toggle();
+        return;
+    }
+
+    switch ( kc ) {
+        case KeyCode.LeftArrow:  QON_MoveLeft( 1 );      break;
+        case KeyCode.RightArrow: QON_MoveRight( 1 );     break;
+        case KeyCode.Home:       QON_MoveLeft( 99999 );  break;
+        case KeyCode.End:        QON_MoveRight( 99999 ); break;
+        case KeyCode.PageUp:     QON_PageUp();           break;
+        case KeyCode.PageDown:   QON_PageDown();         break;
+        case KeyCode.BackQuote:  Toggle();               break;
+        case KeyCode.Return:     HandleEnter();          break;
+        case KeyCode.Escape:     HandleEscape();         break;
+        case KeyCode.Tab:        Autocomplete();         break;
+
+        case KeyCode.UpArrow:
+        case KeyCode.DownArrow:
+             HandleUpOrDownArrow( kc == KeyCode.DownArrow );
+             break;
+
+        case KeyCode.Backspace:
+             _history = null;
+             QON_Backspace( 1 );
+             break;
+
+        case KeyCode.Delete:
+             _history = null;
+             QON_Delete( 1 );
+             break;
+
+        default: break;
+    }
 }
 
-public static bool SDLTick( IntPtr renderer, IntPtr window, bool skipRender = false ) {
-    x_renderer = renderer;
-    x_window = window;
-
-    while ( SDL_PollEvent( out SDL_Event ev ) != 0 ) {
-        SDL_Keycode code = ev.key.keysym.sym;
-        switch( ev.type ) {
-            case SDL_TEXTINPUT:
-                byte [] b = new byte[SDL_TEXTINPUTEVENT_TEXT_SIZE];
-                unsafe {
-                    Marshal.Copy( ( IntPtr )ev.text.text, b, 0, b.Length );
-                }
-                string txt = System.Text.Encoding.UTF8.GetString( b, 0, b.Length );
-                if ( txt.Length > 0 && txt[0] != '`' && txt[0] != '~' ) {
-                    QON_InsertCommand( txt );
-                }
-                break;
-
-            case SDL_KEYDOWN:
-                switch ( code ) {
-                    case SDLK_LEFT:      QON_MoveLeft( 1 );      break;
-                    case SDLK_RIGHT:     QON_MoveRight( 1 );     break;
-                    case SDLK_HOME:      QON_MoveLeft( 99999 );  break;
-                    case SDLK_END:       QON_MoveRight( 99999 ); break;
-
-                    case SDLK_PAGEUP:    QON_PageUp();           break;
-                    case SDLK_PAGEDOWN:  QON_PageDown();         break;
-                    case SDLK_ESCAPE:    EraseCommand();     break;
-                    case SDLK_BACKQUOTE: Toggle();               break;
-
-                    case SDLK_BACKSPACE: {
-                        _history = null;
-                        QON_Backspace( 1 );
-                        break;
-                    }
-
-                    case SDLK_DELETE: {
-                        _history = null;
-                        QON_Delete( 1 );
-                        break;
-                    }
-
-                    case SDLK_TAB: {
-                        string autocomplete = Cellophane.Autocomplete( QON_GetCommand() );
-                        QON_SetCommand( autocomplete );
-                    }
-                    break;
-
-                    case SDLK_RETURN: {
-                        OnEnter();
-                    }
-                    break;
-
-                    default: break;
-                }
-                break;
-
-			case SDL_MOUSEMOTION:
-				//x_mouseX = ev.motion.x;
-                //x_mouseY = ev.motion.y;
-				break;
-
-            case SDL_MOUSEBUTTONDOWN:
-                //ZH_UI_OnMouseButton( 1 );
-                break;
-
-            case SDL_MOUSEBUTTONUP:
-                //ZH_UI_OnMouseButton( 0 );
-                break;
-
-            case SDL_QUIT:
-                return false;
-
-            default:
-                break;
-        }
-    }
-
-    if ( ! Started ) {
-        return true;
-    }
-
-    Update();
-
-    void drawChar( int c, int x, int y, bool isCursor, object param ) { 
-        if ( DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
-            int cw = ( int )( APPLEIIF_CW * QonScale );
-            int ch = ( int )( APPLEIIF_CH * QonScale );
-            int cx = ( int )screenPos.x;
-            int cy = ( int )screenPos.y;
-
-            int off = ( int )QonScale;
-            SDLDrawChar( c, cx + off, cy + off, cw, ch, Color.black );
-            
-            SDLDrawChar( c, cx, cy, cw, ch, color );
-        }
-    }
-
-    RenderBegin();
-
-    SDL_GetWindowSize( x_window, out int screenW, out int screenH );
-
-    int cW = ( int )( _textDx * QonScale );
-    int cH = ( int )( _textDy * QonScale );
-    int conW = screenW / cW;
-    int conH = screenH / cH;
-
-    if ( Active ) {
-        SDL_SetRenderDrawBlendMode( x_renderer, SDL_BLENDMODE_BLEND );
-        SDL_SetRenderDrawColor( x_renderer, 0, 0, 0, ( byte )( QonAlpha_kvar * 255f ) );
-        SDL_Rect bgrRect = new SDL_Rect {
-            x = 0, y = 0, w = screenW, h = screenH
-        };
-        SDL_RenderFillRect( x_renderer, ref bgrRect );
-    } else {
-        int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
-        conH = conH * percent / 100;
-    }
-
-    QON_DrawChar = drawChar;
-    QON_DrawEx( conW, conH, ! Active, 0 );
-
-    RenderEnd();
-
-    return true;
+public static void HandleSDLMouseMotion( float x, float y ) {
+#if QONSOLE_QUI
+    _mousePosition = new Vector2( x, y );
+#endif
 }
 
 #endif // SDL
@@ -1069,7 +954,7 @@ public static bool SDLTick( IntPtr renderer, IntPtr window, bool skipRender = fa
 #else
 
 
-// == Multiplatform (non-Unity) API here ==
+// == Headless (system terminal output) API here ==
 
 
 public static class Qonsole {
@@ -1101,9 +986,9 @@ public static void Init( int configVersion = 0 ) {
     }
 
     string config = string.Empty;
-    string dir = System.IO.Path.GetDirectoryName(
-                    System.Reflection.Assembly.GetEntryAssembly().Location
-                );
+    string exePath = System.Reflection.Assembly.GetEntryAssembly().Location;
+    Log( $"exe path: '{exePath}'" );
+    string dir = System.IO.Path.GetDirectoryName( exePath );
     _configPath = Path.Combine( dir, fnameCfg );
     Log( $"Qonsole config storage: '{_configPath}'" );
     try {
