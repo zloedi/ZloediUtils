@@ -1,6 +1,14 @@
+#if UNITY_STANDALONE || UNITY_2021_1_OR_NEWER || SDL
+
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+
+#if SDL
+using GalliumMath;
+using SDLPorts;
+#else
 using UnityEngine;
+#endif
 
 public struct WrapBox {
     const float DefaultMinRes = 1080;
@@ -182,3 +190,5 @@ public struct WrapBox {
         return BottomLeft( W, H - wbox.H );
     }
 }
+
+#endif

@@ -2,17 +2,18 @@
 // This work is licensed under the terms of the MIT license.  
 // For a copy, see https://opensource.org/licenses/MIT.
 
-#if UNITY_2021_1_OR_NEWER
-#define HAS_UNITY
-#endif
+#if UNITY_2021_1_OR_NEWER || SDL
 
 // apple II font
-#if HAS_UNITY
-using UnityEngine;
-#elif SDL
+
+#if SDL
 using System.Runtime.InteropServices;
 using static SDL2.SDL;
 using static SDL2.SDL.SDL_TextureAccess;
+using GalliumMath;
+using SDLPorts;
+#else
+using UnityEngine;
 #endif
 using System;
 
@@ -96,7 +97,6 @@ public static void MeasureString( string s, out float w, out float h,
     h = y;
 }
 
-#if HAS_UNITY
 static Texture2D _texture;
 public static Texture2D GetTexture() {
     if ( _texture ) {
@@ -171,14 +171,14 @@ public static Texture2D CreateStringTexture( string s, int extraX = 0, int extra
     return tex;
 }
 
-#elif SDL
-static IntPtr _texture;
-public static IntPtr GetTexture( IntPtr renderer ) {
-    if ( _texture != null && _texture != IntPtr.Zero ) {
-        return _texture;
+#if SDL
+static IntPtr _sdlTexture;
+public static IntPtr GetSDLTexture( IntPtr renderer ) {
+    if ( _sdlTexture != null && _sdlTexture != IntPtr.Zero ) {
+        return _sdlTexture;
     }
     SDL_SetHint( SDL_HINT_RENDER_SCALE_QUALITY, "0" );
-    _texture = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_ABGR8888, 
+    _sdlTexture = SDL_CreateTexture( renderer, SDL_PIXELFORMAT_ABGR8888, 
                     ( int )SDL_TEXTUREACCESS_STATIC, APPLEIIF_WIDTH, APPLEIIF_HEIGHT );
     int pitch = APPLEIIF_WIDTH * 4;
     int bw = APPLEIIF_WIDTH / 8;
@@ -197,10 +197,11 @@ public static IntPtr GetTexture( IntPtr renderer ) {
     }
     IntPtr unmanagedPointer = Marshal.AllocHGlobal( bytes.Length );
     Marshal.Copy( bytes, 0, unmanagedPointer, bytes.Length );
-    //SDL_Rect r = new SDL_Rect();
-    SDL_UpdateTexture( _texture, IntPtr.Zero, unmanagedPointer, pitch );
-    return _texture;
+    SDL_UpdateTexture( _sdlTexture, IntPtr.Zero, unmanagedPointer, pitch );
+    return _sdlTexture;
 }
 #endif
 
 }
+
+#endif

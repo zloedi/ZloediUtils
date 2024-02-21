@@ -1,8 +1,13 @@
-#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER || SDL
 
 using System;
 using System.Collections.Generic;
+
+#if UNITY_STANDALONE
 using UnityEngine;
+#else
+using SDLPorts;
+#endif
 
 public static class KeyBinds {
 
@@ -415,6 +420,7 @@ public static bool GetCmd( KeyCode k, string context, out string cmd ) {
 }
 
 public static string StoreConfig() {
+    Log( "Store keybinds to config file." );
     string cfg = "";
     foreach ( var kv in _bindContext ) {
         string context = kv.Key;

@@ -1,8 +1,9 @@
-#if UNITY_2021_1_OR_NEWER
-#define HAS_UNITY
-#endif
+#if UNITY_2021_1_OR_NEWER || SDL
 
-#if HAS_UNITY
+#if SDL
+using GalliumMath;
+using SDLPorts;
+#else
 using UnityEngine;
 #endif
 
@@ -879,7 +880,6 @@ static readonly byte [] bitmap = new byte[NOKIA_IMG_W * NOKIA_IMG_H] {
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
 };
 
-#if HAS_UNITY
 static Texture2D _texture;
 public static Texture2D GetTexture() {
     if ( _texture ) {
@@ -899,7 +899,8 @@ public static Texture2D GetTexture() {
     _texture.Apply();
     return _texture;
 }
-#endif
 
 
 }
+
+#endif

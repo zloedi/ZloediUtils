@@ -1,14 +1,21 @@
-#if UNITY_2021_1_OR_NEWER
+#if UNITY_2021_1_OR_NEWER || SDL
 
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
-using UnityEngine;
 
+#if SDL
+using SDLPorts;
+using GalliumMath;
+#else
+using UnityEngine;
+#endif
 
 public static class QGL {
 
+public static Action<object> Log = o => {};
+public static Action<string> Error = s => {};
 
 static Texture2D _texWhite = Texture2D.whiteTexture;
 static Material _material;
@@ -19,7 +26,7 @@ static bool _invertedY;
 
 class Late {
     public int context;
-    public Color color;
+    public Color32 color;
 }
 
 class LateLine : Late {
@@ -54,7 +61,7 @@ class LateImage : Late {
 static List<Late> _lates = new List<Late>();
 
 static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
-                            Vector3 dstPos, Vector3 dstSize, Vector2 dir, Color color ) { 
+                            Vector2 dstPos, Vector2 dstSize, Vector2 dir, Color color ) { 
     float y = _invertedY ? ScreenHeight() - dstPos.y : dstPos.y;
     float tw = texW > 0 ? texW : 1;
     float th = texH > 0 ? texH : 1;
@@ -93,41 +100,6 @@ static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
         GL.TexCoord( new Vector3( u0, v1, 0 ) );
         GL.Vertex( new Vector3( dstPos.x, dy, 0 ) );
     }
-}
-
-static void BlitSlow( Texture texture, Vector2 srcPos, Vector2 srcSize, Vector3 dstPos,
-                                Vector3 dstSize, Color? color = null, Material material = null) { 
-    Color col = color == null ? Color.white : color.Value;
-    texture = texture ? texture : _texWhite;
-    float y = _invertedY ? ScreenHeight() - dstPos.y : dstPos.y;
-    float dy = _invertedY ? y - dstSize.y : y + dstSize.y;
-    float tw = texture.width > 0 ? texture.width : 1;
-    float th = texture.height > 0 ? texture.height : 1;
-    float u0 = srcPos.x / tw;
-    float u1 = u0 + srcSize.x / tw;
-    float v0 = 1 - srcPos.y / th;
-    float v1 = v0 - srcSize.y / th;
-
-    GL.PushMatrix();
-    if ( material != null ) {
-        material.SetPass(0);
-        material.SetColor("_Color", color.Value);
-    } else {
-        SetTexture( texture );
-    }
-    GL.LoadPixelMatrix();
-    GL.Begin( GL.QUADS );
-    GL.Color( col );
-    GL.TexCoord( new Vector3( u0, v0, 0 ) );
-    GL.Vertex( new Vector3( dstPos.x, y, 0 ) );
-    GL.TexCoord( new Vector3( u1, v0, 0 ) );
-    GL.Vertex( new Vector3( dstPos.x + dstSize.x, y, 0 ) );
-    GL.TexCoord( new Vector3( u1, v1, 0 ) );
-    GL.Vertex( new Vector3( dstPos.x + dstSize.x, dy, 0 ) );
-    GL.TexCoord( new Vector3( u0, v1, 0 ) );
-    GL.Vertex( new Vector3( dstPos.x, dy, 0 ) );
-    GL.End();
-    GL.PopMatrix();
 }
 
 static void DrawText( string s, float x, float y ) {
@@ -201,7 +173,7 @@ public static bool Start( bool invertedY = false ) {
         SetContext( null, invertedY: invertedY );
         return true;
     }
-    Debug.LogError( "Can't find GL shader" );
+    Error( "Can't find GL shader" );
     return false;
 }
 
@@ -249,6 +221,7 @@ public static Vector2 MeasureStringNokia( string s, float scale = 1 ) {
 
 public static void DrawTextNokia( string s, float x, float y, Color color, float scale = 1 ) {
     y = _invertedY ? ScreenHeight() - y : y;
+    float ys = _invertedY ? -1 : 1;
 
     float cx = 0;
     float cy = 0;
@@ -267,7 +240,7 @@ public static void DrawTextNokia( string s, float x, float y, Color color, float
 
         var dst = new float[] {
             x + cx,
-            y + cy - g.yoffset * scale,
+            y + cy + ys * g.yoffset * scale,
             g.width,
             g.height,
         };
@@ -290,21 +263,12 @@ public static void DrawTextNokia( string s, float x, float y, Color color, float
         }
 
         Vector3 [] verts;
-        if ( _invertedY ) {
-            verts = new Vector3[4] {
-                new Vector3( 0, 0, 0 ),
-                new Vector3( dst[2], 0, 0 ),
-                new Vector3( dst[2], -dst[3], 0 ),
-                new Vector3( 0, -dst[3], 0 ),
-            };
-        } else {
-            verts = new Vector3[4] {
-                new Vector3( 0, 0, 0 ),
-                new Vector3( dst[2], 0, 0 ),
-                new Vector3( dst[2], dst[3], 0 ),
-                new Vector3( 0, dst[3], 0 ),
-            };
-        }
+        verts = new Vector3 [4] {
+            new Vector3( 0, 0, 0 ),
+            new Vector3( g.width, 0, 0 ),
+            new Vector3( g.width, ys * g.height, 0 ),
+            new Vector3( 0, ys * g.height, 0 ),
+        };
 
         GL.Color( color );
         for ( int i = 0; i < 4; i++ ) {
@@ -313,7 +277,7 @@ public static void DrawTextNokia( string s, float x, float y, Color color, float
         }
 
         cx += c == '\n' ? -cx : g.xadvance * scale;
-        cy += c == '\n' ? -NokiaFont.NOKIA_LN_H * scale : 0;
+        cy += c == '\n' ? ys * NokiaFont.NOKIA_LN_H * scale : 0;
     }
 }
 
@@ -341,7 +305,7 @@ public static void DrawTextWithOutline( string s, float x, float y, Color color,
 public static void DrawScreenCharWithOutline( int c, float screenX, float screenY, Color color,
                                                                                 float scale = 1 ) { 
     // == outline ==
-    Vector2 [] outline = new Vector2 [] {
+    Vector3 [] outline = new Vector3 [] {
         new Vector3( scale, 0 ),
         new Vector3( 0, scale ),
         new Vector3( scale, scale ),
@@ -805,7 +769,7 @@ public static void FlushLates() {
 
         if ( start < li ) {
             SetWhiteTexture();
-            GL.Begin( GL.LINES);
+            GL.Begin( GL.LINES );
             for ( int i = start; i < li; i++ ) {
                 var l = ( LateLine )_lates[i];
                 GL.Color( l.color );
@@ -830,7 +794,7 @@ public static void End( bool skipLateFlush = false ) {
         if ( _material ) {
             FlushLates();
         } else {
-            Debug.LogError( "Can't find GL material. Should call QGL.Start()" );
+            Error( "Can't find GL material. Should call QGL.Start()" );
         }
     }
     GL.PopMatrix();
@@ -840,4 +804,4 @@ public static void End( bool skipLateFlush = false ) {
 }
 
 
-#endif // UNITY
+#endif

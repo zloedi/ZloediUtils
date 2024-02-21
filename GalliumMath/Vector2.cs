@@ -369,7 +369,6 @@ namespace GalliumMath
             return !(lhs == rhs);
         }
 
-#if false
         // Converts a [[Vector3]] to a Vector2.
         [MethodImpl(MethodImplOptionsEx.AggressiveInlining)]
         public static implicit operator Vector2(Vector3 v)
@@ -383,7 +382,6 @@ namespace GalliumMath
         {
             return new Vector3(v.x, v.y, 0);
         }
-#endif
 
         static readonly Vector2 zeroVector = new Vector2(0F, 0F);
         static readonly Vector2 oneVector = new Vector2(1F, 1F);

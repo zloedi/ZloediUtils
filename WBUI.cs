@@ -1,10 +1,16 @@
-#if UNITY_2021_1_OR_NEWER
+#if UNITY_2021_1_OR_NEWER || SDL
 
 #define QUI_USE_UNITY_UI
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+
+#if SDL
+using SDLPorts;
+using GalliumMath;
+#else
 using UnityEngine;
+#endif
 
 #if QUI_USE_UNITY_UI
 using UnityEngine.UI;
