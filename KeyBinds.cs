@@ -420,7 +420,7 @@ public static bool GetCmd( KeyCode k, string context, out string cmd ) {
 }
 
 public static string StoreConfig() {
-    Log( "Store keybinds to config file." );
+    //Log( "Store keybinds to config file." );
     string cfg = "";
     foreach ( var kv in _bindContext ) {
         string context = kv.Key;

@@ -401,8 +401,6 @@ public static void RenderGL( bool skip = false ) {
     if ( ! skip ) {
         GetSize( out int conW, out int conH );
 
-        QGL.LatePrint( conW + "," + conH, 300, 100 );
-
         if ( Active ) {
             QGL.SetWhiteTexture();
             GL.Begin( GL.QUADS );
@@ -550,12 +548,12 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
     if ( Event.current.type == EventType.Repaint ) {
         QGL.SetContext( camera, pixelsPerPoint, invertedY: true );
         if ( notRunning ) {
-            Vector2 mouse = Event.current.mousePosition * pixelsPerPoint;
+            var mouse = Event.current.mousePosition * pixelsPerPoint;
             QUI.Begin( mouse.x, mouse.y );
         }
         ConsumeEditorInputOnce = false;
         onRepaint( camera );
-        InternalCommand( "qonsole_on_editor_repaint" );
+        InternalCommand( "qonsole_on_editor_repaint", camera );
         QGL.LatePrint( "qonsole is running", Screen.width - 100, QGL.ScreenHeight() - 100 );
     }
     OnGUIInternal();
