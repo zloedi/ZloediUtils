@@ -436,6 +436,16 @@ public static void DrawHexWithLines( Vector2 screenPos, float diameter, Color c 
     QGL.LateDrawLineLoop( _hexPtsBuf, color: c );
 }
 
+static Vector3 [] _hexPtsBufWorld = new Vector3[6];
+public static void DrawHexWithLinesWorld( Vector3 pos, float diameter, Color c ) {
+    float r = diameter / SQRT_3;
+    for ( int i = 0; i < 6; i++ ) {
+        var dp = new Vector3( _hexPtsPointy[i].x, 0, _hexPtsPointy[i].y );
+        _hexPtsBufWorld[i] = dp * r + pos;
+    }
+    QGL.LateDrawLineLoopWorld( _hexPtsBufWorld, color: c );
+}
+
 public static void DrawGLHex( Vector2 screenPos, int x, int y, int gridHeight, Vector2 sz,
                                                                             float consoleAlpha,
                                                                             Color? color = null ) {
