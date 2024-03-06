@@ -3,7 +3,7 @@
 // define this to draw hex diagrams using QGL
 //#define HEXES_QONSOLE
 
-#if UNITY_STANDALONE || UNITY_2021_0_OR_NEWER
+#if UNITY_2021_0_OR_NEWER
 #define HAS_UNITY
 #endif
 
