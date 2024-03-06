@@ -1,4 +1,4 @@
-#if UNITY_STANDALONE || UNITY_2021_1_OR_NEWER || SDL
+#if UNITY_2021_1_OR_NEWER || SDL
 
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
