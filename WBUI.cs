@@ -80,6 +80,14 @@ public static void QGLTextOutlined( string content, WrapBox wbox, int align = 0,
         wbox = wbox.TopLeft( sz.x, sz.y );
     } else if ( align == 2 ) {
         wbox = wbox.BottomLeft( sz.x, sz.y );
+    } else if ( align == 3 ) {
+        wbox = wbox.TopRight( sz.x, sz.y );
+    } else if ( align == 4 ) {
+        wbox = wbox.BottomRight( sz.x, sz.y );
+    } else if ( align == 5 ) {
+        wbox = wbox.TopCenter( sz.x, sz.y );
+    } else if ( align == 6 ) {
+        wbox = wbox.BottomCenter( sz.x, sz.y );
     } else {
         wbox = wbox.Center( sz.x, sz.y );
     }
