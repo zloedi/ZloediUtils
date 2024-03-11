@@ -889,8 +889,8 @@ quit:
 
         public static Texture texture;
 
-        const int MAX_VERTS = 256 * 1024;
-        const int MAX_INDS = 256 * 1024;
+        const int MAX_VERTS = 512 * 1024;
+        const int MAX_INDS = 512 * 1024;
 
         static SDL_Color _color;
 
