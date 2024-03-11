@@ -436,9 +436,15 @@ namespace SDLPorts {
                             break;
 
                         case SDL_MOUSEBUTTONDOWN:
-                            break;
-
                         case SDL_MOUSEBUTTONUP:
+                            KeyCode mb = KeyCode.Mouse0 + ev.button.button;
+                            if ( ev.button.button == 1 ) {
+                                mb = KeyCode.Mouse0;
+                            } else if ( ev.button.button == 3 ) {
+                                mb = KeyCode.Mouse1;
+                            }
+                            int et = ev.type == SDL_MOUSEBUTTONDOWN ? 0 : 1;
+                            Input.keyEvents[( int )mb * 2 + et] = 1;
                             break;
 
                         case SDL_QUIT:
