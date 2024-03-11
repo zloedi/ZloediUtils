@@ -375,10 +375,15 @@ namespace SDLPorts {
         public static Action<string> OnText = s => {};
         public static Action<KeyCode> OnKey = kc => {};
 
+        static int SdlScreenX_kvar = 0;
+        static int SdlScreenY_kvar = 0;
+        static int SdlScreenWidth_kvar = 1024;
+        static int SdlScreenHeight_kvar = 1024;
+
         public static void Run( string [] argv ) {
             SDL_Init( SDL_INIT_VIDEO );
             SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE;
-            SDL_CreateWindowAndRenderer( 1024, 768, flags, out window, out renderer );
+            SDL_CreateWindowAndRenderer( 768, 768, flags, out window, out renderer );
             SDL_GetRendererInfo( renderer, out SDL_RendererInfo info );
             SDL_SetWindowTitle( window, $"Radical Rumble {UTF8_ToManaged( info.name )}" );
             
@@ -388,6 +393,11 @@ namespace SDLPorts {
             }
 
             Init();
+
+            if ( SdlScreenY_kvar > 0 ) {
+                SDL_SetWindowPosition( window, SdlScreenX_kvar, SdlScreenY_kvar );
+            }
+            SDL_SetWindowSize( window, SdlScreenWidth_kvar, SdlScreenHeight_kvar );
 
             while ( true ) {
                 SDL_GetWindowSize( window, out int w, out int h );
@@ -448,6 +458,11 @@ namespace SDLPorts {
                             break;
 
                         case SDL_QUIT:
+                            SDL_GetWindowPosition( window, out int x, out int y );
+                            SdlScreenX_kvar = x;
+                            SdlScreenY_kvar = y;
+                            SdlScreenWidth_kvar = Screen.width;
+                            SdlScreenHeight_kvar = Screen.height;
                             goto quit;
 
                         default:
