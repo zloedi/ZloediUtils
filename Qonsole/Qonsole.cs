@@ -299,7 +299,7 @@ static void Autocomplete() {
 }
 
 static void HandleEnter() {
-    //_history = null;
+    _history = null;
     string cmdClean, cmdRaw;
     QON_GetCommandEx( out cmdClean, out cmdRaw );
     EraseCommand();
@@ -324,12 +324,19 @@ static void HandleUpOrDownArrow( bool down ) {
     string cmd = QON_GetCommand();
     if ( _history == null ) {
         _history = Cellophane.GetHistory( cmd );
-        _historyItem = _history.Length * 100;
+        _historyItem = _history.Length;
     }
+
+    if ( _history.Length == 0 ) {
+        return;
+    }
+
     _historyItem += down ? 1 : -1;
-    if ( _historyItem >= 0 ) {
-        QON_SetCommand( _history[_historyItem % _history.Length] );
-    }
+
+    _historyItem %= _history.Length;
+    _historyItem = _historyItem < 0 ? _historyItem + _history.Length : _historyItem;
+
+    QON_SetCommand( _history[_historyItem] );
 }
 
 // the internal commands have a different path of execution
@@ -896,6 +903,7 @@ public static void GetSize( out int conW, out int conH ) {
 
 public static void HandleSDLTextInput( string txt ) {
     if ( Active && txt.Length > 0 && txt[0] != '`' && txt[0] != '~' ) {
+        _history = null;
         QON_InsertCommand( txt );
     }
 }
