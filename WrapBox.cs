@@ -52,6 +52,7 @@ public struct WrapBox {
     public float x, y, w, h;
     public float W => w / canvasScale;
     public float H => h / canvasScale;
+    public Vector2 midPoint => new Vector2( x + w / 2, y + h / 2 );
 
     // id will remain constant 23, unless id is passed to the anchoring api-s
     // if a valid id is specified, it is propagated to all 'children' wboxes
@@ -148,16 +149,24 @@ public struct WrapBox {
         return new WrapBox( inX, inY, inW, inH, GetId( id ) );
     }
 
-    // == iterating top-down ==
-
     // moves the box below the current one
     public WrapBox NextDown() {
         y += h;
         return TopLeft( W, H );
     }
 
+    public WrapBox NextUp() {
+        y -= h;
+        return TopLeft( W, H );
+    }
+
     public WrapBox NextRight() {
         x += w;
+        return TopLeft( W, H );
+    }
+
+    public WrapBox NextLeft() {
+        x -= w;
         return TopLeft( W, H );
     }
 
@@ -171,6 +180,12 @@ public struct WrapBox {
     public WrapBox CopyMoveUp( int i ) {
         var copy = new WrapBox( x, y, w, h, GetId( i ) );
         y -= h;
+        return copy;
+    }
+
+    public WrapBox CopyMoveLeft( int i ) {
+        var copy = new WrapBox( x, y, w, h, GetId( i ) );
+        x -= w;
         return copy;
     }
 
