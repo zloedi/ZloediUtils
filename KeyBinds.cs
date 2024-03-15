@@ -400,7 +400,7 @@ public static void Bind_kmd( string [] argv ) {
         } else {
             Error( "Unsupported key code " + code );
         }
-        //Log( "Bound command " + argv[2] + " to key " + code );
+        Log( "Bound command " + argv[2] + " to key " + code );
     } else {
         Error( "Couldn't find " + argv[1] + " in valid keys." );
     }

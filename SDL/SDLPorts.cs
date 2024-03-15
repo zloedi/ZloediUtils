@@ -379,6 +379,7 @@ namespace SDLPorts {
         static int SdlScreenY_kvar = 0;
         static int SdlScreenWidth_kvar = 1024;
         static int SdlScreenHeight_kvar = 1024;
+        static bool SdlAlwaysOnTop_kvar = false;
 
         public static void Run( string [] argv ) {
             SDL_Init( SDL_INIT_VIDEO );
@@ -473,6 +474,20 @@ namespace SDLPorts {
                 Tick();
 
                 SDL_RenderPresent( renderer );
+
+                if ( SdlAlwaysOnTop_kvar
+                    && ( SDL_GetWindowFlags( window ) & ( uint )SDL_WINDOW_ALWAYS_ON_TOP ) == 0 ) {
+                    SDL_SetWindowAlwaysOnTop( window, SDL_bool.SDL_TRUE );
+                    SdlAlwaysOnTop_kvar = true;
+                    Log( "Always on top ON" );
+                }
+
+                if ( ! SdlAlwaysOnTop_kvar
+                    && ( SDL_GetWindowFlags( window ) & ( uint )SDL_WINDOW_ALWAYS_ON_TOP ) != 0 ) {
+                    SDL_SetWindowAlwaysOnTop( window, SDL_bool.SDL_FALSE );
+                    SdlAlwaysOnTop_kvar = false;
+                    Log( "Always on top OFF" );
+                }
             }
 
 quit:
