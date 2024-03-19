@@ -13,9 +13,11 @@ using System.Collections.Generic;
 
 #if HAS_UNITY
 using UnityEngine;
-#elif SDL
+#else
 using GalliumMath;
+#if SDL
 using SDLPorts;
+#endif
 #endif
 
 
@@ -26,10 +28,11 @@ public const float SQRT_3 = 1.73205080757f;
 
 // we really hope this goes on the main thread
 static Hexes() {
+#if HAS_UNITY || SDL
     CreateHexTexture();
     CreateHexRegularTexture();
+#endif
 }
-
 
 public static void Neighbours( Vector2Int hxc,
                             out Vector2Int n0,

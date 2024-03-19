@@ -16,6 +16,8 @@ static void Reset( Context ctx, int origin ) {
     ctx.head = 0;
     ctx.tail = 1;
     ctx.front[ctx.head] = origin;
+
+    ctx.diagNumCrossedNodes = 0;
 }
 
 static int Pop( Context ctx ) {
@@ -28,6 +30,7 @@ static int Pop( Context ctx ) {
 static void Push( Context ctx, int coord ) {
     ctx.front[ctx.tail & ( ctx.front.Length - 1 )] = coord;
     ctx.tail++;
+    ctx.diagNumCrossedNodes++;
 }
 
 static bool FrontIsEmpty( Context ctx ) {
@@ -75,6 +78,8 @@ public class Context {
 
     // the filled map, passed to i.e. trace path
     public int [] floodMap;
+
+    public int diagNumCrossedNodes;
 }
 
 public static Context CreateContext( int navMapSize ) {
