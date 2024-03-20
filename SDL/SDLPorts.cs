@@ -388,11 +388,6 @@ namespace SDLPorts {
             SDL_GetRendererInfo( renderer, out SDL_RendererInfo info );
             SDL_SetWindowTitle( window, $"Radical Rumble {UTF8_ToManaged( info.name )}" );
             
-            //for ( int i = 0; i < SDL_GetNumRenderDrivers(); i++ ) {
-            {
-                //SDL_GetRenderDriverInfo( i, out SDL_RendererInfo info );
-            }
-
             Init();
 
             if ( SdlScreenY_kvar > 0 ) {
