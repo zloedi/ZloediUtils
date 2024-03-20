@@ -390,9 +390,10 @@ namespace SDLPorts {
             
             Init();
 
-            if ( SdlScreenY_kvar > 0 ) {
-                SDL_SetWindowPosition( window, SdlScreenX_kvar, SdlScreenY_kvar );
-            }
+            SdlScreenX_kvar = Mathf.Max( SdlScreenX_kvar, 0 );
+            SdlScreenY_kvar = Mathf.Max( SdlScreenY_kvar, 0 );
+
+            SDL_SetWindowPosition( window, SdlScreenX_kvar, SdlScreenY_kvar );
             SDL_SetWindowSize( window, SdlScreenWidth_kvar, SdlScreenHeight_kvar );
 
             while ( true ) {
