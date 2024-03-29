@@ -650,10 +650,6 @@ public static void TickWithClocks( bool forceSendPacket ) {
 }
 
 public static void Tick( int deltaTime, bool forceSendPacket ) {
-    if ( clients.Count == 0 ) {
-        return;
-    }
-
     for ( int i = clients.Count - 1; i >= 0; i-- ) {
         var c = clients[i];
 
@@ -672,7 +668,12 @@ public static void Tick( int deltaTime, bool forceSendPacket ) {
         c.timeout -= deltaTime;
     }
 
+    // keep ticking even if no clients left
     List<byte> delta = onTick_f( deltaTime, forceSendPacket );
+
+    if ( clients.Count == 0 ) {
+        return;
+    }
 
     if ( delta.Count == 0 ) {
 

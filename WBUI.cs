@@ -76,20 +76,21 @@ public static void QGLTextOutlined( string content, WrapBox wbox, int align = 0,
                                                     int fontSize = 1, Color? color = null ) {
     fontSize = Mathf.Max( fontSize, 1 );
     Vector2Int sz = QGL.MeasureStringNokiaInt( content, scale: fontSize );
+    WrapBox wbt = new WrapBox{ w = sz.x, h = sz.y };
     if ( align == 1 ) {
-        wbox = wbox.TopLeft( sz.x, sz.y );
+        wbox = wbox.TopLeft( wbt.W, wbt.H );
     } else if ( align == 2 ) {
-        wbox = wbox.BottomLeft( sz.x, sz.y );
+        wbox = wbox.BottomLeft( wbt.W, wbt.H );
     } else if ( align == 3 ) {
-        wbox = wbox.TopRight( sz.x, sz.y );
+        wbox = wbox.TopRight( wbt.W, wbt.H );
     } else if ( align == 4 ) {
-        wbox = wbox.BottomRight( sz.x, sz.y );
+        wbox = wbox.BottomRight( wbt.W, wbt.H );
     } else if ( align == 5 ) {
-        wbox = wbox.TopCenter( sz.x, sz.y );
+        wbox = wbox.TopCenter( wbt.W, wbt.H );
     } else if ( align == 6 ) {
-        wbox = wbox.BottomCenter( sz.x, sz.y );
+        wbox = wbox.BottomCenter( wbt.W, wbt.H );
     } else {
-        wbox = wbox.Center( sz.x, sz.y );
+        wbox = wbox.Center( wbt.W, wbt.H );
     }
 
     color = color != null ? color : Color.white;
