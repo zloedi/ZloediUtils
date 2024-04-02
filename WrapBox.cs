@@ -151,23 +151,19 @@ public struct WrapBox {
 
     // moves the box below the current one
     public WrapBox NextDown() {
-        y += h;
-        return TopLeft( W, H );
+        return TopLeft( W, H, y: H );
     }
 
     public WrapBox NextUp() {
-        y -= h;
-        return TopLeft( W, H );
+        return TopLeft( W, H, y: -H );
     }
 
     public WrapBox NextRight() {
-        x += w;
-        return TopLeft( W, H );
+        return TopLeft( W, H, x: W );
     }
 
     public WrapBox NextLeft() {
-        x -= w;
-        return TopLeft( W, H );
+        return TopLeft( W, H, x: -W );
     }
 
     // make a copy then move down
