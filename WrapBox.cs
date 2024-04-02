@@ -177,6 +177,8 @@ public struct WrapBox {
         return copy;
     }
 
+
+    // example: WrapBox wb = wbox.CopyMoveUp( row ).Center( wbox.W * 0.9f, wbox.H * 0.9f );
     public WrapBox CopyMoveUp( int i ) {
         var copy = new WrapBox( x, y, w, h, GetId( i ) );
         y -= h;
