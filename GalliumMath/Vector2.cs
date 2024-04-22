@@ -14,6 +14,7 @@ public struct Vector2 {
 
     public float magnitude => ( float )Math.Sqrt( x * x + y * y );
     public float sqrMagnitude => x * x + y * y;
+    public Vector2 normalized => new Vector2( x, y ) / magnitude;
 
     public static readonly Vector2 zero = new Vector2( 0f, 0f );
     public static readonly Vector2 one = new Vector2( 1f, 1f );
