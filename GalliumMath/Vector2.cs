@@ -31,6 +31,14 @@ public struct Vector2 {
         return x.GetHashCode() ^ ( y.GetHashCode() << 2 );
     }
 
+    internal static string FtoA( float f ) {
+        return f.ToString( "F3", CultureInfo.InvariantCulture.NumberFormat ); 
+    }
+
+    public override string ToString() {
+        return string.Format( $"({FtoA( x )}, {FtoA( y )})" );
+    }
+
     public override bool Equals( object other ) {
         return other is Vector2 ov && Equals( ov );
     }
@@ -109,6 +117,10 @@ public struct Vector2 {
     public static float SignedAngle( Vector2 a, Vector2 b ) {
         float sign = Mathf.Sign( a.x * b.y - a.y * b.x );
         return Angle( a, b ) * sign;
+    }
+
+    public static Vector2 Perpendicular( Vector2 v ) {
+        return new Vector2( -v.y, v.x);
     }
 }
 
