@@ -91,7 +91,7 @@ public class NetChan {
 
     static int MaxPacket_cvar = 1400;
 
-    public int zport = GetZPort();
+    public int zport = CreateZPort();
 
     private int _fragSequence;
 
@@ -113,7 +113,7 @@ public class NetChan {
         this.zport = zport;
     }
 
-    private static ushort GetZPort() {
+    private static ushort CreateZPort() {
         byte [] rngBytes = new byte[2];
         RandomNumberGenerator.Create().GetBytes(rngBytes);
         return BitConverter.ToUInt16( rngBytes, 0 );

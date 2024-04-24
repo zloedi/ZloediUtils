@@ -281,14 +281,13 @@ static void CollectItems() {
         asmTypes.AddRange( a.GetTypes() );
     }
 
-    Assembly currentAssembly = Assembly.GetExecutingAssembly();
     Type [] types;
     try {
         if ( asmTypes.Count > 0 ) {
             types = asmTypes.ToArray();
             Log( $"Num assemblies parsed: {numAssemblies}." );
         } else {
-            types = currentAssembly.GetTypes();
+            types = Assembly.GetExecutingAssembly().GetTypes();
         }
     } catch(Exception e) {
         Error( "Cellophane: Failed to parse commands: " + e );

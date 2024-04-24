@@ -476,7 +476,10 @@ public static Font defaultFont;
 
 public static void BeginUnityUI() {
     if ( ! defaultFont ) {
-        defaultFont = Resources.GetBuiltinResource<Font>( "Arial.ttf" );
+        defaultFont = Resources.GetBuiltinResource<Font>( "LegacyRuntime.ttf" );
+        if ( ! defaultFont ) {
+            defaultFont = Resources.GetBuiltinResource<Font>( "Arial.ttf" );
+        }
     }
     // the items from the previous tick are potentially garbage
     foreach ( var i in _tickItems ) {
