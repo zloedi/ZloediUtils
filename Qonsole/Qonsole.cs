@@ -100,6 +100,7 @@ static void CreateBootstrapObject() {
         GameObject go = new GameObject( "QonsoleBootstrap" );
         GameObject.DontDestroyOnLoad( go );
         go.AddComponent<QonsoleBootstrap>();
+        Debug.Log( "Created QonsoleBootstrap" );
     } else {
         Debug.Log( "Already have QonsoleBootstrap" );
     }
