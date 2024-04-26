@@ -778,11 +778,15 @@ public static void Toggle() {
     }
 }
 
+public static void Error( string s ) {
+    Error( s, null );
+}
+
 public static void Error( object o ) {
     Error( o.ToString() );
 }
 
-public static void Error( string s, QObject o = null ) {
+public static void Error( string s, QObject o ) {
     string serr = "ERROR: " + s;
     Action fade = OverlayGetFade();
 
@@ -804,11 +808,19 @@ public static void PrintRaw( string s ) {
     QON_PrintAndAct( s, (x,y)=>fade() );
 }
 
-public static void Log( string s, QObject o = null ) {
+public static void Log( string s ) {
+    Log( s, null );
+}
+
+public static void Log( string s, QObject o ) {
     Print( s + "\n", o );
 }
 
-public static void Log( object o, QObject unityObj = null ) {
+public static void Log( object o ) {
+    Log( o, null );
+}
+
+public static void Log( object o, QObject unityObj ) {
     Log( o == null ? "null" : o.ToString(), unityObj );
 }
 
