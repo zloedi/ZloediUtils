@@ -150,8 +150,13 @@ static void OnVariable( Variable cvar, string [] argv ) {
                 break;
             }
         }
-        cvar.SetValue_f( argv[i] );
-        Log( cvar.name + " = " + cvar.GetValue() );
+        if ( i == argv.Length && argv[i - 1] == "=" ) {
+            // user forces empty string
+            cvar.SetValue_f( "" );
+        } else {
+            cvar.SetValue_f( argv[i] );
+            Log( cvar.name + " = " + cvar.GetValue() );
+        }
     } else {
         string log = cvar.name + " = " + cvar.GetValue();
         if ( ! string.IsNullOrEmpty( cvar.description ) ) {
