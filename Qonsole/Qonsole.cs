@@ -64,8 +64,10 @@ public class QonsoleBootstrap : MonoBehaviour {
         Qonsole.Init();
         Qonsole.Start();
 
-        //KeyBinds.Log = s => Qonsole.Log( s );
-        //KeyBinds.Error = s => Qonsole.Error( s );
+#if QONSOLE_KEYBINDS
+        KeyBinds.Log = s => Qonsole.Log( s );
+        KeyBinds.Error = s => Qonsole.Error( s );
+#endif
     }
 
     void Awake() {
@@ -94,7 +96,7 @@ public static class Qonsole {
 #if HAS_UNITY && QONSOLE_BOOTSTRAP
 
 [RuntimeInitializeOnLoadMethod]
-static void CreateBootstrapObject() {
+public static void CreateBootstrapObject() {
     QonsoleBootstrap[] components = GameObject.FindObjectsOfType<QonsoleBootstrap>();
     if ( components.Length == 0 ) {
         GameObject go = new GameObject( "QonsoleBootstrap" );
