@@ -64,8 +64,8 @@ public class QonsoleBootstrap : MonoBehaviour {
         Qonsole.Init();
         Qonsole.Start();
 
-        KeyBinds.Log = s => Qonsole.Log( s );
-        KeyBinds.Error = s => Qonsole.Error( s );
+        //KeyBinds.Log = s => Qonsole.Log( s );
+        //KeyBinds.Error = s => Qonsole.Error( s );
     }
 
     void Awake() {
@@ -543,10 +543,14 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
         if ( Event.current.button == 0 ) {
             var controlID = GUIUtility.GetControlID( FocusType.Passive );
             if ( Event.current.type == EventType.MouseDown ) {
+#if QONSOLE_QUI
                 QUI.OnMouseButton( true );
+#endif
                 GUIUtility.hotControl = controlID;
             } else if ( Event.current.type == EventType.MouseUp ) {
+#if QONSOLE_QUI
                 QUI.OnMouseButton( false );
+#endif
                 if ( GUIUtility.hotControl == controlID ) {
                     GUIUtility.hotControl = 0;
                 }
@@ -555,10 +559,12 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
     }
     if ( Event.current.type == EventType.Repaint ) {
         QGL.SetContext( camera, pixelsPerPoint, invertedY: true );
+#if QONSOLE_QUI
         if ( notRunning ) {
             var mouse = Event.current.mousePosition * pixelsPerPoint;
             QUI.Begin( mouse.x, mouse.y );
         }
+#endif
         ConsumeEditorInputOnce = false;
         onRepaint( camera );
         InternalCommand( "qonsole_on_editor_repaint", camera );
@@ -567,9 +573,11 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
     OnGUIInternal();
     if ( Event.current.type == EventType.Repaint ) {
         QGL.SetContext( null, invertedY: QonInvertPlayY );
+#if QONSOLE_QUI
         if ( notRunning ) {
             QUI.End( skipUnityUI: true );
         }
+#endif
     }
     if ( ( Active || ConsumeEditorInputOnce )
             && Event.current.type != EventType.Repaint
