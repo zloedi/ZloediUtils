@@ -84,11 +84,7 @@ public class QonsoleBootstrap : MonoBehaviour {
     }
 #else
     void OnGUI() {
-        GUI.depth = -666;
         Qonsole.OnGUI();
-        if ( Qonsole.Active ) {
-            Event.current.Use();
-        }
     }
 #endif
 
@@ -148,8 +144,8 @@ public const string featuresDescription = @"Features:
 . Variable descriptions stored as comments in the config file.
 . Overlay display -- the last emitted lines could be shown on top of the window and fade out with time
 . Hook on different events (Start, Update, Done) by defining Qonsole commands with no dependencies.
-    and more...
 . Autocomplete the token under the cursor, not only at the start of prompt.
+    and more...
 ";
 
 [Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
@@ -662,6 +658,11 @@ public static void OnGUIInternal( bool skipRender = false ) {
 }
 
 public static void OnGUI() {
+#if ! QONSOLE_KEEP_DEPTH
+    // make sure we are on top of everything
+    GUI.depth = -666;
+#endif
+
 #if QONSOLE_QUI
     _mousePosition = Event.current.mousePosition;
     if ( Event.current.button == 0 ) {
@@ -695,6 +696,12 @@ public static void OnGUI() {
     InternalCommand( "qonsole_on_gui" );
     onGUI_f();
     OnGUIInternal( skipRender: _isEditor && QonShowInEditor_kvar == 2 );
+
+#if ! QONSOLE_DONT_USE_INPUT
+    if ( Qonsole.Active ) {
+        Event.current.Use();
+    }
+#endif
 }
 
 static void PrintToSystemLog( string s, QObject o ) {
