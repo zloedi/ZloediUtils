@@ -64,8 +64,10 @@ public class QonsoleBootstrap : MonoBehaviour {
         Qonsole.Init();
         Qonsole.Start();
 
+#if QONSOLE_KEYBINDS
         KeyBinds.Log = s => Qonsole.Log( s );
         KeyBinds.Error = s => Qonsole.Error( s );
+#endif
     }
 
     void Awake() {
@@ -76,9 +78,15 @@ public class QonsoleBootstrap : MonoBehaviour {
         Qonsole.Update();
     }
 
+#if true
     void OnGUI() {
         Qonsole.OnGUI();
     }
+#else
+    void OnGUI() {
+        Qonsole.OnGUI();
+    }
+#endif
 
     void OnApplicationQuit() {
         Qonsole.OnApplicationQuit();
@@ -94,7 +102,7 @@ public static class Qonsole {
 #if HAS_UNITY && QONSOLE_BOOTSTRAP
 
 [RuntimeInitializeOnLoadMethod]
-static void CreateBootstrapObject() {
+public static void CreateBootstrapObject() {
     QonsoleBootstrap[] components = GameObject.FindObjectsOfType<QonsoleBootstrap>();
     if ( components.Length == 0 ) {
         GameObject go = new GameObject( "QonsoleBootstrap" );
@@ -136,8 +144,8 @@ public const string featuresDescription = @"Features:
 . Variable descriptions stored as comments in the config file.
 . Overlay display -- the last emitted lines could be shown on top of the window and fade out with time
 . Hook on different events (Start, Update, Done) by defining Qonsole commands with no dependencies.
-    and more...
 . Autocomplete the token under the cursor, not only at the start of prompt.
+    and more...
 ";
 
 [Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
@@ -543,10 +551,14 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
         if ( Event.current.button == 0 ) {
             var controlID = GUIUtility.GetControlID( FocusType.Passive );
             if ( Event.current.type == EventType.MouseDown ) {
+#if QONSOLE_QUI
                 QUI.OnMouseButton( true );
+#endif
                 GUIUtility.hotControl = controlID;
             } else if ( Event.current.type == EventType.MouseUp ) {
+#if QONSOLE_QUI
                 QUI.OnMouseButton( false );
+#endif
                 if ( GUIUtility.hotControl == controlID ) {
                     GUIUtility.hotControl = 0;
                 }
@@ -555,10 +567,12 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
     }
     if ( Event.current.type == EventType.Repaint ) {
         QGL.SetContext( camera, pixelsPerPoint, invertedY: true );
+#if QONSOLE_QUI
         if ( notRunning ) {
             var mouse = Event.current.mousePosition * pixelsPerPoint;
             QUI.Begin( mouse.x, mouse.y );
         }
+#endif
         ConsumeEditorInputOnce = false;
         onRepaint( camera );
         InternalCommand( "qonsole_on_editor_repaint", camera );
@@ -567,9 +581,11 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
     OnGUIInternal();
     if ( Event.current.type == EventType.Repaint ) {
         QGL.SetContext( null, invertedY: QonInvertPlayY );
+#if QONSOLE_QUI
         if ( notRunning ) {
             QUI.End( skipUnityUI: true );
         }
+#endif
     }
     if ( ( Active || ConsumeEditorInputOnce )
             && Event.current.type != EventType.Repaint
@@ -584,7 +600,10 @@ public static void OnGUIInternal( bool skipRender = false ) {
     }
 
     if ( Event.current.type == EventType.Repaint ) {
+        int prev = GUI.depth;
+        GUI.depth = 666;
         RenderGL( skipRender );
+        GUI.depth = prev;
     } else if ( Active ) {
         if ( Event.current.type != EventType.Repaint ) {
             // Handling arrows in IsKeyDown/Up on Update doesn't respect
@@ -639,6 +658,11 @@ public static void OnGUIInternal( bool skipRender = false ) {
 }
 
 public static void OnGUI() {
+#if ! QONSOLE_KEEP_DEPTH
+    // make sure we are on top of everything
+    GUI.depth = -666;
+#endif
+
 #if QONSOLE_QUI
     _mousePosition = Event.current.mousePosition;
     if ( Event.current.button == 0 ) {
@@ -672,6 +696,12 @@ public static void OnGUI() {
     InternalCommand( "qonsole_on_gui" );
     onGUI_f();
     OnGUIInternal( skipRender: _isEditor && QonShowInEditor_kvar == 2 );
+
+#if ! QONSOLE_DONT_USE_INPUT
+    if ( Qonsole.Active ) {
+        Event.current.Use();
+    }
+#endif
 }
 
 static void PrintToSystemLog( string s, QObject o ) {
