@@ -600,10 +600,7 @@ public static void OnGUIInternal( bool skipRender = false ) {
     }
 
     if ( Event.current.type == EventType.Repaint ) {
-        int prev = GUI.depth;
-        GUI.depth = 666;
         RenderGL( skipRender );
-        GUI.depth = prev;
     } else if ( Active ) {
         if ( Event.current.type != EventType.Repaint ) {
             // Handling arrows in IsKeyDown/Up on Update doesn't respect
