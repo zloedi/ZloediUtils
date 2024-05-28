@@ -675,11 +675,17 @@ public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
 
 public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
     Camera cam = _camera ? _camera : Camera.main;
+#if HAS_UNITY
+    if ( ! cam ) {
+        cam = GameObject.FindObjectOfType<Camera>();
+    }
+#endif
     if ( cam ) {
         Vector2 pt = cam.WorldToScreenPoint( worldPos );
         pt.y = ScreenHeight() - pt.y;
         return pt;
     }
+
     return Vector2.zero;
 }
 

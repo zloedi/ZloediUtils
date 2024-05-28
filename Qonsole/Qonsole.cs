@@ -695,7 +695,9 @@ public static void OnGUI() {
     OnGUIInternal( skipRender: _isEditor && QonShowInEditor_kvar == 2 );
 
 #if ! QONSOLE_DONT_USE_INPUT
-    if ( Qonsole.Active ) {
+    if ( Qonsole.Active
+            && Event.current.type != EventType.Repaint
+            && Event.current.type != EventType.Layout ) {
         Event.current.Use();
     }
 #endif
