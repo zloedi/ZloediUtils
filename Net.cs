@@ -362,8 +362,6 @@ public class Net {
 
 // server side client state
 public class SvClient {
-    const int MAX_DELTA = 32;
-
     public NetChan netChan;
     public IPEndPoint endPoint;
 
