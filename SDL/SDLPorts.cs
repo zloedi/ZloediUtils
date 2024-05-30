@@ -820,6 +820,7 @@ quit:
 
     public class Texture2D : Texture {
         public FilterMode filterMode;
+        public HideFlags hideFlags;
 
         public Texture2D() {}
 
