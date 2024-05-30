@@ -22,6 +22,7 @@ static Dictionary<int,ImmObject> _immCache = new Dictionary<int,ImmObject>();
 static HashSet<ImmObject> _immGarbage = new HashSet<ImmObject>();
 static List<ImmObject> _immDead = new List<ImmObject>();
 static List<ImmObject> _immTickItems = new List<ImmObject>();
+static Dictionary<string,Texture2D> _stringTextures = new Dictionary<string,Texture2D>();
 static GameObject _immRoot;
 static GameObject _sprite;
 
@@ -52,6 +53,15 @@ public static void End() {
             if ( i.garbageMaterials ) {
                 foreach ( var r in i.rends ) {
                     Destroy( r.material );
+                }
+            }
+            foreach ( var r in i.rends ) {
+                foreach ( var kv in _stringTextures ) {
+                    if ( kv.Value == r.material.mainTexture ) {
+                        _stringTextures.Remove( kv.Key );
+                        Destroy( r.material.mainTexture );
+                        break;
+                    }
                 }
             }
             DestroyGO( i.go );
@@ -105,6 +115,26 @@ public static ImmObject RegisterPrefab( GameObject prefab, Action<GameObject> on
     }
     _immTickItems.Add( imo );
     return imo;
+}
+
+public static GameObject WorldText( string s, Vector3 pos, float scale = 1,
+                                                        int layer = -1,
+                                                        Color? color = null,
+                                                        Vector4? border = null,
+                                                        int handle = 0,
+                                                        [CallerLineNumber] int lineNumber = 0,
+                                                        [CallerMemberName] string caller = null ) {
+    handle = QUI.NextHashWg( s.GetHashCode(), handle );
+    Texture2D tex;
+    if ( ! _stringTextures.TryGetValue( s, out tex ) ) {
+        _stringTextures[s] = tex = AppleFont.CreateStringTexture( s );
+    }
+    GameObject go = SpriteTex( tex, pos, null, scale, layer, color, border, handle, lineNumber,
+                                                                                        caller );
+    if ( Camera.main ) {
+        go.transform.forward = Camera.main.transform.forward;
+    }
+    return go;
 }
 
 public static GameObject SpriteTex( Texture2D tex, Vector3 pos, Material mat = null, float scale = 1,

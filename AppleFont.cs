@@ -106,6 +106,8 @@ public static Texture2D GetTexture() {
     _texture = new Texture2D( APPLEIIF_WIDTH, APPLEIIF_HEIGHT, textureFormat: TextureFormat.RGBA32,
                                                                 mipChain: false, linear: false ); 
     _texture.filterMode = FilterMode.Point;
+    _texture.hideFlags = HideFlags.HideAndDontSave;
+
     int srcW = APPLEIIF_WIDTH / 8;
     for ( int y = 0; y < APPLEIIF_HEIGHT; y++ ) {
         for ( int x = 0; x < srcW; x++ ) {
@@ -126,6 +128,7 @@ public static Texture2D CreateStringTexture( string s, int extraX = 0, int extra
     var tex = new Texture2D( ( int )( w + 0.5f ), ( int )( h + 0.5f ),
                             textureFormat: TextureFormat.RGBA32, mipChain: false, linear: false ); 
     tex.filterMode = FilterMode.Point;
+    tex.hideFlags = HideFlags.HideAndDontSave;
 
     for ( int y = 0; y < tex.height; y++ ) {
         for ( int x = 0; x < tex.width; x++ ) {
