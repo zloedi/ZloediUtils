@@ -49,12 +49,24 @@ public static int RegisterAnimationSource( GameObject go ) {
 }
 
 public static void PrintStates( int source ) {
+    if ( source < 0 || source >= sourcesList.Count ) {
+        Error( "No source at " + source );
+        return;
+    }
     var src = sourcesList[source];
     var str = "";
     for ( int i = 0; i < src.stateName.Count; i++ ) {
         str += i + ": " + src.stateName[i] + " len: " + src.duration[i] + "\n";
     }
     Log( str );
+}
+
+static void PrintStates_cmd( string [] argv ) {
+    int s = 1;
+    if ( argv.Length > 1 ) {
+        int.TryParse( argv[1], out s );
+    }
+    PrintStates( s );
 }
 
 public static void ResetToState( Crossfade cf, int state, int offset = 0 ) {
