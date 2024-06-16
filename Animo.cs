@@ -105,6 +105,13 @@ public static void CrossfadeToState( Crossfade cf, int state ) {
 // returns true if the entire clip was played (overflown)
 public static bool UpdateState( int dt, int source, Crossfade cf, int state, bool clamp = false,
                                                         int transition = 266, float speed = 1 ) {
+    Source src = sourcesList[source];
+
+    state = Mathf.Clamp( state, 0, src.state.Count - 1 );
+    for ( int i = 0; i < 2; i++ ) {
+        cf.state[i] = Mathf.Clamp( cf.state[i], 0, src.state.Count - 1 );
+    }
+            
     int [] c = {
         ( cf.chan + 0 ) & 1,
         ( cf.chan + 1 ) & 1,
@@ -116,8 +123,6 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
         c[0] = ( cf.chan + 0 ) & 1;
         c[1] = ( cf.chan + 1 ) & 1;
     }
-
-    Source src = sourcesList[source];
 
     // clamp the transition to half the clip duration of the shorter clip
     for ( int i = 0; i < 2; i++ ) {
