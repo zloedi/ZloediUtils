@@ -82,6 +82,8 @@ public static void ResetToState( Crossfade cf, int state, int offset = 0 ) {
 }
 
 // can crossfade to same state at time 0
+// useful if you need to gracefully force animation
+// i.e. single-shot animations forced to repeat
 public static void CrossfadeToState( Crossfade cf, int state ) {
     int [] c = {
         ( cf.chan + 0 ) & 1,
