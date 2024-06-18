@@ -107,6 +107,9 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
                                                         int transition = 266, float speed = 1 ) {
     Source src = sourcesList[source];
 
+    transition = ( int )( transition / speed );
+    dt = ( int )( dt * speed );
+
     state = Mathf.Clamp( state, 0, src.state.Count - 1 );
     for ( int i = 0; i < 2; i++ ) {
         cf.state[i] = Mathf.Clamp( cf.state[i], 0, src.state.Count - 1 );
