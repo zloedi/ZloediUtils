@@ -9,6 +9,7 @@ public class ImmObject {
     public float garbageAge;
     public bool garbageMaterials;
     public Renderer [] rends;
+    public Material [] mats;
     public GameObject go;
 }
 
@@ -93,11 +94,24 @@ public static ImmObject RegisterPrefab( GameObject prefab, Action<GameObject> on
     ImmObject imo;
     if ( ! _immCache.TryGetValue( handle, out imo ) || ! imo.go ) {
         GameObject go = GameObject.Instantiate( prefab );
+
         imo = new ImmObject {
             go = go,
             garbageMaterials = garbageMaterials,
             rends = go.GetComponentsInChildren<Renderer>( includeInactive: true ),
         };
+
+        if ( imo.rends != null && imo.rends.Length > 0 ) {
+            imo.mats = new Material[imo.rends.Length];
+            for ( int i = 0; i < imo.rends.Length; i++ ) {
+                if ( garbageMaterials ) {
+                    imo.mats[i] = imo.rends[i].material;
+                } else {
+                    imo.mats[i] = imo.rends[i].sharedMaterial;
+                }
+            }
+        }
+
         _immCache[handle] = imo;
         if ( ! _immRoot ) {
             _immRoot = new GameObject( "imm_root" );
