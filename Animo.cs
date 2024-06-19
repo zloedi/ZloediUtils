@@ -34,6 +34,10 @@ public static int RegisterAnimationSource( GameObject go ) {
         return 0;
     }
     var rac = anm.runtimeAnimatorController;
+    if ( ! rac ) {
+        Error( $"No runtime Animator Controller supplied on Animator '{go.name}'" );
+        return 0;
+    }
     var src = new Source();
     foreach ( var c in rac.animationClips ) {
         int hash = Animator.StringToHash( c.name );
