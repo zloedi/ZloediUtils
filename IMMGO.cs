@@ -13,6 +13,25 @@ public class ImmObject {
     public GameObject go;
     // matches the lookupChildren array size
     public List<Transform> [] refChildren = new List<Transform>[0];
+
+    public bool GetRefs( int iList, out List<Transform> list ) {
+        if ( refChildren.Length == 0 ) {
+            list = null;
+            return false;
+        }
+        list = refChildren[iList];
+        return true;
+    }
+
+    public Transform GetRef( int iList, int iElem ) {
+        if ( GetRefs( iList, out List<Transform> list ) ) {
+            if ( list.Count == 0 ) {
+                return null;
+            }
+            return list[iElem];
+        }
+        return null;
+    }
 }
 
 
