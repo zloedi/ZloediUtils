@@ -11,6 +11,8 @@ public class ImmObject {
     public Renderer [] rends;
     public Material [] mats;
     public GameObject go;
+    // matches the lookupChildren array size
+    public List<Transform> [] refChildren = new List<Transform>[0];
 }
 
 
@@ -87,6 +89,7 @@ public static void End() {
 public static ImmObject RegisterPrefab( GameObject prefab, Action<GameObject> onCreate = null,
                                                         int layer = -1,
                                                         bool garbageMaterials = true,
+                                                        string [] lookupChildren = null,
                                                         int handle = 0,
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
@@ -108,6 +111,26 @@ public static ImmObject RegisterPrefab( GameObject prefab, Action<GameObject> on
                     imo.mats[i] = imo.rends[i].material;
                 } else {
                     imo.mats[i] = imo.rends[i].sharedMaterial;
+                }
+            }
+        }
+
+        if ( lookupChildren != null ) {
+            imo.refChildren = new List<Transform>[lookupChildren.Length];
+            for ( int i = 0; i < imo.refChildren.Length; i++ ) {
+                imo.refChildren[i] = new List<Transform>();
+            }
+            Transform [] ts = imo.go.GetComponentsInChildren<Transform>();
+            foreach ( Transform t in ts ) {
+                string ln = t.name.ToLowerInvariant();
+                int roll = 0; 
+                for ( int i = 0; i < lookupChildren.Length; i++ ) {
+                    int idx = ( i + roll ) % lookupChildren.Length;
+                    if ( ln.Contains( lookupChildren[idx].ToLowerInvariant() ) ) {
+                        imo.refChildren[idx].Add( t );
+                        roll++;
+                        break;
+                    }
                 }
             }
         }
