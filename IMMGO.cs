@@ -105,6 +105,17 @@ public static void End() {
     }
 }
 
+public static int NextHashWg( int hash, int val ) {
+    return hash * 31 + val + 1;
+}
+
+public static int HashWg( int lineNumber, string caller ) {
+    int id = 23;
+    id = NextHashWg( id, lineNumber + 1 );
+    id = NextHashWg( id, caller.GetHashCode() );
+    return id;
+}
+
 public static ImmObject RegisterPrefab( GameObject prefab, Action<GameObject> onCreate = null,
                                                         int layer = -1,
                                                         bool garbageMaterials = true,
@@ -112,7 +123,7 @@ public static ImmObject RegisterPrefab( GameObject prefab, Action<GameObject> on
                                                         int handle = 0,
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
-    handle = QUI.NextHashWg( QUI.HashWg( lineNumber, caller ), handle );
+    handle = NextHashWg( HashWg( lineNumber, caller ), handle );
     ImmObject imo;
     if ( ! _immCache.TryGetValue( handle, out imo ) || ! imo.go ) {
         GameObject go = GameObject.Instantiate( prefab );
@@ -180,7 +191,7 @@ public static GameObject WorldText( string s, Vector3 pos, float scale = 1,
                                                         int handle = 0,
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
-    handle = QUI.NextHashWg( s.GetHashCode(), handle );
+    handle = NextHashWg( s.GetHashCode(), handle );
     Texture2D tex;
     if ( ! _stringTextures.TryGetValue( s, out tex ) ) {
         _stringTextures[s] = tex = AppleFont.CreateStringTexture( s );
