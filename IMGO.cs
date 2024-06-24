@@ -40,34 +40,34 @@ public static class IMGO {
 
 public static Transform root;
 
-static Dictionary<int,ImObject> _immCache = new Dictionary<int,ImObject>();
-static HashSet<ImObject> _immGarbage = new HashSet<ImObject>();
-static List<ImObject> _immDead = new List<ImObject>();
-static List<ImObject> _immTickItems = new List<ImObject>();
+static Dictionary<int,ImObject> _cache = new Dictionary<int,ImObject>();
+static HashSet<ImObject> _garbage = new HashSet<ImObject>();
+static List<ImObject> _dead = new List<ImObject>();
+static List<ImObject> _tickItems = new List<ImObject>();
 static Dictionary<string,Texture2D> _stringTextures = new Dictionary<string,Texture2D>();
-static GameObject _immRoot;
+static GameObject _root;
 static GameObject _sprite;
 
 public static void Begin() {
     // the items from the previous tick are potentially garbage
-    foreach ( var i in _immTickItems ) {
-        _immGarbage.Add( i );
+    foreach ( var i in _tickItems ) {
+        _garbage.Add( i );
     }
-    _immTickItems.Clear();
+    _tickItems.Clear();
 }
 
 public static void End() {
-    foreach ( var i in _immTickItems ) {
-        _immGarbage.Remove( i );
+    foreach ( var i in _tickItems ) {
+        _garbage.Remove( i );
     }
 
-    _immDead.Clear();
+    _dead.Clear();
 
-    foreach ( var i in _immGarbage ) {
+    foreach ( var i in _garbage ) {
         i.garbageAge += Time.deltaTime;
 
         if ( ! i.go ) {
-            _immDead.Add( i );
+            _dead.Add( i );
             continue;
         }
 
@@ -88,18 +88,18 @@ public static void End() {
             }
             DestroyGO( i.go );
             //Qonsole.Log( $"Removing IMM garbage {i.go.name}" );
-            _immDead.Add( i );
+            _dead.Add( i );
         } else {
             i.go.SetActive( false );
         }
     }
 
-    foreach ( var i in _immDead ) {
-        _immGarbage.Remove( i );
+    foreach ( var i in _dead ) {
+        _garbage.Remove( i );
     }
 
-    for ( int i = 0; i < _immTickItems.Count; i++ ) {
-        var imti = _immTickItems[i];
+    for ( int i = 0; i < _tickItems.Count; i++ ) {
+        var imti = _tickItems[i];
         imti.go.SetActive( true );
         imti.go.transform.SetSiblingIndex( i );
     }
@@ -125,7 +125,7 @@ public static ImObject RegisterPrefab( GameObject prefab, Action<GameObject> onC
                                                         [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
     ImObject imo;
-    if ( ! _immCache.TryGetValue( handle, out imo ) || ! imo.go ) {
+    if ( ! _cache.TryGetValue( handle, out imo ) || ! imo.go ) {
         GameObject go = GameObject.Instantiate( prefab );
 
         imo = new ImObject {
@@ -165,12 +165,12 @@ public static ImObject RegisterPrefab( GameObject prefab, Action<GameObject> onC
             }
         }
 
-        _immCache[handle] = imo;
-        if ( ! _immRoot ) {
-            _immRoot = new GameObject( "imm_root" );
-            _immRoot.transform.parent = root;
+        _cache[handle] = imo;
+        if ( ! _root ) {
+            _root = new GameObject( "imm_root" );
+            _root.transform.parent = root;
         }
-        go.transform.parent = _immRoot.transform;
+        go.transform.parent = _root.transform;
         go.name = $"{prefab.name}{handle.ToString( "X8" )}";
         if ( layer != -1 ) {
             go.layer = layer;
@@ -180,7 +180,7 @@ public static ImObject RegisterPrefab( GameObject prefab, Action<GameObject> onC
         }
         //Qonsole.Log( "Created game object on IMM draw." );
     }
-    _immTickItems.Add( imo );
+    _tickItems.Add( imo );
     return imo;
 }
 
