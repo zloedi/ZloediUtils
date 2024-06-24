@@ -5,7 +5,7 @@ using System;
 using UnityEngine;
 
 
-public class ImmObject {
+public class ImObject {
     public float garbageAge;
     public bool garbageMaterials;
     public Renderer [] rends;
@@ -35,15 +35,15 @@ public class ImmObject {
 }
 
 
-public static class IMMGO {
+public static class IMGO {
 
 
 public static Transform root;
 
-static Dictionary<int,ImmObject> _immCache = new Dictionary<int,ImmObject>();
-static HashSet<ImmObject> _immGarbage = new HashSet<ImmObject>();
-static List<ImmObject> _immDead = new List<ImmObject>();
-static List<ImmObject> _immTickItems = new List<ImmObject>();
+static Dictionary<int,ImObject> _immCache = new Dictionary<int,ImObject>();
+static HashSet<ImObject> _immGarbage = new HashSet<ImObject>();
+static List<ImObject> _immDead = new List<ImObject>();
+static List<ImObject> _immTickItems = new List<ImObject>();
 static Dictionary<string,Texture2D> _stringTextures = new Dictionary<string,Texture2D>();
 static GameObject _immRoot;
 static GameObject _sprite;
@@ -116,7 +116,7 @@ public static int HashWg( int lineNumber, string caller ) {
     return id;
 }
 
-public static ImmObject RegisterPrefab( GameObject prefab, Action<GameObject> onCreate = null,
+public static ImObject RegisterPrefab( GameObject prefab, Action<GameObject> onCreate = null,
                                                         int layer = -1,
                                                         bool garbageMaterials = true,
                                                         string [] lookupChildren = null,
@@ -124,11 +124,11 @@ public static ImmObject RegisterPrefab( GameObject prefab, Action<GameObject> on
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
-    ImmObject imo;
+    ImObject imo;
     if ( ! _immCache.TryGetValue( handle, out imo ) || ! imo.go ) {
         GameObject go = GameObject.Instantiate( prefab );
 
-        imo = new ImmObject {
+        imo = new ImObject {
             go = go,
             garbageMaterials = garbageMaterials,
             rends = go.GetComponentsInChildren<Renderer>( includeInactive: true ),
@@ -217,7 +217,7 @@ public static GameObject SpriteTex( Texture2D tex, Vector3 pos, Material mat = n
         _sprite.transform.parent = root;
         _sprite.SetActive( false );
     }
-    ImmObject imo = RegisterPrefab( _sprite, layer: layer, garbageMaterials: false,
+    ImObject imo = RegisterPrefab( _sprite, layer: layer, garbageMaterials: false,
                                                                                 handle: handle );
     imo.go.transform.position = pos;
     imo.go.transform.localScale = Vector3.one * scale;
