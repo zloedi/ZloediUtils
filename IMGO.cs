@@ -143,6 +143,8 @@ public static ImObject RegisterPrefab( GameObject prefab, Action<GameObject> onC
                     imo.mats[i] = imo.rends[i].sharedMaterial;
                 }
             }
+        } else {
+            imo.mats = new Material[0];
         }
 
         if ( lookupChildren != null ) {
