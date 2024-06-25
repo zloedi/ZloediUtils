@@ -19,6 +19,8 @@ public struct Color {
     public static Color gray    => new Color(.5f, .5f, .5f, 1f);
     public static Color clear   => new Color(0f, 0f, 0f, 0f);
 
+    public float grayscale => 0.299f * r + 0.587f * g + 0.114f * b;
+
     public Color( float r, float g, float b, float a ) {
         this.r = r;
         this.g = g;
