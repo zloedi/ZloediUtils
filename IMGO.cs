@@ -72,11 +72,13 @@ public static void End() {
         }
 
         if ( i.garbageAge > 5f ) {
+
             if ( i.garbageMaterials ) {
-                foreach ( var r in i.rends ) {
-                    Destroy( r.material );
+                foreach ( var m in i.mats ) {
+                    Destroy( m );
                 }
             }
+
             foreach ( var r in i.rends ) {
                 foreach ( var kv in _stringTextures ) {
                     if ( kv.Value == r.material.mainTexture ) {
@@ -86,7 +88,9 @@ public static void End() {
                     }
                 }
             }
+
             DestroyGO( i.go );
+
             //Qonsole.Log( $"Removing IMM garbage {i.go.name}" );
             _dead.Add( i );
         } else {
