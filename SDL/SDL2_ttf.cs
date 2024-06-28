@@ -1,3 +1,5 @@
+#if ! UNITY_STANDALONE
+
 #region License
 /* SDL2# - C# Wrapper for SDL2
  *
@@ -766,3 +768,5 @@ namespace SDL2
 		#endregion
 	}
 }
+
+#endif

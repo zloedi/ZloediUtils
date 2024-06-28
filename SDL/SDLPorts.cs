@@ -1,3 +1,5 @@
+#if ! UNITY_STANDALONE
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -988,4 +990,4 @@ quit:
     }
 }
 
-
+#endif

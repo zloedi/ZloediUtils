@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine.Rendering;
 using UnityEngine;
+using UnityEngine.Rendering;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -94,9 +94,11 @@ static bool CanHaveXRayMaterial(Renderer r) {
         return false;
     }
 
+#if false // don't have cloth in dmd yet
     if ( SkipCloth_cvar && r.GetComponent<Cloth>() ) {
         return false;
     }
+#endif
     
     return true;
 }
@@ -218,13 +220,17 @@ public static void Tick( IList<Component> actors, IList<bool> isHostile ) {
                     cloneR.enabled = true;
                     var comps = clone.GetComponents<Component>();
                     foreach ( var c in comps ) {
+#if false // don't have cloth in dmd yet
                         if ( c is Cloth ) {
                             if ( SkipCloth_cvar ) {
                                 UnityEngine.Object.Destroy( c );
                             } else if ( Verbose_cvar ) {
                                 Log( $"Keeping cloth on {r.gameObject}." ); 
                             }
-                        } else if ( ! ( c is Transform || c is Renderer || c is MeshFilter ) ) {
+                        }
+                        else
+#endif
+                        if ( ! ( c is Transform || c is Renderer || c is MeshFilter ) ) {
                             UnityEngine.Object.Destroy(c);
                         }
                     }
