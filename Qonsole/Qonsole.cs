@@ -78,15 +78,9 @@ public class QonsoleBootstrap : MonoBehaviour {
         Qonsole.Update();
     }
 
-#if true
     void OnGUI() {
         Qonsole.OnGUI();
     }
-#else
-    void OnGUI() {
-        Qonsole.OnGUI();
-    }
-#endif
 
     void OnApplicationQuit() {
         Qonsole.OnApplicationQuit();
@@ -166,6 +160,8 @@ public static bool QonInvertPlayY = true;
 #else
 public static bool QonInvertPlayY => QonInvertPlayY_kvar;
 #endif
+[Description( "Should the Qonsole be toggled by '~'/'`'" )]
+public static bool QonSkipBackquote_kvar = false;
 
 // OBSOLETE, USE COMMANDS INSTEAD: stuff to be executed before the .cfg file is loaded
 public static Func<string> onPreLoadCfg_f = () => "";
@@ -316,6 +312,12 @@ static void HandleEnter() {
     Cellophane.AddToHistory( cmdClean );
     TryExecute( cmdClean );
     FlushConfig();
+}
+
+static void HandleBackQuote() {
+    if ( ! QonSkipBackquote_kvar ) {
+        Toggle();
+    }
 }
 
 static void HandleEscape() {
@@ -609,7 +611,7 @@ public static void OnGUIInternal( bool skipRender = false ) {
             // As a bonus -- no dependency on the legacy Input system
             if ( Event.current.type == EventType.KeyDown ) {
                 if ( Event.current.keyCode == KeyCode.BackQuote ) {
-                    Toggle();
+                    HandleBackQuote();
                 } else if ( Event.current.keyCode == KeyCode.LeftArrow ) {
                     QON_MoveLeft( 1 );
                 } else if ( Event.current.keyCode == KeyCode.Home ) {
@@ -650,7 +652,7 @@ public static void OnGUIInternal( bool skipRender = false ) {
         }
     } else if ( Event.current.type == EventType.KeyDown
                 && Event.current.keyCode == KeyCode.BackQuote ) {
-        Toggle();
+        HandleBackQuote();
     }
 }
 
@@ -952,7 +954,7 @@ public static void HandleSDLTextInput( string txt ) {
 
 public static void HandleSDLKeyDown( KeyCode kc ) {
     if ( ! Active && kc == KeyCode.BackQuote ) {
-        Toggle();
+        HandleBackQuote();
         return;
     }
 
@@ -963,7 +965,7 @@ public static void HandleSDLKeyDown( KeyCode kc ) {
         case KeyCode.End:        QON_MoveRight( 99999 ); break;
         case KeyCode.PageUp:     QON_PageUp();           break;
         case KeyCode.PageDown:   QON_PageDown();         break;
-        case KeyCode.BackQuote:  Toggle();               break;
+        case KeyCode.BackQuote:  HandleBackQuote();      break;
         case KeyCode.Return:     HandleEnter();          break;
         case KeyCode.Escape:     HandleEscape();         break;
         case KeyCode.Tab:        Autocomplete();         break;
