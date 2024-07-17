@@ -271,16 +271,26 @@ static void CollectItems() {
 
     foreach ( var a in assemblies ) {
         string name = a.GetName().Name;
+        if ( name == "System" ) continue;
+        if ( name == "Mono.Security" ) continue;
+        if ( name == "netstandard" ) continue;
+        if ( name.Contains( "Newtonsoft" ) ) continue;
+        if ( name.Contains( "steamworks" ) ) continue;
         if ( name.Contains( "Unity." ) ) continue;
-        if ( name.Contains( "UnityEditor." ) ) continue;
+        if ( name.Contains( ".Unity" ) ) continue;
+        if ( name.Contains( "UnityEditor" ) ) continue;
         if ( name.Contains( "Engine." ) ) continue;
-        if ( name.Contains( "UnityEngine." ) ) continue;
+        if ( name.Contains( "UnityEngine" ) ) continue;
         if ( name.Contains( "System." ) ) continue;
         if ( name.Contains( "Photon" ) ) continue;
         if ( name.Contains( "Microsoft" ) ) continue;
         if ( name.Contains( "Autodesk" ) ) continue;
         if ( name.Contains( "Sony" ) ) continue;
         if ( name.Contains( "mscorlib" ) ) continue;
+        if ( name.Contains( "BeeDriver" ) ) continue;
+        if ( name.Contains( "UniTask" ) ) continue;
+        if ( name.Contains( "Cinemachine" ) ) continue;
+        if ( name.Contains( "com.unity" ) ) continue;
 
         numAssemblies++;
         asmTypes.AddRange( a.GetTypes() );

@@ -150,7 +150,7 @@ static bool QonPrintToSystemLog_kvar = true;
 static float QonScale_kvar = 1;
 static float QonScale => Mathf.Clamp( QonScale_kvar, 1, 100 );
 [Description( "Show the Qonsole in the editor: 0 -- no, 1 -- yes, 2 -- editor only." )]
-public static float QonShowInEditor_kvar = 1;
+public static int QonShowInEditor_kvar = 1;
 [Description( "Alpha blend value of the Qonsole background." )]
 public static float QonAlpha_kvar = 0.65f;
 [Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
@@ -454,6 +454,8 @@ public static void RenderGL( bool skip = false ) {
 
 // some stuff need to be initialized before the Start() Unity callback
 public static void Init( int configVersion = -1 ) {
+    float startTime = Time.realtimeSinceStartup;
+
     Log( featuresDescription );
 
     string fnameCfg = null, fnameHistory;
@@ -533,6 +535,9 @@ public static void Init( int configVersion = -1 ) {
     //QUI.whiteTexture = ...
     //QUI.defaultFont = ...
 #endif
+
+    float time = Time.realtimeSinceStartup - startTime;
+    Log( $"Init took {time} seconds." );
 }
 
 #if HAS_UNITY
