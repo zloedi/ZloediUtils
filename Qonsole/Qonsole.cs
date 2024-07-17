@@ -310,7 +310,12 @@ static void HandleEnter() {
     EraseCommand();
     Log( cmdRaw );
     Cellophane.AddToHistory( cmdClean );
-    TryExecute( cmdClean );
+    Action<string[],object> action;
+    if ( Cellophane.TryFindCommand( "qonsole_on_command_line", out action ) ) {
+        action( null, cmdClean );
+    } else {
+        TryExecute( cmdClean );
+    }
     FlushConfig();
 }
 
