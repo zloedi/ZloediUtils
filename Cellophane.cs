@@ -38,7 +38,10 @@ class Variable : Named {
     public Func<bool> Changed_f;
 
     public string GetValue() {
-        return Convert.ToString( fieldInfo.GetValue( null ), CultureInfo.InvariantCulture ); 
+        if ( fieldInfo.FieldType == typeof( float ) ) {
+            return FtoA( ( float )fieldInfo.GetValue( null ) ); 
+        }
+        return fieldInfo.GetValue( null ).ToString();
     }
 
     public void SetupChanged<T>() {
@@ -255,7 +258,7 @@ static void PrintSuggestions( int maxToPrint, string hilight = null,
             str = raw;
         }
         if ( TryFindVariable( raw, out v ) ) {
-            string log =  str + " = " + v.GetValue();
+            string log = str + " = " + v.GetValue();
             log += v.description.Length > 0 ? ( "[c0c0c0] : " + v.description + "[-]" ) : "";
             Log( log );
         } else {

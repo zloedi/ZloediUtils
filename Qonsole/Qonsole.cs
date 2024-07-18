@@ -52,22 +52,10 @@ public static class QonsoleEditorSetup {
 }
 #endif
 
-#if HAS_UNITY && QONSOLE_BOOTSTRAP
-
 public class QonsoleBootstrap : MonoBehaviour {
     public static void TrySetupQonsole() {
-		if ( Qonsole.Started ) {
-			return;
-		}
-
-        Qonsole.onEditorRepaint_f = c => {};
         Qonsole.Init();
         Qonsole.Start();
-
-#if QONSOLE_KEYBINDS
-        KeyBinds.Log = s => Qonsole.Log( s );
-        KeyBinds.Error = s => Qonsole.Error( s );
-#endif
     }
 
     void Awake() {
@@ -87,15 +75,13 @@ public class QonsoleBootstrap : MonoBehaviour {
     }
 }
 
-#endif // QONSOLE_BOOTSTRAP
-
 
 public static class Qonsole {
 
 
 #if HAS_UNITY && QONSOLE_BOOTSTRAP
-
 [RuntimeInitializeOnLoadMethod]
+#endif
 public static void CreateBootstrapObject() {
     QonsoleBootstrap[] components = GameObject.FindObjectsOfType<QonsoleBootstrap>();
     if ( components.Length == 0 ) {
@@ -108,14 +94,13 @@ public static void CreateBootstrapObject() {
     }
 }
 
-// the Unity editor (QGL) repaint callback
-public static Action<Camera> onEditorRepaint_f = c => {};
-
-#endif
-
 public static bool Active;
 public static bool Started;
+public static bool Initialized;
+
 public static bool ConsumeEditorInputOnce;
+// the Unity editor (QGL) repaint callback
+public static Action<Camera> onEditorRepaint_f = c => {};
 
 public const string featuresDescription = @"Features:
 . Persistent history, browse previously issued commands (in previous app runs) using up/down arrows.
@@ -160,8 +145,8 @@ public static bool QonInvertPlayY = true;
 #else
 public static bool QonInvertPlayY => QonInvertPlayY_kvar;
 #endif
-[Description( "Should the Qonsole be toggled by '~'/'`'" )]
-public static bool QonSkipBackquote_kvar = false;
+[Description( "Should the Qonsole be toggled by '~'/'`': 1 -- skip in play mode only, 2 -- skip both in play and edit modes." )]
+public static int QonSkipBackquote_kvar = 0;
 
 // OBSOLETE, USE COMMANDS INSTEAD: stuff to be executed before the .cfg file is loaded
 public static Func<string> onPreLoadCfg_f = () => "";
@@ -320,7 +305,8 @@ static void HandleEnter() {
 }
 
 static void HandleBackQuote() {
-    if ( ! QonSkipBackquote_kvar ) {
+    if ( QonSkipBackquote_kvar == 0 
+            || ( QonSkipBackquote_kvar == 1 && ! Application.isPlaying ) ) {
         Toggle();
     }
 }
@@ -459,6 +445,12 @@ public static void RenderGL( bool skip = false ) {
 
 // some stuff need to be initialized before the Start() Unity callback
 public static void Init( int configVersion = -1 ) {
+    if ( Initialized ) {
+        return;
+    }
+
+    Qonsole.onEditorRepaint_f = c => {};
+
     float startTime = Time.realtimeSinceStartup;
 
     Log( featuresDescription );
@@ -524,6 +516,10 @@ public static void Init( int configVersion = -1 ) {
     InternalCommand( "qonsole_post_config" );
     Help_kmd( null );
 
+#if QONSOLE_KEYBINDS
+    KeyBinds.Log = s => Log( s );
+    KeyBinds.Error = s => Error( s );
+#endif
     if ( onStoreCfg_f == null ) {
 #if QONSOLE_KEYBINDS
         onStoreCfg_f = () => KeyBinds.StoreConfig();
@@ -543,6 +539,8 @@ public static void Init( int configVersion = -1 ) {
 
     float time = Time.realtimeSinceStartup - startTime;
     Log( $"Init took {time} seconds." );
+
+    Initialized = true;
 }
 
 #if HAS_UNITY
@@ -786,6 +784,9 @@ public static void OnApplicationQuit() {
 // == public API ==
 
 public static void Start() {
+    if ( Started ) {
+        return;
+    }
     if ( QGL.Start( invertedY: QonInvertPlayY ) ) {
         Started = true;
         Log( "Qonsole Started." );
@@ -1025,6 +1026,10 @@ static Qonsole() {
 }
 
 public static void Init( int configVersion = 0 ) {
+    if ( Initialized) {
+        return;
+    }
+
     string fnameCfg = null;
 
     string[] args = System.Environment.GetCommandLineArgs ();
@@ -1064,6 +1069,8 @@ public static void Init( int configVersion = 0 ) {
     Cellophane.ScanVarsAndCommands();
     Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
     FlushConfig();
+
+    Initialized = true;
 }
 
 public static void FlushConfig() {
