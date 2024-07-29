@@ -444,7 +444,8 @@ public static void RenderGL( bool skip = false ) {
 }
 
 // some stuff need to be initialized before the Start() Unity callback
-public static void Init( int configVersion = -1 ) {
+public static void Init( int configVersion = -1, List<Cellophane.Command> cmds = null,
+                                                            List<Cellophane.Variable> vars = null ) {
     if ( Initialized ) {
         return;
     }
@@ -507,7 +508,7 @@ public static void Init( int configVersion = -1 ) {
     Cellophane.UseColor = true;
     Cellophane.Log = s => Log( s );
     Cellophane.Error = s => Error( $"[Cellophane] {s}" );
-    Cellophane.ScanVarsAndCommands();
+    Cellophane.ScanVarsAndCommands( cmds, vars );
     InternalCommand( "qonsole_pre_config" );
     TryExecuteLegacy( onPreLoadCfg_f() );
     Cellophane.ReadHistory( history );
@@ -1025,7 +1026,8 @@ static string _configPath = "";
 static Qonsole() {
 }
 
-public static void Init( int configVersion = 0 ) {
+public static void Init( int configVersion = -1, List<Command> cmds = null,
+                                                                    List<Variable> vars = null ) {
     if ( Initialized) {
         return;
     }
@@ -1066,7 +1068,7 @@ public static void Init( int configVersion = 0 ) {
     Cellophane.UseColor = false;
     Cellophane.Log = s => Log( s );
     Cellophane.Error = s => Error( $"[Cellophane] {s}" );
-    Cellophane.ScanVarsAndCommands();
+    Cellophane.ScanVarsAndCommands( cmds, vars );
     Cellophane.ReadConfig( config, skipVersionCheck: customConfig );
     FlushConfig();
 

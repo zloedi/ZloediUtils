@@ -14,7 +14,8 @@ using System;
 
 public static class Cellophane {
 
-class Named : IComparable {
+public class Named : IComparable {
+    public string description = "";
     public string rawName;
     public string name;
 
@@ -26,13 +27,11 @@ class Named : IComparable {
     }
 }
 
-class Command : Named {
+public class Command : Named {
     public Action<string[],object> ActionArgv = (sa,context) => {};
 }
 
-class Variable : Named {
-    public string description = "";
-
+public class Variable : Named {
     public FieldInfo fieldInfo;
 
     public Func<bool> Changed_f;
@@ -104,7 +103,11 @@ static void List_kmd( string [] argv ) {
         } 
     } else {
         foreach ( var c in _commands ) {
-            Log( c.name );
+            string str = c.name;
+            if ( c.description.Length > 0 ) {
+                str += " : " + c.description;
+            }
+            Log( str );
         }
         Log( "" );
         foreach ( var v in _variables ) {
@@ -249,7 +252,6 @@ static void PrintSuggestions( int maxToPrint, string hilight = null,
     }
     string lit = "[ff9000]" + hilight + "[-]";
     for ( ; i >= 0; i-- ) {
-        Variable v;
         string raw = GetSorted( i );
         string str;
         if ( hilight != null ) {
@@ -257,7 +259,11 @@ static void PrintSuggestions( int maxToPrint, string hilight = null,
         } else {
             str = raw;
         }
-        if ( TryFindVariable( raw, out v ) ) {
+        if ( TryFindCommand( raw, out Command c ) ) {
+            string log = str;
+            log += c.description.Length > 0 ? ( "[c0c0c0] : " + c.description + "[-]" ) : "";
+            Log( log );
+        } else if ( TryFindVariable( raw, out Variable v ) ) {
             string log = str + " = " + v.GetValue();
             log += v.description.Length > 0 ? ( "[c0c0c0] : " + v.description + "[-]" ) : "";
             Log( log );
@@ -267,7 +273,7 @@ static void PrintSuggestions( int maxToPrint, string hilight = null,
     }
 }
 
-static void CollectItems() {
+static void CollectItems( List<Command> cmds, List<Variable> vars ) {
     var assemblies = AppDomain.CurrentDomain.GetAssemblies();
     List<Type> asmTypes = new List<Type>();
     int numAssemblies = 0;
@@ -314,8 +320,8 @@ static void CollectItems() {
         return;
     }
 
-    List<Command> cmds = new List<Command>();
-    List<Variable> vars = new List<Variable>();
+    cmds = cmds != null ? cmds : new List<Command>();
+    vars = vars != null ? vars : new List<Variable>();
 
     foreach (Type type in types) {
         FieldInfo [] fields = type.GetFields( BFS );
@@ -887,10 +893,11 @@ public static void PrintInfo() {
     Log( "Num commands: " + _commands.Length );
 }
 
-public static void ScanVarsAndCommands() {
+// can pass down some custom vars and commands
+public static void ScanVarsAndCommands( List<Command> cmds = null, List<Variable> vars = null ) {
     var log = Log;
     Log = (s) => log( UseColor ? s : ColorTagStripAll( s ) );
-    CollectItems();
+    CollectItems( cmds, vars );
 }
 
 static readonly int tagLen = "[000000]".Length;
