@@ -657,8 +657,6 @@ public static void OnGUIInternal( bool skipRender = false ) {
                         HandleEnter();
                     } else {
                         _history = null;
-                        Debug.Log( c );
-                        Debug.Log( ( int )c );
                         QON_InsertCommand( c.ToString(), false );
                     }
                 }
