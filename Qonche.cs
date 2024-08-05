@@ -147,7 +147,7 @@ public static void QON_Backspace( int numChars ) {
     }
 }
 
-public static void QON_InsertCommand( string str ) {
+public static void QON_InsertCommand( string str, bool unscroll = false ) {
     if ( string.IsNullOrEmpty( str ) ) {
         return;
     }
@@ -166,7 +166,14 @@ public static void QON_InsertCommand( string str ) {
         // deletion always fills zeros, no need to zero terminate here
         qon_cursor += shift;
     }
-    // cancel the page-up if started typing
+
+    if ( unscroll ) {
+        // cancel the page-up if started typing
+        QON_Unscroll();
+    }
+}
+
+public static void QON_Unscroll() {
     qon_currPage = qon_pagerHead;
 }
 

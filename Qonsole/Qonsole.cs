@@ -625,10 +625,12 @@ public static void OnGUIInternal( bool skipRender = false ) {
                     QON_MoveLeft( 1 );
                 } else if ( Event.current.keyCode == KeyCode.Home ) {
                     QON_MoveLeft( 99999 );
+                    QON_Unscroll();
                 } else if ( Event.current.keyCode == KeyCode.RightArrow ) {
                     QON_MoveRight( 1 );
                 } else if ( Event.current.keyCode == KeyCode.End ) {
                     QON_MoveRight( 99999 );
+                    QON_Unscroll();
                 } else if ( Event.current.keyCode == KeyCode.Delete ) {
                     _history = null;
                     QON_Delete( 1 );
@@ -650,11 +652,14 @@ public static void OnGUIInternal( bool skipRender = false ) {
                     } else if ( c == '\t' ) {
                         Autocomplete();
                     } else if ( c == '\b' ) {
+                    } else if ( c == '\0' ) {
                     } else if ( c == '\n' || c == '\r' ) {
                         HandleEnter();
                     } else {
                         _history = null;
-                        QON_InsertCommand( c.ToString() );
+                        Debug.Log( c );
+                        Debug.Log( ( int )c );
+                        QON_InsertCommand( c.ToString(), false );
                     }
                 }
             }
