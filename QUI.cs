@@ -660,7 +660,8 @@ public static RectTransform [] PrefabWH( float x, float y, float w, float h,
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
-    RectTransform rt = RegisterPrefab( x, y, float.MaxValue, float.MaxValue, handle, prefab, scissor );
+    RectTransform rt = RegisterPrefab( x, y, float.MaxValue, float.MaxValue, handle, prefab,
+                                                                                        scissor );
     rt.localScale = new Vector2( w / rt.sizeDelta.x, h / rt.sizeDelta.y );
     return RegisterChildren( rt, refChildren );
 }

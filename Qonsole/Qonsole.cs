@@ -52,6 +52,7 @@ public static class QonsoleEditorSetup {
 }
 #endif
 
+#if HAS_UNITY
 public class QonsoleBootstrap : MonoBehaviour {
     public static void TrySetupQonsole() {
         Qonsole.Init();
@@ -74,14 +75,17 @@ public class QonsoleBootstrap : MonoBehaviour {
         Qonsole.OnApplicationQuit();
     }
 }
-
+#endif
 
 public static class Qonsole {
 
 
-#if HAS_UNITY && QONSOLE_BOOTSTRAP
+#if HAS_UNITY
+
+#if QONSOLE_BOOTSTRAP
 [RuntimeInitializeOnLoadMethod]
 #endif
+
 public static void CreateBootstrapObject() {
     QonsoleBootstrap[] components = GameObject.FindObjectsOfType<QonsoleBootstrap>();
     if ( components.Length == 0 ) {
@@ -93,6 +97,8 @@ public static void CreateBootstrapObject() {
         Debug.Log( "Already have QonsoleBootstrap" );
     }
 }
+
+#endif // HAS_UNITY
 
 public static bool Active;
 public static bool Started;
