@@ -51,6 +51,7 @@ public static int activeWidget;
 
 public static float cursorX;
 public static float cursorY;
+
 static float _oldCursorX;
 static float _oldCursorY;
 
@@ -259,30 +260,39 @@ static Dictionary<int,TickItem> _cache = new Dictionary<int,TickItem>();
 static List<TickItem> _dead = new List<TickItem>();
 static List<TickItem> _tickItems = new List<TickItem>();
 static TextGenerator _textGen = new TextGenerator();
+static RectTransform [] _rtEmpty = new RectTransform[0];
 
 // 1 -- show creation, 2 -- show destruction, 3 -- show all
 public static int DebugLogGraphicLife_cvar;
 
 public static RectTransform [] RegisterChildren( RectTransform rt, string [] refChildren ) {
-    RectTransform [] result;
-    if ( ! _refChildren.TryGetValue( rt, out result ) ) {
-        var found = new List<RectTransform>();
-        if ( refChildren != null ) {
-            foreach ( var rc in refChildren ) {
-                var t = rt.Find( rc );
-                if ( ! t ) {
-                    Error( $"Couldn't find {rc} in {rt}. Will have empty children refs array." );
-                    return null;
+    if ( refChildren == null ) {
+        return _rtEmpty;
+    }
+
+    if ( ! _refChildren.TryGetValue( rt, out RectTransform [] result ) ) {
+
+        result = new RectTransform[refChildren.Length];
+        for ( int i = 0; i < result.Length; i++ ) {
+            // use the root as a fallback
+            result[i] = rt;
+        }
+
+        var crts = rt.GetComponentsInChildren<RectTransform>();
+        foreach ( var crt in crts ) {
+            string ln = crt.name.ToLowerInvariant();
+            for ( int i = 0; i < refChildren.Length; i++ ) {
+                if ( ln.Contains( refChildren[i].ToLowerInvariant() ) ) {
+                    result[i] = crt;
+                    break;
                 }
-                found.Add( t as RectTransform );
             }
         }
-		// add the root rect transform as last element
-		found.Add( rt );
-        result = found.ToArray();
+
         _refChildren[rt] = result;
         Log( "Registered referenced children of " + rt );
     }
+
     return result;
 }
 
