@@ -104,7 +104,7 @@ public static void CrossfadeToState( Crossfade cf, int state ) {
     cf.chan++;
 
 #if false
-    Qonsole.Log( "switch to " + state + " chan: " + cf.chan );
+    Log( "switch to " + state + " chan: " + cf.chan );
 #endif
 }
 
@@ -144,9 +144,9 @@ public static bool UpdateState( int dt, int source, Crossfade cf, int state, boo
     } else { 
 #if false
         if ( cf.weight[c[1]] < 1 ) {
-            Qonsole.Log( $"{cf.time[0] + dt} {src.duration[cf.state[0]]} {cf.weight[0]} {cf.state[0]}" );
-            Qonsole.Log( $"{cf.time[1] + dt} {src.duration[cf.state[1]]} {cf.weight[1]} {cf.state[1]}" );
-            Qonsole.Log( "\n" );
+            Log( $"{cf.time[0] + dt} {src.duration[cf.state[0]]} {cf.weight[0]} {cf.state[0]}" );
+            Log( $"{cf.time[1] + dt} {src.duration[cf.state[1]]} {cf.weight[1]} {cf.state[1]}" );
+            Log( "\n" );
         }
 #endif
         // the fade-in clip is ramping UP
