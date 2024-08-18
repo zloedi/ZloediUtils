@@ -26,7 +26,9 @@ public struct WrapBox {
     public static float canvasScale =>
                             _canvasMinResolution == 0
                                 ? _fixedScale
-                                : Mathf.Min( 1f, ( float )Screen.height / _canvasMinResolution );
+                                : Mathf.Min( 1f,
+                                    ( float )Mathf.Min( Screen.width, Screen.height )
+                                        / _canvasMinResolution );
 
     public static float ScaleRound( float f ) {
         return Mathf.Round( Scale( f ) );
@@ -45,8 +47,8 @@ public struct WrapBox {
         _canvasMinResolution = 0f;
     }
 
-    public static void EnableCanvasScale() {
-        _canvasMinResolution = DefaultMinRes;
+    public static void EnableCanvasScale( float minRes = 0 ) {
+        _canvasMinResolution = minRes != 0 ? minRes : DefaultMinRes;
     }
 
     public float x, y, w, h;

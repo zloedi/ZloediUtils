@@ -663,7 +663,7 @@ public static void Texture( float x, float y, float w, float h, Texture2D tex = 
     Texture_wg( x, y, w, h, handle, tex, color, scissor );
 }
 
-public static RectTransform [] PrefabWH( float x, float y, float w, float h, 
+public static RectTransform [] PrefabScaled( float x, float y, float w, float h, 
                                                         GameObject prefab = null,
                                                         string [] refChildren = null,
                                                         bool scissor = false, int handle = 0, 
@@ -695,14 +695,15 @@ public static void GetClickRect( RectTransform rt, float canvasScale,
 }
 
 public static RectTransform [] Prefab( float posX = float.MaxValue, float posY = float.MaxValue,
+                                        // use these if you want to just stretch, not scale
+                                        float rtW = float.MaxValue, float rtH = float.MaxValue,
 										float scale = float.MaxValue, GameObject prefab = null,
 										string [] refChildren = null, bool scissor = false,
 														int handle = 0, 
                                                         [CallerLineNumber] int lineNumber = 0,
                                                         [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
-    RectTransform rt = RegisterPrefab( posX, posY, float.MaxValue, float.MaxValue, handle, prefab,
-																						scissor );
+    RectTransform rt = RegisterPrefab( posX, posY, rtW, rtH, handle, prefab, scissor );
 	if ( scale != float.MaxValue ) {
 		rt.localScale = Vector2.one * scale;
 	}
