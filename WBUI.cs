@@ -229,6 +229,37 @@ public static void DisableScissor( int handle = 0, [CallerLineNumber] int lineNu
     QUI.DisableScissor_wg( handle );
 }
 
+public static WrapBox FromRectTransform( RectTransform rt ) {
+    if ( ! QUI.canvas ) {
+        return new WrapBox();
+    }
+    float x, y, w, h;
+    Vector3 [] corners = new Vector3[4];
+    rt.GetWorldCorners( corners );
+    float minx = 999999;
+    float maxx = 0;
+    float miny = 999999;
+    float maxy = 0;
+    for ( int i = 0; i < corners.Length; i++ ) {
+        var cam = QUI.canvas.worldCamera;
+        var sp = corners[i];
+
+        if ( cam ) {
+            sp = cam.WorldToScreenPoint( corners[i] );
+        }
+
+        minx = Mathf.Min( sp.x, minx );
+        miny = Mathf.Min( Screen.height - sp.y, miny );
+        maxx = Mathf.Max( sp.x, maxx );
+        maxy = Mathf.Max( Screen.height - sp.y, maxy );
+    }
+    x = minx;
+    y = miny;
+    w = maxx - minx;
+    h = maxy - miny;
+    return new WrapBox( x, y, w, h, id: rt.GetHashCode() );
+}
+
 #endif // Use unity UI
 
 
