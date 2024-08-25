@@ -664,13 +664,14 @@ public static void Texture( float x, float y, float w, float h, Texture2D tex = 
 }
 
 public static RectTransform [] PrefabScaled( float x, float y, float w, float h, 
-                                                        GameObject prefab = null,
-                                                        string [] refChildren = null,
-                                                        bool scissor = false, int handle = 0, 
-                                                        [CallerLineNumber] int lineNumber = 0,
-                                                        [CallerMemberName] string caller = null ) {
+                                            float rtW = float.MaxValue, float rtH = float.MaxValue,
+                                            GameObject prefab = null,
+                                            string [] refChildren = null,
+                                            bool scissor = false, int handle = 0, 
+                                            [CallerLineNumber] int lineNumber = 0,
+                                            [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
-    RectTransform rt = RegisterPrefab( x, y, float.MaxValue, float.MaxValue, handle, prefab,
+    RectTransform rt = RegisterPrefab( x, y, rtW, rtH, handle, prefab,
                                                                                         scissor );
     rt.localScale = new Vector2( w / rt.sizeDelta.x, h / rt.sizeDelta.y );
     return RegisterChildren( rt, refChildren );
