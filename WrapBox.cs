@@ -160,8 +160,8 @@ public struct WrapBox {
         return TopLeft( W, H, y: -H );
     }
 
-    public WrapBox NextRight() {
-        return TopLeft( W, H, x: W );
+    public WrapBox NextRight( int id = int.MaxValue ) {
+        return TopLeft( W, H, x: W, id: id );
     }
 
     public WrapBox NextLeft() {
