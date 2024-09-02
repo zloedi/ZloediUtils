@@ -566,11 +566,15 @@ public static void EndUnityUI() {
 		}
 
         // handle scissors
-        IClippable c = rt.GetComponent<Graphic>() as IClippable;
-        if ( c != null ) {
-            c.Cull( scissor, true);
-            c.SetClipRect( scissor, true );
+        var gfx = rt.GetComponentsInChildren<Graphic>();
+        foreach ( var gf in gfx ) {
+            IClippable c = gf as IClippable;
+            if ( c != null ) {
+                c.Cull( scissor, true);
+                c.SetClipRect( scissor, true );
+            }
         }
+
         Rect s = _tickItems[i].scissor;
         if ( s.width + s.height > 0 ) {
             scissor = s;
@@ -671,8 +675,7 @@ public static RectTransform [] PrefabScaled( float x, float y, float w, float h,
                                             [CallerLineNumber] int lineNumber = 0,
                                             [CallerMemberName] string caller = null ) {
     handle = NextHashWg( HashWg( lineNumber, caller ), handle );
-    RectTransform rt = RegisterPrefab( x, y, rtW, rtH, handle, prefab,
-                                                                                        scissor );
+    RectTransform rt = RegisterPrefab( x, y, rtW, rtH, handle, prefab, scissor );
     rt.localScale = new Vector2( w / rt.sizeDelta.x, h / rt.sizeDelta.y );
     return RegisterChildren( rt, refChildren );
 }
