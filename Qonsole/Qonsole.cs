@@ -511,8 +511,9 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
     if ( configVersion >= 0 ) {
         Cellophane.ConfigVersion_kvar = configVersion;
     }
+
     Cellophane.UseColor = true;
-    Cellophane.Log = s => Log( s );
+    Cellophane.Log = s => Log( $"[Cellophane] {s}" );
     Cellophane.Error = s => Error( $"[Cellophane] {s}" );
     Cellophane.ScanVarsAndCommands( cmds, vars );
     InternalCommand( "qonsole_pre_config" );
@@ -535,10 +536,11 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
 #endif
     }
 
+    QGL.Log = s => Log( $"[QGL] {s}" );
+    QGL.Error = s => Error( $"[QGL] {s}" );
+
 #if QONSOLE_QUI
     QUI.DrawLineRect = (x,y,w,h) => QGL.LateDrawLineRect(x,y,w,h,color:Color.magenta);
-    QUI.Log = s => Qonsole.Log( s );
-    QUI.Error = s => Qonsole.Error( s );
     //QUI.canvas = ...
     //QUI.whiteTexture = ...
     //QUI.defaultFont = ...

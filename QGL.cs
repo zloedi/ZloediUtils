@@ -701,6 +701,17 @@ public static void Begin() {
     GL.LoadPixelMatrix();
 }
 
+public static void End( bool skipLateFlush = false ) {
+    if ( ! skipLateFlush ) {
+        if ( _material ) {
+            FlushLates();
+        } else {
+            Error( "Can't find GL material. Should call QGL.Start()" );
+        }
+    }
+    GL.PopMatrix();
+}
+
 public static void FlushLates() {
     for ( int li = 0; li < _lates.Count; ) {
 
@@ -793,17 +804,6 @@ public static void FlushLates() {
             _lates.RemoveAt( li );
         }
     }
-}
-
-public static void End( bool skipLateFlush = false ) {
-    if ( ! skipLateFlush ) {
-        if ( _material ) {
-            FlushLates();
-        } else {
-            Error( "Can't find GL material. Should call QGL.Start()" );
-        }
-    }
-    GL.PopMatrix();
 }
 
 
