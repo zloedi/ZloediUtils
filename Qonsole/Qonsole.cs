@@ -513,8 +513,8 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
     }
 
     Cellophane.UseColor = true;
-    Cellophane.Log = s => Log( $"[Cellophane] {s}" );
-    Cellophane.Error = s => Error( $"[Cellophane] {s}" );
+    Cellophane.Log = s => Log( s );
+    Cellophane.Error = s => Error( s );
     Cellophane.ScanVarsAndCommands( cmds, vars );
     InternalCommand( "qonsole_pre_config" );
     TryExecuteLegacy( onPreLoadCfg_f() );
