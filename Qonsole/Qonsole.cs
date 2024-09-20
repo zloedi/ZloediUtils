@@ -428,11 +428,14 @@ public static void RenderGL( bool skip = false ) {
             conH = conH * percent / 100;
         }
 
-        QGL.SetFontTexture();
-        GL.Begin( GL.QUADS );
-        QON_DrawChar = drawChar;
-        QON_DrawEx( conW, conH, ! Active, 0 );
-        GL.End();
+        // do nothing if entirely offscreen
+        if ( conH > 0 ) {
+            QGL.SetFontTexture();
+            GL.Begin( GL.QUADS );
+            QON_DrawChar = drawChar;
+            QON_DrawEx( conW, conH, ! Active, 0 );
+            GL.End();
+        }
     }
 
     QGL.End( skipLateFlush: true );
