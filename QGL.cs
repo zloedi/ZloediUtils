@@ -287,10 +287,15 @@ public static void DrawTextWithOutline( string s, float x, float y, Color color,
         if ( Cellophane.ColorTagLead( s, i, out string tl ) ) {
             _colStack.Add( TagToCol( tl ) );
             i += tl.Length;
+            if ( i >= s.Length )
+                break;
         } else if ( Cellophane.ColorTagClose( s, i, out string tc ) ) {
             _colStack.RemoveAt( _colStack.Count - 1 );
             i += tc.Length;
+            if ( i >= s.Length )
+                break;
         }
+
         if ( s[i] == '\n' ) {
             j = 0;
             y += TextDy * scale;
