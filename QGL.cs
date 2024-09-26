@@ -283,18 +283,21 @@ public static void DrawTextNokia( string s, float x, float y, Color color, float
 
 static List<Color> _colStack = new List<Color>();
 public static void DrawTextWithOutline( string s, float x, float y, Color color, float scale = 1 ) {
-    for ( int i = 0, j = 0; i < s.Length; i++ ) {
-        if ( Cellophane.ColorTagLead( s, i, out string tl ) ) {
-            _colStack.Add( TagToCol( tl ) );
-            i += tl.Length;
-            if ( i >= s.Length )
+    for ( int i = 0, j = 0; ; i++ ) {
+        while ( i < s.Length ) {
+            if ( Cellophane.ColorTagLead( s, i, out string tl ) ) {
+                _colStack.Add( TagToCol( tl ) );
+                i += tl.Length;
+            } else if ( _colStack.Count > 0 && Cellophane.ColorTagClose( s, i, out string tc ) ) {
+                _colStack.RemoveAt( _colStack.Count - 1 );
+                i += tc.Length;
+            } else {
                 break;
-        } else if ( Cellophane.ColorTagClose( s, i, out string tc ) ) {
-            _colStack.RemoveAt( _colStack.Count - 1 );
-            i += tc.Length;
-            if ( i >= s.Length )
-                break;
+            }
         }
+
+        if ( i >= s.Length )
+            return;
 
         if ( s[i] == '\n' ) {
             j = 0;
@@ -352,9 +355,13 @@ public static void SetMaterialColor( Color color ) {
     _material.color = color;
 }
 
+static Texture _mainTex;
 public static void SetTexture( Texture tex ) {
+    if (_mainTex == tex)
+        return;
     _material.SetTexture( "_MainTex", tex );
     _material.SetPass( 0 );
+    _mainTex = tex;
 }
 
 public static void DrawQuad( Vector2 pos, Vector2 size,
@@ -714,6 +721,7 @@ public static void End( bool skipLateFlush = false ) {
             Error( "Can't find GL material. Should call QGL.Start()" );
         }
     }
+    _mainTex = null;
     GL.PopMatrix();
 }
 
