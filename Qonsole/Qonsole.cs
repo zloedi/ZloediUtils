@@ -389,6 +389,46 @@ static void Help_kmd( string [] argv ) {
     Cellophane.PrintInfo();
 }
 
+static void PrintAssemblies_kmd( string [] argv ) {
+    var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+    var names = new List<string>();
+    var namesLowcase = new List<string>();
+
+    foreach ( var a in assemblies ) {
+        names.Add( a.GetName().Name );
+    }
+
+    names.Sort();
+
+    foreach ( var n in names ) {
+        namesLowcase.Add( n.ToLowerInvariant() );
+    }
+
+    for ( int i = 0; i < names.Count; i++ ) {
+        if ( namesLowcase[i].StartsWith( "system" ) ) {
+            continue;
+        }
+
+        if ( namesLowcase[i].StartsWith( "unityengine" ) ) {
+            continue;
+        }
+
+        if ( namesLowcase[i].StartsWith( "microsoft" ) ) {
+            continue;
+        }
+
+        if ( namesLowcase[i].StartsWith( "mscorlib" ) ) {
+            continue;
+        }
+
+        if ( namesLowcase[i].StartsWith( "unity." ) ) {
+            continue;
+        }
+
+        Log( names[i] );
+    }
+}
+
 static void Exit_kmd( string [] argv ) {
 #if UNITY_EDITOR
     UnityEditor.EditorApplication.isPlaying = false;
