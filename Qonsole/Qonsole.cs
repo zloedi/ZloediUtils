@@ -674,41 +674,50 @@ public static void OnGUIInternal( bool skipRender = false ) {
                     HandleBackQuote();
                 } else if ( Event.current.keyCode == KeyCode.LeftArrow ) {
                     QON_MoveLeft( 1 );
-                } else if ( Event.current.keyCode == KeyCode.Home ) {
-                    QON_MoveLeft( 99999 );
                     QON_Unscroll();
                 } else if ( Event.current.keyCode == KeyCode.RightArrow ) {
                     QON_MoveRight( 1 );
+                    QON_Unscroll();
+                } else if ( Event.current.keyCode == KeyCode.Home ) {
+                    QON_MoveLeft( 99999 );
+                    QON_Unscroll();
                 } else if ( Event.current.keyCode == KeyCode.End ) {
                     QON_MoveRight( 99999 );
                     QON_Unscroll();
                 } else if ( Event.current.keyCode == KeyCode.Delete ) {
                     _history = null;
                     QON_Delete( 1 );
+                    QON_Unscroll();
                 } else if ( Event.current.keyCode == KeyCode.Backspace ) {
                     _history = null;
                     QON_Backspace( 1 );
+                    QON_Unscroll();
                 } else if ( Event.current.keyCode == KeyCode.PageUp ) {
                     QON_PageUp();
                 } else if ( Event.current.keyCode == KeyCode.PageDown ) {
                     QON_PageDown();
                 } else if ( Event.current.keyCode == KeyCode.Escape ) {
                     HandleEscape();
+                    QON_Unscroll();
                 } else if ( Event.current.keyCode == KeyCode.DownArrow
                             || Event.current.keyCode == KeyCode.UpArrow ) {
                     HandleUpOrDownArrow( Event.current.keyCode == KeyCode.DownArrow );
+                    QON_Unscroll();
                 } else {
                     char c = Event.current.character;
                     if ( c == '`' ) {
                     } else if ( c == '\t' ) {
                         Autocomplete();
+                        QON_Unscroll();
                     } else if ( c == '\b' ) {
                     } else if ( c == '\0' ) {
                     } else if ( c == '\n' || c == '\r' ) {
                         HandleEnter();
+                        QON_Unscroll();
                     } else {
                         _history = null;
                         QON_InsertCommand( c.ToString(), false );
+                        QON_Unscroll();
                     }
                 }
             }
