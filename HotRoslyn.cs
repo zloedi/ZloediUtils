@@ -1,7 +1,7 @@
 #if ROSLYN
 
 /*
-How to integrate Roslyn into Unity:
+How to integrate the Roslyn compiler into Unity:
 - install the NuGet package: https://github.com/GlitchEnzo/NuGetForUnity.
 - install Microsoft.CodeAnalysis and Microsoft.CodeAnalysis.CSharp NuGet packages.
 - will have to degrade them to version 2 if don't need CSharp > 7, or ...
