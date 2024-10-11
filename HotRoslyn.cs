@@ -1,5 +1,3 @@
-#if ROSLYN
-
 /*
 How to integrate the Roslyn compiler into Unity:
 - install the NuGet package: https://github.com/GlitchEnzo/NuGetForUnity.
@@ -19,6 +17,8 @@ How to use this script:
 TODO:
 - debugger support
 */
+
+#if ROSLYN
 
 using System;
 using System.Collections.Generic;
