@@ -9,6 +9,7 @@ How to integrate Roslyn into Unity:
     to have LanguageVersion.CSharp9.
 
 How to use this script:
+- #define ROSLYN
 - setup Log, Error, OnCompile, ScriptsRoot, ScriptFiles.
 - invoke Init(), this will start listening for file changes under ScriptsRoot.
 - invoke Update() i.e. on mono behaviour Update.
