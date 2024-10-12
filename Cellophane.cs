@@ -124,6 +124,40 @@ static void List_kmd( string [] argv ) {
     Log( "Use with --raw to show function names." );
 }
 
+static void SetValueSetup( Variable cvar ) {
+    var fi = cvar.fieldInfo;
+
+    if ( fi.FieldType == typeof( bool ) ) {
+        cvar.SetValue_f = (s) => {
+            string tl = s.ToLowerInvariant();
+            bool val = tl != "false" && tl != "0";
+            cvar.fieldInfo.SetValue( null, val );
+        };
+    } else if ( fi.FieldType == typeof( int ) ) {
+        cvar.SetValue_f = (s) => {
+            int i;
+            if ( int.TryParse( s, out i ) ) {
+                cvar.fieldInfo.SetValue( null, i );
+            }
+        };
+    } else if ( fi.FieldType == typeof( float ) ) {
+        cvar.SetValue_f = (s) => {
+            if ( AtoF( s, out float f ) ) {
+                cvar.fieldInfo.SetValue( null, f );
+            }
+        };
+    } else if ( fi.FieldType == typeof( string ) ) {
+        cvar.SetValue_f = s => cvar.fieldInfo.SetValue( null, s );
+    } else {
+        Error( "Cellophane: Unsupported type of var " + fi.FieldType.ToString() );
+    }
+}
+
+static string FieldNameToVarName( Type type, FieldInfo fi ) {
+    string name = fi.Name.EndsWith( "_kvar" ) ? fi.Name : type.Name + "_" + fi.Name;
+    return NormalizeNameVar( name );
+}
+
 static bool ValidSuffixVar( string name ) {
     return name.EndsWith( "_cvar" ) || name.EndsWith( "_kvar" );
 }
@@ -323,18 +357,16 @@ static void CollectItems( List<Command> cmds, List<Variable> vars ) {
     cmds = cmds != null ? cmds : new List<Command>();
     vars = vars != null ? vars : new List<Variable>();
 
-    foreach (Type type in types) {
+    foreach ( Type type in types ) {
         FieldInfo [] fields = type.GetFields( BFS );
         foreach ( FieldInfo fi in fields ) {
             if ( ! ValidSuffixVar( fi.Name ) ) {
                 continue;
             }
 
-            string name = fi.Name.EndsWith( "_kvar" ) ? fi.Name : type.Name + "_" + fi.Name;
-
             Variable cvar = new Variable {
                 fieldInfo = fi,
-                name = NormalizeNameVar( name ),
+                name = FieldNameToVarName( type, fi ),
                 rawName = type.Name + "." + fi.Name,
             };
 
@@ -345,30 +377,8 @@ static void CollectItems( List<Command> cmds, List<Variable> vars ) {
                 }
             }
 
-            if ( fi.FieldType == typeof( bool ) ) {
-                cvar.SetValue_f = (s) => {
-                    string tl = s.ToLowerInvariant();
-                    bool val = tl != "false" && tl != "0";
-                    cvar.fieldInfo.SetValue( null, val );
-                };
-            } else if ( fi.FieldType == typeof( int ) ) {
-                cvar.SetValue_f = (s) => {
-                    int i;
-                    if ( int.TryParse( s, out i ) ) {
-                        cvar.fieldInfo.SetValue( null, i );
-                    }
-                };
-            } else if ( fi.FieldType == typeof( float ) ) {
-                cvar.SetValue_f = (s) => {
-                    if ( AtoF( s, out float f ) ) {
-                        cvar.fieldInfo.SetValue( null, f );
-                    }
-                };
-            } else if ( fi.FieldType == typeof( string ) ) {
-                cvar.SetValue_f = s => cvar.fieldInfo.SetValue( null, s );
-            } else {
-                Error( "Cellophane: Unsupported type of var " + fi.FieldType.ToString() );
-            }
+            SetValueSetup( cvar );
+
             vars.Add( cvar );
         }
 
@@ -979,6 +989,38 @@ public static bool VarChanged( string name, Type type = null ) {
         }
     }
     return result;
+}
+
+public static void ImportAndReplace( Assembly a ) {
+    Type [] types = a.GetTypes();
+    foreach ( Type type in types ) {
+        FieldInfo [] fields = type.GetFields( BFS );
+
+        foreach ( FieldInfo fi in fields ) {
+            if ( ! ValidSuffixVar( fi.Name ) ) {
+                continue;
+            }
+
+            string name = FieldNameToVarName( type, fi );
+
+            int idx = Array.BinarySearch( _variables, name );  
+            if ( idx < 0 ) {
+                continue;
+            }
+
+            if ( fi.FieldType == _variables[idx].fieldInfo.FieldType ) {
+                fi.SetValue( null, _variables[idx].fieldInfo.GetValue( null ) );
+                _variables[idx].fieldInfo = fi;
+            } else {
+                string oldValue = _variables[idx].GetValue();
+                _variables[idx].fieldInfo = fi;
+                SetValueSetup( _variables[idx] );
+                _variables[idx].SetValue_f( oldValue );
+            }
+
+            Log( $"Replaced field info on cvar {_variables[idx].name}: {_variables[idx].GetValue()}" );
+        }
+    }
 }
 
 
