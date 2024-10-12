@@ -903,7 +903,7 @@ public static void PrintInfo() {
     Log( "Num commands: " + _commands.Length );
 }
 
-// can pass down some custom vars and commands
+// can pass down some custom vars and commands before scanning the app assemblies
 public static void ScanVarsAndCommands( List<Command> cmds = null, List<Variable> vars = null ) {
     var log = Log;
     Log = (s) => log( UseColor ? s : ColorTagStripAll( s ) );

@@ -53,13 +53,13 @@ static FileSystemWatcher _watcher;
 
 static readonly object _assemblyLock = new();
 
-public static void TryInit() {
+public static bool TryInit() {
     if ( _initialized ) {
-        return;
+        return true;
     }
 
     try {
-        Log( $"Setting up File Watcher to {ScriptsRoot}..." );
+        Log( $"Setting up File Watcher to {ScriptsRoot}" );
 
         _watcher = new FileSystemWatcher( ScriptsRoot );
         _watcher.Filter = "*.cs";
@@ -75,6 +75,8 @@ public static void TryInit() {
     } catch ( Exception e ) {
         Error( e );
     }
+
+    return _initialized;
 }
 
 // makes sure we are detached from the Unity editor on play mode off
@@ -86,6 +88,7 @@ public static void Done() {
     _roslynAssembly = null;
     _initialized = false;
     _initializedCompiler = false;
+    Log( "Compiler Done." );
 }
 
 public static void Update() {
@@ -152,10 +155,7 @@ static void OnFileWatcherChange( object sender, FileSystemEventArgs e ) {
         return;
     }
 
-    if ( _roslynAssembly != null ) {
-        Log( "Still working..." );
-        return;
-    }
+    lock( _assemblyLock ) {
 
     {
         string compareA = e.FullPath.Replace( @"\", "|" );
@@ -170,6 +170,11 @@ static void OnFileWatcherChange( object sender, FileSystemEventArgs e ) {
         if ( i == ScriptFiles.Length ) {
             return;
         }
+    }
+
+    if ( _roslynAssembly != null ) {
+        Log( "Still working..." );
+        return;
     }
 
     Log( $"Script changed: {e.FullPath}, recompiling..." );
@@ -198,15 +203,12 @@ static void OnFileWatcherChange( object sender, FileSystemEventArgs e ) {
         var assembly = Assembly.Load( image );
         Log( "...done" );
         _numReloads++;
-
-        lock( _assemblyLock ) {
-            _roslynAssembly = assembly;
-        }
-
+        _roslynAssembly = assembly;
     } catch ( Exception ex ) {
         Error( ex );
-        return;
     }
+
+    } // lock
 }
 
 static void OnFileWatcherError( object sender, ErrorEventArgs e ) {

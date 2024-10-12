@@ -861,8 +861,10 @@ public static void Start() {
     }
 }
 
-public static void TryExecute( string cmdLine, object context = null, bool keepJsonTags = false ) {
-    Cellophane.TryExecuteString( cmdLine, context: context, keepJsonTags: keepJsonTags );
+public static bool TryExecute( string cmdLine, object context = null, bool silent = false,
+                                                                    bool keepJsonTags = false ) {
+    return Cellophane.TryExecuteString( cmdLine, context, silent: silent,
+                                                                    keepJsonTags: keepJsonTags );
 }
 
 public static void TryExecuteLegacy( string cmdLine, object context = null ) {
