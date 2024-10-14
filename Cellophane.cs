@@ -124,7 +124,25 @@ static void List_kmd( string [] argv ) {
     Log( "Use with --raw to show function names." );
 }
 
-static void SetValueSetup( Variable cvar ) {
+static Variable VarCreate( Type type, FieldInfo fi ) {
+    Variable cvar = new Variable {
+        fieldInfo = fi,
+        name = FieldNameToVarName( type, fi ),
+        rawName = type.Name + "." + fi.Name,
+    };
+
+    foreach ( var ca in fi.GetCustomAttributes() ) {
+        DescriptionAttribute da = ca as DescriptionAttribute;
+        if ( da != null ) {
+            cvar.description = da.Description;
+        }
+    }
+
+    VarSetValueUpdate( cvar );
+    return cvar;
+}
+
+static void VarSetValueUpdate( Variable cvar ) {
     var fi = cvar.fieldInfo;
 
     if ( fi.FieldType == typeof( bool ) ) {
@@ -153,9 +171,67 @@ static void SetValueSetup( Variable cvar ) {
     }
 }
 
+static bool CmdIsValid( MethodInfo mi ) {
+    if ( ! ValidSuffixCmd( mi.Name ) ) {
+        return false;
+    }
+    ParameterInfo[] parameters = mi.GetParameters();
+    if ( parameters.Length == 0 ) {
+        return false;
+    }
+    ParameterInfo pi = parameters[0];
+    if ( ! pi.ParameterType.IsArray ) {
+        return false;
+    }
+    if ( pi.ParameterType.GetElementType() != typeof( string ) ) {
+        return false;
+    }
+    return true;
+}
+
+static Command CmdCreate( Type type, MethodInfo mi ) {
+    Command cmd = new Command {
+        name = MethodNameToCmdName( type, mi ),
+        rawName = type.Name + "." + mi.Name,
+    };
+    CmdCallbackUpdate( cmd, mi );
+    return cmd;
+}
+
+static void CmdCallbackUpdate( Command cmd, MethodInfo mi ) {
+    ParameterInfo[] parameters = mi.GetParameters();
+    if ( parameters.Length == 1 ) {
+        var d = mi.CreateDelegate( typeof( Action<string[]> ) ) as Action<string[]>;
+        cmd.ActionArgv = (argv,context) => {
+            d( argv );
+        };
+    } else {
+        var pt = parameters[1].ParameterType;
+        var objs2 = new object[2];
+        cmd.ActionArgv = (argv,context) => {
+            if ( context != null ) {
+                if ( context.GetType() == pt ) {
+                    objs2[0] = argv;
+                    objs2[1] = context;
+                    mi.Invoke( mi, objs2 );
+                } else {
+                    Error( $"cmd.name requires '{pt}' context but got '{context.GetType()}'" );
+                }
+            } else {
+                Error( $"cmd.name requires '{pt}' context but got null" );
+            }
+        };
+    }
+}
+
 static string FieldNameToVarName( Type type, FieldInfo fi ) {
     string name = fi.Name.EndsWith( "_kvar" ) ? fi.Name : type.Name + "_" + fi.Name;
     return NormalizeNameVar( name );
+}
+
+static string MethodNameToCmdName( Type type, MethodInfo mi ) {
+    string name = mi.Name.EndsWith("_kmd") ? mi.Name : type.Name + "_" + mi.Name;
+    return NormalizeNameCmd( name );
 }
 
 static bool ValidSuffixVar( string name ) {
@@ -377,7 +453,7 @@ static void CollectItems( List<Command> cmds, List<Variable> vars ) {
                 }
             }
 
-            SetValueSetup( cvar );
+            VarSetValueUpdate( cvar );
 
             vars.Add( cvar );
         }
@@ -385,46 +461,10 @@ static void CollectItems( List<Command> cmds, List<Variable> vars ) {
         MethodInfo [] methods = type.GetMethods( BFS );
         var objs2 = new object[2];
         foreach ( MethodInfo mi in methods ) {
-            if ( ! ValidSuffixCmd( mi.Name ) ) {
+            if ( ! CmdIsValid( mi ) ) {
                 continue;
             }
-            ParameterInfo[] parameters = mi.GetParameters();
-            if ( parameters.Length == 0 ) {
-                continue;
-            }
-            ParameterInfo pi = parameters[0];
-            if ( ! pi.ParameterType.IsArray ) {
-                continue;
-            }
-            if (pi.ParameterType.GetElementType() != typeof(string)) {
-                continue;
-            }
-            string name = mi.Name.EndsWith("_kmd") ? mi.Name : type.Name + "_" + mi.Name;
-            Command cmd = new Command {
-                name = NormalizeNameCmd( name ),
-                rawName = type.Name + "." + mi.Name,
-            };
-            if ( parameters.Length == 1 ) {
-                var d = mi.CreateDelegate( typeof( Action<string[]> ) ) as Action<string[]>;
-                cmd.ActionArgv = (a,context) => {
-                    d( a );
-                };
-            } else {
-                var pt = parameters[1].ParameterType;
-                cmd.ActionArgv = (a,context) => {
-                    if ( context != null ) {
-                        if ( context.GetType() == pt ) {
-                            objs2[0] = a;
-                            objs2[1] = context;
-                            mi.Invoke( mi, objs2 );
-                        } else {
-                            Error( $"cmd.name requires '{pt}' context but got '{context.GetType()}'" );
-                        }
-                    } else {
-                        Error( $"cmd.name requires '{pt}' context but got null" );
-                    }
-                };
-            }
+            Command cmd = CmdCreate( type, mi );
             if ( cmd.name == "cellophane_on_register" ) {
                 cmd.ActionArgv( new string [] { cmd.name, type.Name }, null );
             }
@@ -993,10 +1033,14 @@ public static bool VarChanged( string name, Type type = null ) {
 
 public static void ImportAndReplace( Assembly a ) {
     Type [] types = a.GetTypes();
+
+    var cvars = new List<Variable>();
+    var cmds = new List<Command>();
+
     foreach ( Type type in types ) {
         FieldInfo [] fields = type.GetFields( BFS );
-
         foreach ( FieldInfo fi in fields ) {
+
             if ( ! ValidSuffixVar( fi.Name ) ) {
                 continue;
             }
@@ -1005,6 +1049,9 @@ public static void ImportAndReplace( Assembly a ) {
 
             int idx = Array.BinarySearch( _variables, name );  
             if ( idx < 0 ) {
+                Variable cvar = VarCreate( type, fi );
+                cvars.Add( cvar );
+                Log( $"Added new var {cvar.name}: {_variables[idx].GetValue()}" );
                 continue;
             }
 
@@ -1014,13 +1061,37 @@ public static void ImportAndReplace( Assembly a ) {
             } else {
                 string oldValue = _variables[idx].GetValue();
                 _variables[idx].fieldInfo = fi;
-                SetValueSetup( _variables[idx] );
+                VarSetValueUpdate( _variables[idx] );
                 _variables[idx].SetValue_f( oldValue );
             }
-
             Log( $"Replaced field info on cvar {_variables[idx].name}: {_variables[idx].GetValue()}" );
         }
+
+        MethodInfo [] methods = type.GetMethods( BFS );
+        foreach ( MethodInfo mi in methods ) {
+            if ( ! CmdIsValid( mi ) ) {
+                continue;
+            }
+            string name = MethodNameToCmdName( type, mi );
+            int idx = Array.BinarySearch( _commands, name );  
+            if ( idx < 0 ) {
+                Command cmd = CmdCreate( type, mi );
+                cmds.Add( cmd );
+                Log( $"Added new command -- {_commands[idx].name}" );
+            } else {
+                CmdCallbackUpdate( _commands[idx], mi );
+                Log( $"Replaced callback on command {_commands[idx].name}" );
+            }
+        }
     }
+
+    cvars.AddRange( _variables );
+    cvars.Sort((a,b) => string.Compare(a.name, b.name));
+    _variables = cvars.ToArray();
+
+    cmds.AddRange( _commands );
+    cmds.Sort( ( a,b ) => string.Compare( a.name, b.name ) );
+    _commands = cmds.ToArray();
 }
 
 
