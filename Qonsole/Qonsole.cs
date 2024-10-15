@@ -1086,14 +1086,16 @@ public static void HandleSDLMouseMotion( float x, float y ) {
 
 public static class Qonsole {
 
+public static bool Initialized;
+
 static string _configPath = "";
 
 static Qonsole() {
 }
 
-public static void Init( int configVersion = -1, List<Command> cmds = null,
-                                                                    List<Variable> vars = null ) {
-    if ( Initialized) {
+public static void Init( int configVersion = -1, List<Cellophane.Command> cmds = null,
+                                                        List<Cellophane.Variable> vars = null ) {
+    if ( Initialized ) {
         return;
     }
 
