@@ -24,9 +24,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
+using System.Text;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Emit;
+using Microsoft.CodeAnalysis.Text;
 using Microsoft.CodeAnalysis.CSharp;
 
 #if UNITY_STANDALONE
@@ -191,7 +193,7 @@ static void OnFileWatcherChange( object sender, FileSystemEventArgs e ) {
         Log( $"Parsed {path}" );
     }
 
-    if ( ! CompileSyntaxTrees( trees, out byte [] image ) ) {
+    if ( ! CompileSyntaxTrees( trees, out byte [] imageAssembly, out byte [] imagePDB ) ) {
         return;
     }
 
@@ -200,7 +202,7 @@ static void OnFileWatcherChange( object sender, FileSystemEventArgs e ) {
     try {
 
         Log( "Try loading assembly..." );
-        var assembly = Assembly.Load( image );
+        var assembly = Assembly.Load( imageAssembly, imagePDB );
         Log( "...done" );
         _numReloads++;
         _roslynAssembly = assembly;
@@ -226,52 +228,62 @@ static bool ParseFile( string path, bool dll, out SyntaxTree tree ) {
     }
 }
 
-static bool CompileSyntaxTrees( SyntaxTree [] trees, out byte [] image ) {
+static bool CompileSyntaxTrees( SyntaxTree [] trees, out byte [] imageAssembly,
+                                                                            out byte [] imagePDB ) {
+    imageAssembly = imagePDB = null;
+
     try {
-        image = null;
+        var options = new CSharpCompilationOptions( OutputKind.DynamicallyLinkedLibrary )
+                                         .WithOptimizationLevel(OptimizationLevel.Debug);
 
         var compilation = CreateCompilation( $"program_{_numReloads}", trees,
-             compilerOptions: new CSharpCompilationOptions( OutputKind.DynamicallyLinkedLibrary ) );
+             compilerOptions: options );
 
-        using ( var ms = new MemoryStream() ) {
-            EmitResult result = compilation.Emit( ms );
-            if ( ! result.Success ) {
-                Error( "Compilation failed." );
-                foreach ( Diagnostic d in result.Diagnostics ) {
-                    // ignore Assuming assembly reference'
-                    if ( d.Id == "CS1701" )
-                        continue;
+        using ( var assemblyStream = new MemoryStream() ) {
+           using ( var symbolStream = new MemoryStream() ) {
+               var emitOptions = new EmitOptions( false, DebugInformationFormat.PortablePdb );
+               EmitResult result = compilation.Emit( assemblyStream, symbolStream,
+                                                                           options: emitOptions );
+               if ( ! result.Success ) {
+                   Error( "Compilation failed." );
+                   foreach ( Diagnostic d in result.Diagnostics ) {
+                       // ignore Assuming assembly reference'
+                       if ( d.Id == "CS1701" )
+                           continue;
 
-                    // ignore confilicting assemblies
-                    if ( d.Id == "CS0436" )
-                        continue;
+                       // ignore confilicting assemblies
+                       if ( d.Id == "CS0436" )
+                           continue;
 
-                    if ( d.ToString().Contains( "warning CS" ) ) {
-                        //Log( d );
-                    } else {
-                        Error( d );
-                    }
-                }
-                return false;
+                       if ( d.ToString().Contains( "warning CS" ) ) {
+                           //Log( d );
+                       } else {
+                           Error( d );
+                       }
+                   }
+                   return false;
+               }
+               symbolStream.Seek( 0, SeekOrigin.Begin );
+               imagePDB = symbolStream.ToArray();
             }
-            ms.Seek( 0, SeekOrigin.Begin );
-            image = ms.ToArray();
+            assemblyStream.Seek( 0, SeekOrigin.Begin );
+            imageAssembly = assemblyStream.ToArray();
         }
 
         return true;
 
     } catch ( Exception ex ) {
         Error( ex );
-        image = null;
         return false;
     }
 }
 
 static SyntaxTree Parse( string code, string path ) {
+    var stringText = SourceText.From( code, Encoding.UTF8 );
     var options = CSharpParseOptions.Default;
     options = options.WithPreprocessorSymbols( "UNITY_STANDALONE" );
     options = options.WithLanguageVersion( LanguageVersion.CSharp9 );
-    return SyntaxFactory.ParseSyntaxTree( code, options: options, path: path );
+    return SyntaxFactory.ParseSyntaxTree( stringText, options: options, path: path );
 }
 
 static CSharpCompilation CreateCompilation( string assemblyOrModuleName, SyntaxTree [] trees,
