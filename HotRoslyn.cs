@@ -1,4 +1,8 @@
 /*
+This script is intended for compiling a bunch of .cs files into an assembly, while the C# app is running.
+The result assembly is loaded after successful compile, so the user can instantiate/invoke stuff.
+I use it to implement hot-reloading in my C#/Unity stuff.
+
 How to integrate the Roslyn compiler into Unity:
 - install the NuGet package: https://github.com/GlitchEnzo/NuGetForUnity.
 - install Microsoft.CodeAnalysis and Microsoft.CodeAnalysis.CSharp NuGet packages.
@@ -13,9 +17,6 @@ How to use this script:
 - invoke Update() i.e. on mono behaviour Update.
 - eventually Update() will invoke OnCompile() passing down the newly compiled assembly.
 - invoke Done() i.e. OnApplicationQuit().
-
-TODO:
-- debugger support
 */
 
 #if ROSLYN
