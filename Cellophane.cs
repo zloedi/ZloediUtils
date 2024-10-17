@@ -1031,8 +1031,8 @@ public static bool VarChanged( string name, Type type = null ) {
     return result;
 }
 
-public static void ImportAndReplace( Assembly a ) {
-    Type [] types = a.GetTypes();
+public static void ImportAndReplace( Assembly assembly ) {
+    Type [] types = assembly.GetTypes();
 
     var cvars = new List<Variable>();
     var cmds = new List<Command>();
@@ -1086,11 +1086,11 @@ public static void ImportAndReplace( Assembly a ) {
     }
 
     cvars.AddRange( _variables );
-    cvars.Sort((a,b) => string.Compare(a.name, b.name));
+    cvars.Sort( (a,b) => string.Compare( a.name, b.name ) );
     _variables = cvars.ToArray();
 
     cmds.AddRange( _commands );
-    cmds.Sort( ( a,b ) => string.Compare( a.name, b.name ) );
+    cmds.Sort( (a,b) => string.Compare( a.name, b.name ) );
     _commands = cmds.ToArray();
 }
 
