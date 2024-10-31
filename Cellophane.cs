@@ -1077,7 +1077,7 @@ public static void ImportAndReplace( Assembly assembly ) {
             if ( idx < 0 ) {
                 Command cmd = CmdCreate( type, mi );
                 cmds.Add( cmd );
-                Log( $"Added new command -- {_commands[idx].name}" );
+                Log( $"Added new command -- {cmd.name}" );
             } else {
                 CmdCallbackUpdate( _commands[idx], mi );
                 Log( $"Replaced callback on command {_commands[idx].name}" );
