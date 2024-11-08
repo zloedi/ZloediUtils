@@ -1051,7 +1051,7 @@ public static void ImportAndReplace( Assembly assembly ) {
             if ( idx < 0 ) {
                 Variable cvar = VarCreate( type, fi );
                 cvars.Add( cvar );
-                Log( $"Added new var {cvar.name}: {_variables[idx].GetValue()}" );
+                Log( $"Added new var {cvar.name}: {cvar.GetValue()}" );
                 continue;
             }
 
