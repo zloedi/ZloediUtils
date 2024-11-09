@@ -460,8 +460,7 @@ public static void RenderGL( bool skip = false ) {
             QGL.SetWhiteTexture();
             GL.Begin( GL.QUADS );
             GL.Color( new Color( 0, 0, 0, QonAlpha_kvar ) );
-            QGL.DrawSolidQuad( new Vector2( 0, 0 ),
-                                                new Vector2( Screen.width, QGL.ScreenHeight() ) );
+            QGL.DrawSolidQuad( new Vector2( 0, 0 ), new Vector2( Screen.width, QGL.ScreenHeight ) );
             GL.End();
         } else {
             int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
@@ -638,7 +637,7 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
         ConsumeEditorInputOnce = false;
         onRepaint( camera );
         InternalCommand( "qonsole_on_editor_repaint", camera );
-        QGL.LatePrint( "qonsole is running", Screen.width - 100, QGL.ScreenHeight() - 100 );
+        QGL.LatePrint( "qonsole is running", Screen.width - 100, QGL.ScreenHeight - 100 );
     }
     OnGUIInternal();
     if ( Event.current.type == EventType.Repaint ) {
@@ -1013,7 +1012,7 @@ public static float LineHeight() {
 }
 
 public static void GetSize( out int conW, out int conH ) {
-    int maxH = ( int )QGL.ScreenHeight();
+    int maxH = ( int )QGL.ScreenHeight;
     int cW = ( int )( _textDx * QonScale );
     int cH = ( int )( _textDy * QonScale );
     conW = Screen.width / cW;

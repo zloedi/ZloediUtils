@@ -17,6 +17,8 @@ public static class QGL {
 public static Action<object> Log = o => {};
 public static Action<string> Error = s => {};
 
+public static float ScreenHeight { get; private set; }
+
 static Texture2D _texWhite = Texture2D.whiteTexture;
 static Material _material;
 
@@ -62,7 +64,7 @@ static List<Late> _lates = new List<Late>();
 
 static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
                             Vector2 dstPos, Vector2 dstSize, Vector2 dir, Color color ) { 
-    float y = _invertedY ? ScreenHeight() - dstPos.y : dstPos.y;
+    float y = _invertedY ? ScreenHeight - dstPos.y : dstPos.y;
     float tw = texW > 0 ? texW : 1;
     float th = texH > 0 ? texH : 1;
     float u0 = srcPos.x / tw;
@@ -114,10 +116,6 @@ static int _fontNumRows    => _font == 0 ? AppleFont.APPLEIIF_ROWS : CodePage437
 static int _fontCharWidth  => _font == 0 ? AppleFont.APPLEIIF_CW   : CodePage437.CharSz;
 static int _fontCharHeight => _font == 0 ? AppleFont.APPLEIIF_CH   : CodePage437.CharSz;
 
-static int GetCharInFont( int c ) {
-    return c % ( _fontNumColumns * _fontNumRows );
-}
-
 // == Public API ==
 
 static int CharSpacingX_cvar = -3;
@@ -153,14 +151,6 @@ public static float ScreenWidth() {
     return Screen.width;
 }
 
-public static float ScreenHeight() {
-    Camera cam = _camera ? _camera : Camera.main;
-    if ( cam ) {
-        return cam.pixelHeight;
-    }
-    return Screen.height;
-}
-
 public static bool Start( bool invertedY = false ) {
     Shader shader = Shader.Find( "GLSprites" );
     if ( ! shader ) {
@@ -171,6 +161,7 @@ public static bool Start( bool invertedY = false ) {
         _material.hideFlags = HideFlags.HideAndDontSave;
         _lates.Clear();
         SetContext( null, invertedY: invertedY );
+        Log( $"GL started, using shader {shader.name}" );
         return true;
     }
     Error( "Can't find GL shader" );
@@ -220,7 +211,7 @@ public static Vector2 MeasureStringNokia( string s, float scale = 1 ) {
 }
 
 public static void DrawTextNokia( string s, float x, float y, Color color, float scale = 1 ) {
-    y = _invertedY ? ScreenHeight() - y : y;
+    y = _invertedY ? ScreenHeight - y : y;
     float ys = _invertedY ? -1 : 1;
 
     float cx = 0;
@@ -369,7 +360,7 @@ public static void DrawQuad( Vector2 pos, Vector2 size,
     Vector2 uv0 = srcOrigin != null ? srcOrigin.Value : Vector2.zero;
     Vector2 uv1 = srcSize != null ? ( uv0 + srcSize.Value ) : Vector2.one;
 
-    float y = _invertedY ? ScreenHeight() - pos.y : pos.y;
+    float y = _invertedY ? ScreenHeight - pos.y : pos.y;
     float dy = _invertedY ? y - size.y : y + size.y;
 
     GL.TexCoord( new Vector3( uv0.x, uv0.y, 0 ) );
@@ -383,7 +374,7 @@ public static void DrawQuad( Vector2 pos, Vector2 size,
 }
 
 public static void DrawSolidQuad( Vector2 pos, Vector2 size ) { 
-    float y = _invertedY ? ScreenHeight() - pos.y : pos.y;
+    float y = _invertedY ? ScreenHeight - pos.y : pos.y;
     float dy = _invertedY ? y - size.y : y + size.y;
     
     GL.Vertex( new Vector3( pos.x, y, 0 ) );
@@ -398,15 +389,10 @@ struct CharInfo {
 }
 static Dictionary<int,CharInfo> _charsMap = new Dictionary<int,CharInfo>();
 public static void DrawScreenChar( int c, float screenX, float screenY, float scale ) { 
-    int idx = GetCharInFont( c );
-
-    float y = _invertedY ? ScreenHeight() - screenY : screenY;
-    Vector3 vertOff = new Vector3( screenX, y );
-
-    int a = _font | ( ( _invertedY ? 1 : 0 ) << 8 );
-    int b = idx;
-    int hash = ( a + b ) * ( ( a + b + 1 ) >> 1 ) + a;
+    int hash = ( ( _invertedY ? 1 : 0 ) << 16 ) | ( _font << 8 ) | ( c & 255 );
     if ( ! _charsMap.TryGetValue( hash, out CharInfo ci ) ) {
+        int idx = c % ( _fontNumColumns * _fontNumRows );
+
         float tw = ( float )_fontCharWidth / _texFont.width;
         float th = ( float )_fontCharHeight / _texFont.height;
         Vector3 uvOff = new Vector3( ( idx % _fontNumColumns ) * tw, ( idx / _fontNumColumns ) * th );
@@ -442,6 +428,9 @@ public static void DrawScreenChar( int c, float screenX, float screenY, float sc
 
         _charsMap[hash] = ci;
     }
+
+    float y = _invertedY ? ScreenHeight - screenY : screenY;
+    Vector3 vertOff = new Vector3( screenX, y );
 
     for ( int i = 0; i < 4; i++ ) {
         GL.TexCoord( ci.uv[i] );
@@ -672,7 +661,7 @@ public static void LateDrawLineRect( float x, float y, float w, float h, Color? 
 public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
     var l = new List<Vector2>( line );
     for ( int i = 0; i < l.Count; i++ ) {
-        float y = _invertedY ? ScreenHeight() - l[i].y : l[i].y;
+        float y = _invertedY ? ScreenHeight - l[i].y : l[i].y;
         l[i] = new Vector2( l[i].x, y );
     }
 
@@ -694,7 +683,7 @@ public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
 #endif
     if ( cam ) {
         Vector2 pt = cam.WorldToScreenPoint( worldPos );
-        pt.y = ScreenHeight() - pt.y;
+        pt.y = ScreenHeight - pt.y;
         return pt;
     }
 
@@ -711,6 +700,12 @@ public static void SetContext( Camera camera, float pixelsPerPoint = 1, bool inv
 public static void Begin() {
     GL.PushMatrix();
     GL.LoadPixelMatrix();
+    Camera cam = _camera ? _camera : Camera.main;
+    if ( cam ) {
+        ScreenHeight = cam.pixelHeight;
+    } else {
+        ScreenHeight = Screen.height;
+    }
 }
 
 public static void End( bool skipLateFlush = false ) {

@@ -262,8 +262,6 @@ public static void QON_DrawEx( int conWidth, int conHeight, bool skipCommandLine
         for ( int i = 0; i < numChars; i++, cmdCaret++ ) {
             int c = qon_cmdBuf[i + start]; 
 
-            //Debug.Log( c );
-
             if ( c == 0 ) {
                 break;
             }
