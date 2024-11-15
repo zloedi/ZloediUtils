@@ -720,6 +720,10 @@ public static void End( bool skipLateFlush = false ) {
     GL.PopMatrix();
 }
 
+public static void ClearLates() {
+    _lates.Clear();
+}
+
 public static void FlushLates() {
     for ( int li = 0; li < _lates.Count; ) {
 
