@@ -103,10 +103,7 @@ public static Texture2D GetTexture() {
         return _texture;
     }
 
-    _texture = new Texture2D( APPLEIIF_WIDTH, APPLEIIF_HEIGHT, textureFormat: TextureFormat.RGBA32,
-                                                                mipChain: false, linear: false ); 
-    _texture.filterMode = FilterMode.Point;
-    _texture.hideFlags = HideFlags.HideAndDontSave;
+    _texture = CreateTexture( APPLEIIF_WIDTH, APPLEIIF_HEIGHT );
 
     int srcW = APPLEIIF_WIDTH / 8;
     for ( int y = 0; y < APPLEIIF_HEIGHT; y++ ) {
@@ -123,12 +120,83 @@ public static Texture2D GetTexture() {
     return _texture;
 }
 
+static Texture2D _textureWithOutline;
+public static Texture2D GetTextureWithOutline() {
+    if ( _textureWithOutline ) {
+        return _textureWithOutline;
+    }
+
+    _textureWithOutline = CreateTexture( ( APPLEIIF_CW + 1 ) * APPLEIIF_CLMS + 4,
+                                                        ( APPLEIIF_CH + 2 ) * APPLEIIF_ROWS + 4);
+
+    var colors = new Color32[_textureWithOutline.width * _textureWithOutline.height];
+
+    Color32 white = new Color32(0xff, 0xff, 0xff, 0xff);
+    Color32 clear = new Color32(0, 0, 0, 0);
+    Color32 black = new Color32(0, 0, 0, 0xff);
+
+    int srcW = APPLEIIF_WIDTH / 8;
+    int row = 1;
+    for ( int y = 0; y < APPLEIIF_HEIGHT; y++ ) {
+        int column = 0;
+        for ( int x = 0; x < srcW; x++ ) {
+            int byt = bitmap[x + y * srcW];
+            for ( int i = 0; i < 8; i++ ) {
+                int xx = x * 8 + i;
+                if ( ( xx % APPLEIIF_CW ) == 0 ) {
+                    column++;
+                }
+                if ( ( byt & ( 1 << i ) ) != 0 ) {
+                    colors[column + 1 + ( row + 0 ) * _textureWithOutline.width] = black;
+                    colors[column + 1 + ( row + 1 ) * _textureWithOutline.width] = black;
+                    colors[column + 0 + ( row + 1 ) * _textureWithOutline.width] = black;
+
+                    colors[column - 1 + ( row - 0 ) * _textureWithOutline.width] = black;
+                    colors[column - 1 + ( row - 1 ) * _textureWithOutline.width] = black;
+                    colors[column - 0 + ( row - 1 ) * _textureWithOutline.width] = black;
+
+                    colors[column + 1 + ( row - 1 ) * _textureWithOutline.width] = black;
+                    colors[column - 1 + ( row + 1 ) * _textureWithOutline.width] = black;
+                }
+                column++;
+            }
+        }
+        row++;
+        if ( ( y % APPLEIIF_CH ) == APPLEIIF_CH - 1 ) {
+            row += 2;
+        }
+    }
+
+    row = 1;
+    for ( int y = 0; y < APPLEIIF_HEIGHT; y++ ) {
+        int column = 0;
+        for ( int x = 0; x < srcW; x++ ) {
+            int byt = bitmap[x + y * srcW];
+            for ( int i = 0; i < 8; i++ ) {
+                int xx = x * 8 + i;
+                if ( ( xx % APPLEIIF_CW ) == 0 ) {
+                    column++;
+                }
+                if ( ( byt & ( 1 << i ) ) != 0 ) {
+                    colors[column + row * _textureWithOutline.width] = white;
+                }
+                column++;
+            }
+        }
+        row++;
+        if ( ( y % APPLEIIF_CH ) == APPLEIIF_CH - 1 ) {
+            row += 2;
+        }
+    }
+
+    _textureWithOutline.SetPixels32( colors );
+    _textureWithOutline.Apply();
+    return _textureWithOutline;
+}
+
 public static Texture2D CreateStringTexture( string s, int extraX = 0, int extraY = 0 ) {
     MeasureString( s, out float w, out float h, extraX: extraX, extraY: extraY );
-    var tex = new Texture2D( ( int )( w + 0.5f ), ( int )( h + 0.5f ),
-                            textureFormat: TextureFormat.RGBA32, mipChain: false, linear: false ); 
-    tex.filterMode = FilterMode.Point;
-    tex.hideFlags = HideFlags.HideAndDontSave;
+    var tex = CreateTexture( ( int )( w + 0.5f ), ( int )( h + 0.5f ) );
 
     for ( int y = 0; y < tex.height; y++ ) {
         for ( int x = 0; x < tex.width; x++ ) {
@@ -204,6 +272,14 @@ public static IntPtr GetSDLTexture( IntPtr renderer ) {
     return _sdlTexture;
 }
 #endif
+
+static Texture2D CreateTexture( int w, int h ) {
+    var tex = new Texture2D( w, h, textureFormat: TextureFormat.RGBA32,
+                                                                mipChain: false, linear: false ); 
+    tex.filterMode = FilterMode.Point;
+    tex.hideFlags = HideFlags.HideAndDontSave;
+    return tex;
+}
 
 }
 

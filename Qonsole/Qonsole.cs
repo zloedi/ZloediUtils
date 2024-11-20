@@ -180,7 +180,7 @@ static string _dataPath =>
 #endif
 static float _textDx => QGL.TextDx;
 static float _textDy => QGL.TextDy;
-static int _cursorChar => QGL.GetCursorChar();
+static int _cursorChar => QGL.CursorChar;
 
 static int _totalTime;
 static string _historyPath;
@@ -249,6 +249,10 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     }
 
     if ( c == ' ' ) {
+        return false;
+    }
+
+    if ( c == '\n' ) {
         return false;
     }
 
@@ -449,8 +453,11 @@ static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
 public static void RenderGL( bool skip = false ) {
     _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
 
+    float startTime = Time.realtimeSinceStartup;
+
     QGL.Begin();
 
+    // lates come first, the console on top
     QGL.FlushLates();
 
     if ( ! skip ) {
@@ -478,6 +485,8 @@ public static void RenderGL( bool skip = false ) {
     }
 
     QGL.End( skipLateFlush: true );
+
+    //Debug.Log(((Time.realtimeSinceStartup - startTime) * 1000) + "ms");
 
     _overlayAlpha = 1;
     _drawCharStartY = 0;
