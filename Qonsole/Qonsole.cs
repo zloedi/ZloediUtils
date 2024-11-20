@@ -453,8 +453,6 @@ static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
 public static void RenderGL( bool skip = false ) {
     _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
 
-    float startTime = Time.realtimeSinceStartup;
-
     QGL.Begin();
 
     // lates come first, the console on top
@@ -485,8 +483,6 @@ public static void RenderGL( bool skip = false ) {
     }
 
     QGL.End( skipLateFlush: true );
-
-    //Debug.Log(((Time.realtimeSinceStartup - startTime) * 1000) + "ms");
 
     _overlayAlpha = 1;
     _drawCharStartY = 0;
