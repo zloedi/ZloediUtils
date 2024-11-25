@@ -43,7 +43,7 @@ public static void AddMs( Action<int> tick = null,
 
 public static void AddConditional( Func<float,bool> tick = null, 
                          // duration in seconds
-                         float duration = 5000,
+                         float duration = 5,
                          // optional on callback on finish
                          Action done = null, 
                          // optional postpone in milliseconds
