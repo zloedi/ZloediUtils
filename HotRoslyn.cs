@@ -12,7 +12,7 @@ How to integrate the Roslyn compiler into Unity:
 
 How to use this script:
 - #define ROSLYN
-- setup Log, Error, OnCompile, ScriptsRoot, ScriptFiles.
+- setup Log, Error, OnCompile, ScriptsRoot, ScriptFiles, Defines
 - invoke Init(), this will start listening for file changes under ScriptsRoot.
 - invoke Update() i.e. on mono behaviour Update.
 - eventually Update() will invoke OnCompile() passing down the newly compiled assembly.
@@ -45,6 +45,7 @@ public static Action<object> Error = o => {};
 public static Action<Assembly> OnCompile = a => {};
 public static string ScriptsRoot = "";
 public static string [] ScriptFiles = {};
+public static string [] Defines = {};
 
 static List<MetadataReference> _domainReferences = new List<MetadataReference>();
 
@@ -282,7 +283,7 @@ static bool CompileSyntaxTrees( SyntaxTree [] trees, out byte [] imageAssembly,
 static SyntaxTree Parse( string code, string path ) {
     var stringText = SourceText.From( code, Encoding.UTF8 );
     var options = CSharpParseOptions.Default;
-    options = options.WithPreprocessorSymbols( "UNITY_STANDALONE" );
+    options = options.WithPreprocessorSymbols( Defines );
     options = options.WithLanguageVersion( LanguageVersion.CSharp9 );
     return SyntaxFactory.ParseSyntaxTree( stringText, options: options, path: path );
 }
