@@ -659,6 +659,14 @@ public static void SetContext( Camera camera, float pixelsPerPoint = 1, bool inv
     _camera = camera;
     _invertedY = invertedY;
     QGL.pixelsPerPoint = pixelsPerPoint;
+
+    if ( camera ) {
+        ScreenWidth = camera.pixelWidth;
+        ScreenHeight = camera.pixelHeight;
+    } else {
+        ScreenWidth = Screen.width;
+        ScreenHeight = Screen.height;
+    }
 }
 
 public static void Begin() {
