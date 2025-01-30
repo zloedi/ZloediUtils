@@ -802,6 +802,25 @@ public static void FlushLates() {
     _flushed = _lates.Count == 0;
 }
 
+// this will flush the lates and will invoke GL only if there are lates to flush
+public static void OnGUIFull( bool invertedY = false ) {
+    if ( _lates.Count == 0 ) {
+        _flushed = true;
+        return;
+    }
+
+    if ( Event.current.type != EventType.Repaint ) {
+        return;
+    }
+
+    if ( !_material ) {
+        QGL.Start( invertedY );
+    }
+
+    QGL.Begin();
+    QGL.End();
+}
+
 static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
     if ( ! _flushed ) {
