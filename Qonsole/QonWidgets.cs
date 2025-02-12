@@ -60,7 +60,7 @@ public static void ColorPicker_kmd( string [] argv ) {
 
 	Qonsole.PrintAndAct( "\n", ( screenPos, alpha ) => {
 		Vector2 origin = screenPos + new Vector2( Qonsole.LineHeight(), Qonsole.LineHeight() );
-		Vector2 mouseGlob = Event.current.mousePosition * QGL.pixelsPerPoint;
+		Vector2 mouseGlob = Event.current.mousePosition * QGL.PixelsPerPoint;
 		Vector2 mouse = mouseGlob - origin;
 
 #if false

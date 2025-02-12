@@ -63,10 +63,10 @@ struct CharInfo {
 }
 
 public static float ScreenWidth { get; private set; }
+public static float ScreenHeight { get; private set; }
 public static Action<object> Log = o => {};
 public static Action<string> Error = s => {};
-public static float ScreenHeight { get; private set; }
-public static float pixelsPerPoint = 1;
+public static float PixelsPerPoint { get; private set; } = 1;
 public static int CursorChar => _currentFontInfo.cursorChar;
 public static float TextDx => Mathf.Max( AppleFont.APPLEIIF_CW + 1, _fontCharWidth + CharSpacingX_cvar );
 public static float TextDy => _fontCharHeight + CharSpacingY_cvar;
@@ -638,12 +638,14 @@ public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
 }
 
 public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
-    Camera cam = _camera ? _camera : Camera.main;
+    Camera cam = _camera ?? Camera.main;
+
 #if HAS_UNITY
-    if ( ! cam ) {
-        cam = GameObject.FindObjectOfType<Camera>();
+    if ( ! _camera ) {
+        _camera = GameObject.FindObjectOfType<Camera>();
     }
 #endif
+
     if ( cam ) {
         Vector2 pt = cam.WorldToScreenPoint( worldPos );
         pt.y = ScreenHeight - pt.y;
@@ -655,18 +657,11 @@ public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
 
 // Lates after this call will be marked 'of this context'
 public static void SetContext( Camera camera, float pixelsPerPoint = 1, bool invertedY = false ) {
-    _context = camera ? camera.GetHashCode() : 0;
-    _camera = camera;
+    _camera = camera ?? Camera.main;
+    _context = _camera ? _camera.GetHashCode() : 0;
     _invertedY = invertedY;
-    QGL.pixelsPerPoint = pixelsPerPoint;
-
-    if ( camera ) {
-        ScreenWidth = camera.pixelWidth;
-        ScreenHeight = camera.pixelHeight;
-    } else {
-        ScreenWidth = Screen.width;
-        ScreenHeight = Screen.height;
-    }
+    PixelsPerPoint = pixelsPerPoint;
+    UpdateScreenSize();
 }
 
 public static void Begin() {
@@ -676,18 +671,9 @@ public static void Begin() {
                                                                             color: Color.magenta );
         LateBlit( tex, 0, 0, tex.width  * ShowFontTexture_cvar, tex.height * ShowFontTexture_cvar );
     }
-
     GL.PushMatrix();
     GL.LoadPixelMatrix();
-
-    Camera cam = _camera ? _camera : Camera.main;
-    if ( cam ) {
-        ScreenWidth = cam.pixelWidth;
-        ScreenHeight = cam.pixelHeight;
-    } else {
-        ScreenWidth = Screen.width;
-        ScreenHeight = Screen.height;
-    }
+    UpdateScreenSize();
 }
 
 public static void End( bool skipLateFlush = false ) {
@@ -819,6 +805,19 @@ public static void OnGUIFull( bool invertedY = false ) {
 
     QGL.Begin();
     QGL.End();
+}
+
+static void UpdateScreenSize() {
+    if ( _camera ) {
+        ScreenWidth = _camera.pixelWidth;
+        ScreenHeight = _camera.pixelHeight;
+    } else if ( Camera.main ) {
+        ScreenWidth = Camera.main.pixelWidth;
+        ScreenHeight = Camera.main.pixelHeight;
+    } else {
+        ScreenWidth = Screen.width;
+        ScreenHeight = Screen.height;
+    }
 }
 
 static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? color = null,
