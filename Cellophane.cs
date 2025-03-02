@@ -472,21 +472,13 @@ static void CollectItems( List<Command> cmds, List<Variable> vars ) {
         }
     }
 
-    vars.Sort((a,b) => string.Compare(a.name, b.name));
+    vars.Sort( (a,b) => string.Compare( a.name, b.name ) );
     _variables = vars.ToArray();
 
-    cmds.Sort( ( a,b ) => string.Compare( a.name, b.name ) );
+    cmds.Sort( (a,b) => string.Compare( a.name, b.name ) );
     _commands = cmds.ToArray();
 
-    int n = _variables.Length + _commands.Length;
-    _orderedDist = new int[n];
-    _allNames = new string[n];
-    for ( int i = 0; i < _variables.Length; i++ ) {
-        _allNames[i] = _variables[i].name;
-    }
-    for ( int i = 0; i < _commands.Length; i++ ) {
-        _allNames[i + _variables.Length] = _commands[i].name;
-    }
+    PostAdd();
 }
 
 static bool TryFindVariable( string str, out Variable v ) {
@@ -507,6 +499,18 @@ static bool TryFindCommand( string str, out Command c ) {
     }
     c = null;
     return false;
+}
+
+static void PostAdd() {
+    int n = _variables.Length + _commands.Length;
+    _orderedDist = new int[n];
+    _allNames = new string[n];
+    for ( int i = 0; i < _variables.Length; i++ ) {
+        _allNames[i] = _variables[i].name;
+    }
+    for ( int i = 0; i < _commands.Length; i++ ) {
+        _allNames[i + _variables.Length] = _commands[i].name;
+    }
 }
 
 // == Public API ==
@@ -1031,6 +1035,7 @@ public static bool VarChanged( string name, Type type = null ) {
     return result;
 }
 
+// replace existing cmds and vars with the ones coming from this assembly
 public static void ImportAndReplace( Assembly assembly ) {
     Type [] types = assembly.GetTypes();
 
@@ -1094,5 +1099,12 @@ public static void ImportAndReplace( Assembly assembly ) {
     _commands = cmds.ToArray();
 }
 
-
+public static void AddCommands( IList<Command> cmds ) {
+    var list = new List<Command>( cmds );
+    list.AddRange( _commands );
+    list.Sort( (a,b) => string.Compare( a.name, b.name ) );
+    _commands = list.ToArray();
+    PostAdd();
 }
+
+} // class Cellophane
