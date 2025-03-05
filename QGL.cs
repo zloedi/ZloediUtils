@@ -584,6 +584,10 @@ public static void LateDrawLineLoopWorld( IList<Vector3> worldLine, Color? color
     LateDrawLineLoop( l, color );
 }
 
+public static void LateDrawRayWorld( Vector3 origin, Vector3 dir, Color? color = null ) {
+    LateDrawLineWorld( origin, origin + dir, color );
+}
+
 public static void LateDrawLineWorld( Vector3 a, Vector3 b, Color? color = null ) {
     LateDrawLineWorld( new [] { a, b }, color );
 }
