@@ -377,18 +377,23 @@ namespace SDLPorts {
         public static Action<string> OnText = s => {};
         public static Action<KeyCode> OnKey = kc => {};
 
-        static int SdlScreenX_kvar = 0;
-        static int SdlScreenY_kvar = 0;
+        static int SdlScreenX_kvar = 100;
+        static int SdlScreenY_kvar = 100;
         static int SdlScreenWidth_kvar = 1024;
-        static int SdlScreenHeight_kvar = 1024;
+        static int SdlScreenHeight_kvar = 768;
         static bool SdlAlwaysOnTop_kvar = false;
 
-        public static void Run( string [] argv ) {
+        public static void SetTitle( string title ) {
+            SDL_GetRendererInfo( renderer, out SDL_RendererInfo info );
+            SDL_SetWindowTitle( window, $"{title} {UTF8_ToManaged( info.name )}" );
+        }
+
+        public static void Run( string [] argv, string title = null ) {
             SDL_Init( SDL_INIT_VIDEO );
             SDL_WindowFlags flags = SDL_WINDOW_RESIZABLE;
             SDL_CreateWindowAndRenderer( 768, 768, flags, out window, out renderer );
-            SDL_GetRendererInfo( renderer, out SDL_RendererInfo info );
-            SDL_SetWindowTitle( window, $"Radical Rumble {UTF8_ToManaged( info.name )}" );
+            title = title ?? "Radical Rumble";
+            SetTitle( title );
             
             Init();
 
@@ -853,6 +858,18 @@ quit:
             _buf[x * 4 + y * pitch + 3] = color.a;
         }
 
+        public void SetPixels32( IList<Color32> pixels )
+        {
+            _buf.Clear();
+            foreach (var p in pixels)
+            {
+                _buf.Add(p.r);
+                _buf.Add(p.b);
+                _buf.Add(p.g);
+                _buf.Add(p.a);
+            }
+        }
+
         public void Apply() {
             Update( _buf.ToArray() );
             _buf.Clear();
@@ -876,6 +893,7 @@ quit:
     public class Shader {
         public static implicit operator bool( Shader sh ) => sh != null;
         public static Shader Find( string name ) { return new Shader(); }
+        public string name => "SDL_Dummy";
     }
 
     public class Material {

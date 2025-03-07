@@ -792,6 +792,7 @@ public static void FlushLates() {
     _flushed = _lates.Count == 0;
 }
 
+#if HAS_UNITY
 // this will flush the lates and will invoke GL only if there are lates to flush
 public static void OnGUIFull( bool invertedY = false ) {
     if ( _lates.Count == 0 ) {
@@ -810,6 +811,7 @@ public static void OnGUIFull( bool invertedY = false ) {
     QGL.Begin();
     QGL.End();
 }
+#endif
 
 static void UpdateScreenSize() {
     if ( _camera ) {
