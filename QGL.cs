@@ -1,4 +1,6 @@
-#if UNITY_STANDALONE || UNITY_2021_1_OR_NEWER || SDL
+#if UNITY_STANDALONE || UNITY_2021_1_OR_NEWER
+#define HAS_UNITY
+#endif
 
 using System;
 using System.Collections.Generic;
@@ -11,6 +13,8 @@ using GalliumMath;
 #else
 using UnityEngine;
 #endif
+
+#if SDL || HAS_UNITY
 
 public static class QGL {
 
@@ -646,6 +650,7 @@ public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
 
 #if HAS_UNITY
     if ( ! _camera ) {
+        Error("No camera, try to find one.");
         _camera = GameObject.FindObjectOfType<Camera>();
     }
 #endif

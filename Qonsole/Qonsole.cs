@@ -146,6 +146,8 @@ public static int QonShowInEditor_kvar = 1;
 public static float QonAlpha_kvar = 0.65f;
 [Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
 public static bool QonInvertPlayY_kvar = false;
+[Description( "Prefix messages with a time stamp. 1 -- milliseconds, 2 -- min:sec:ms" )]
+static int QonShowTimestamps_kvar = 0;
 #if QONSOLE_INVERTED_PLAY_Y
 public static bool QonInvertPlayY = true;
 #else
@@ -955,6 +957,19 @@ public static void PrintAndAct( string s, Action<Vector2,float> a ) {
 
 // print (colorized) text
 public static void Print( string s, QObject o = null ) {
+    if ( QonShowTimestamps_kvar != 0 ) {
+        string prefix;
+        float time = Application.isPlaying ? Time.time : Time.realtimeSinceStartup;
+        if ( QonShowTimestamps_kvar == 1 ) {
+            prefix = ( (int)( time * 1000 ) ).ToString( "D6" );
+        } else {
+            int min = (int)time / 60;
+            int sec = (int)time % 60;
+            int ms = (int)(time * 1000) % 1000;
+            prefix = $"{min.ToString( "D2" )}:{sec.ToString( "D2" )}:{ms.ToString( "D4" )}";
+        }
+        s = prefix + ": " + s;
+    }
     string sysString = "";
     bool skipFade = false;
     for ( int i = 0; i < s.Length; i++ ) {
