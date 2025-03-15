@@ -1083,7 +1083,7 @@ static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? co
     _lateGens[i].x = Mathf.Round( x - ( int )sz.x / 2 );
     _lateGens[i].y = Mathf.Round( y - ( int )sz.y / 2 );
     _lateGens[i].scale = scale;
-    _lateGens[i].str = str + " " + _numLateGens;
+    _lateGens[i].str = str;
 }
 
 static void AddText( string str, float x, float y, Color? color = null, float scale = 1 ) {
