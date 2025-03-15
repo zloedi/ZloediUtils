@@ -63,8 +63,8 @@ class FontInfo {
 
 struct CharInfo {
     public int hash;
-    public Vector3 [] uv;
-    public Vector3 [] verts;
+    public Vector2 [] uv;
+    public Vector2 [] verts;
 }
 
 public static float ScreenWidth { get; private set; }
@@ -82,6 +82,7 @@ static int Font_cvar = 0;
 static int ShowFontTexture_cvar = 0;
 
 static Camera _camera;
+// FIXME: use Color32 for the stack
 // used with Cellophane color tags
 static List<Color> _colStack = new List<Color>();
 // these are postponed and drawn after all geometry in scene
@@ -103,6 +104,12 @@ static int _fontNumRows    => _currentFontInfo.numRows;
 
 static Dictionary<int,CharInfo> _ciMap = new Dictionary<int,CharInfo>();
 static CharInfo [] _ciCache = new CharInfo[256];
+
+static QGL()
+{
+    _ciCache[0].uv = new Vector2[4];
+    _ciCache[0].verts = new Vector2[4];
+}
 
 public static Color TagToCol( string tag ) {
     int [] rgb = new int[3 * 2];
@@ -390,14 +397,14 @@ public static void DrawScreenChar( int c, float screenX, float screenY, float sc
         float charU = ( float )( _fontCharWidth ) / texFont.width;
         float charV = ( float )( _fontCharHeight ) / texFont.height;
 
-        ci.uv = new Vector3[4] {
-            new Vector3( 0, 0, 0 ),
-            new Vector3( charU, 0, 0 ),
-            new Vector3( charU, charV, 0 ),
-            new Vector3( 0, charV, 0 ),
+        ci.uv = new Vector2[4] {
+            new Vector2( 0, 0 ),
+            new Vector2( charU, 0 ),
+            new Vector2( charU, charV ),
+            new Vector2( 0, charV ),
         };
 
-        Vector3 uvOff = new Vector3( ( idx % _fontNumColumns ) * charU,
+        var uvOff = new Vector2( ( idx % _fontNumColumns ) * charU,
                                         ( idx / _fontNumColumns ) * charV );
 
         for ( int i = 0; i < 4; i++ ) {
@@ -405,18 +412,18 @@ public static void DrawScreenChar( int c, float screenX, float screenY, float sc
         }
 
         if ( _invertedY ) {
-            ci.verts = new Vector3[4] {
-                new Vector3( 0, 0, 0 ),
-                new Vector3( _fontCharWidth, 0, 0 ),
-                new Vector3( _fontCharWidth, -_fontCharHeight, 0 ),
-                new Vector3( 0, -_fontCharHeight, 0 ),
+            ci.verts = new Vector2[4] {
+                new Vector2( 0, 0 ),
+                new Vector2( _fontCharWidth, 0 ),
+                new Vector2( _fontCharWidth, -_fontCharHeight ),
+                new Vector2( 0, -_fontCharHeight ),
             };
         } else {
-            ci.verts = new Vector3[4] {
-                new Vector3( 0, 0, 0 ),
-                new Vector3( _fontCharWidth, 0, 0 ),
-                new Vector3( _fontCharWidth, _fontCharHeight, 0 ),
-                new Vector3( 0, _fontCharHeight, 0 ),
+            ci.verts = new Vector2[4] {
+                new Vector2( 0, 0 ),
+                new Vector2( _fontCharWidth, 0 ),
+                new Vector2( _fontCharWidth, _fontCharHeight ),
+                new Vector2( 0, _fontCharHeight ),
             };
         }
 
@@ -894,6 +901,7 @@ static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
         Vector2 pos = new Vector2( dstPos.x, y );
         float dy = _invertedY ? -dstSize.y : +dstSize.y;
         Vector2 rv = new Vector2( dstSize.x, dy );
+        // FIXME: use vector2 everywhere
         Vector3 rotate( float rx, float ry ) {
             rx *= rv.x * 0.5f;
             ry *= rv.y * 0.5f;
