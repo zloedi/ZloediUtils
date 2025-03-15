@@ -62,6 +62,7 @@ class FontInfo {
 }
 
 struct CharInfo {
+    public int hash;
     public Vector3 [] uv;
     public Vector3 [] verts;
 }
@@ -72,8 +73,8 @@ public static Action<object> Log = o => {};
 public static Action<string> Error = s => {};
 public static float PixelsPerPoint { get; private set; } = 1;
 public static int CursorChar => _currentFontInfo.cursorChar;
-public static float TextDx => Mathf.Max( AppleFont.APPLEIIF_CW + 1, _fontCharWidth + CharSpacingX_cvar );
-public static float TextDy => _fontCharHeight + CharSpacingY_cvar;
+public static float TextDx { get; private set; } = 1;
+public static float TextDy { get; private set; } = 1;
 
 static int CharSpacingX_cvar = -3;
 static int CharSpacingY_cvar = 3;
@@ -99,7 +100,9 @@ static int _fontCharHeight => _currentFontInfo.charHeight;
 static int _fontCharWidth  => _currentFontInfo.charWidth;
 static int _fontNumColumns => _currentFontInfo.numColumns;
 static int _fontNumRows    => _currentFontInfo.numRows;
-static Dictionary<int,CharInfo> _charsMap = new Dictionary<int,CharInfo>();
+
+static Dictionary<int,CharInfo> _ciMap = new Dictionary<int,CharInfo>();
+static CharInfo [] _ciCache = new CharInfo[256];
 
 public static Color TagToCol( string tag ) {
     int [] rgb = new int[3 * 2];
@@ -322,6 +325,9 @@ public static void SetFontTexture() {
         _currentFontInfo = _allFonts[_currentFont];
     }
 
+    TextDx = Mathf.Max( AppleFont.APPLEIIF_CW + 1, _fontCharWidth + CharSpacingX_cvar );
+    TextDy = _fontCharHeight + CharSpacingY_cvar;
+
     SetTexture( _currentFontInfo.tex );
 }
 
@@ -371,7 +377,12 @@ public static void DrawSolidQuad( Vector2 pos, Vector2 size ) {
 
 public static void DrawScreenChar( int c, float screenX, float screenY, float scale ) { 
     int hash = ( ( _invertedY ? 1 : 0 ) << 16 ) | ( _currentFont << 8 ) | ( c & 255 );
-    if ( ! _charsMap.TryGetValue( hash, out CharInfo ci ) ) {
+
+    CharInfo ci;
+
+    if ( _ciCache[c & 255].hash == hash ) {
+        ci = _ciCache[c & 255];
+    } else if ( ! _ciMap.TryGetValue( hash, out ci ) ) {
         Texture2D texFont = _currentFontInfo.tex;
 
         int idx = c % ( _fontNumColumns * _fontNumRows );
@@ -409,15 +420,18 @@ public static void DrawScreenChar( int c, float screenX, float screenY, float sc
             };
         }
 
-        _charsMap[hash] = ci;
+        ci.hash = hash;
+
+        _ciMap[hash] = ci;
     }
 
+    _ciCache[c & 255] = ci;
+
     float y = _invertedY ? ScreenHeight - screenY : screenY;
-    Vector3 vertOff = new Vector3( screenX, y );
 
     for ( int i = 0; i < 4; i++ ) {
-        GL.TexCoord( ci.uv[i] );
-        GL.Vertex( ci.verts[i] * scale + vertOff );
+        GL.TexCoord3( ci.uv[i].x, ci.uv[i].y, 0 );
+        GL.Vertex3( ci.verts[i].x * scale + screenX, ci.verts[i].y * scale + y, 0 );
     }
 }
 
