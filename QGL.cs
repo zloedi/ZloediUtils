@@ -18,13 +18,45 @@ using UnityEngine;
 
 public static class QGL {
 
+public enum LateType {
+    None,
+    Line,
+    Text,
+    NokiaText,
+    Image,
+}
+
+struct LateGen {
+
+    public LateType type;
+
+    public int context;
+    public Color32 color;
+
+    public List<Vector2> line;
+
+    public float x, y;
+    public float scale;
+    public string str;
+
+    // dest rect
+    public float w, h;
+    // src rect
+    public float sx, sy, sw, sh;
+    // orientation
+    public float ox, oy;
+
+    public Texture texture;
+    public Material material;
+}
+
 class Late {
     public int context;
     public Color32 color;
 }
 
 class LateLine : Late {
-    public List<Vector2> line;
+    public List<Vector2> line = new();
 }
 
 class LateText : Late {
@@ -86,10 +118,22 @@ static Camera _camera;
 static List<Color> _colStack = new List<Color>();
 // these are postponed and drawn after all geometry in scene
 static List<Late> _lates = new List<Late>();
+static LateGen [] _lateGens = new LateGen[8 * 1024];
+static int _numLateGens;
+static LateGen NewLate( LateType type, int context, Color? color ) {
+    var result = _lateGens[_numLateGens & ( _lateGens.Length - 1)];
+    _numLateGens++;
+    result.type = type;
+    result.context = context;
+    result.color = color == null ? Color.green : color.Value;
+    return result;
+}
 static Material _material;
 static Texture _mainTex;
 static Texture2D _texWhite = Texture2D.whiteTexture;
+static Vector2 [] _linePair = new Vector2[2];
 static Vector2 [] _lineRect = new Vector2[4];
+static List<Vector2> _lineBuf = new();
 static bool _flushed;
 static bool _invertedY;
 static int _context;
@@ -103,6 +147,12 @@ static int _fontNumRows    => _currentFontInfo.numRows;
 
 static Dictionary<int,CharInfo> _ciMap = new Dictionary<int,CharInfo>();
 static CharInfo [] _ciCache = new CharInfo[256];
+
+static QGL() {
+    for ( int i = 0; i < _lateGens.Length; i++ ) {
+        _lateGens[i].line = new();
+    }
+}
 
 public static Color TagToCol( string tag ) {
     int [] rgb = new int[3 * 2];
@@ -495,6 +545,12 @@ public static void LatePrintNokia( string str, float x, float y, Color? color = 
     };
 
     _lates.Add( txt );
+
+    var txtGen = NewLate( LateType.NokiaText, _context, color );
+    txtGen.x = Mathf.Round( x - ( int )sz.x / 2 );
+    txtGen.y = Mathf.Round( y - ( int )sz.y / 2 );
+    txtGen.scale = scale;
+    txtGen.str = str;
 }
 
 public static void LatePrintNokia_tl( string str, float x, float y, Color? color = null,
@@ -512,6 +568,13 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
     };
 
     _lates.Add( txt );
+
+    var txtGen = NewLate( LateType.NokiaText, _context, color );
+    txtGen.context = _context;
+    txtGen.x = ( int )x;
+    txtGen.y = ( int )y;
+    txtGen.scale = scale;
+    txtGen.str = str;
 }
 
 public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h,
@@ -592,14 +655,28 @@ public static void LateBlitComplete( Texture tex, float x, float y,
     };
     
     _lates.Add( img );
+
+    var imgGen = NewLate( LateType.Image, _context, color );
+    imgGen.x = x;
+    imgGen.y = y;
+    imgGen.w = w != float.MaxValue ? w : tex.width;
+    imgGen.h = h != float.MaxValue ? h : tex.height;
+    imgGen.sx = sx;
+    imgGen.sy = sy;
+    imgGen.sw = sw > 0 ? sw : tex.width;
+    imgGen.sh = sh > 0 ? sh : tex.height;
+    imgGen.ox = ox;
+    imgGen.oy = oy;
+    imgGen.texture = tex;
+    imgGen.material = mat;
 }
 
 public static void LateDrawLineLoopWorld( IList<Vector3> worldLine, Color? color = null ) {
-    List<Vector2> l = new List<Vector2>();
+    _lineBuf.Clear();
     foreach ( var p in worldLine ) {
-        l.Add( WorldToScreenPos( p ) );
+        _lineBuf.Add( WorldToScreenPos( p ) );
     }
-    LateDrawLineLoop( l, color );
+    LateDrawLineLoop( _lineBuf, color );
 }
 
 public static void LateDrawRayWorld( Vector3 origin, Vector3 dir, Color? color = null ) {
@@ -611,11 +688,11 @@ public static void LateDrawLineWorld( Vector3 a, Vector3 b, Color? color = null 
 }
 
 public static void LateDrawLineWorld( IList<Vector3> worldLine, Color? color = null ) {
-    List<Vector2> l = new List<Vector2>();
+    _lineBuf.Clear();
     foreach ( var p in worldLine ) {
-        l.Add( WorldToScreenPos( p ) );
+        _lineBuf.Add( WorldToScreenPos( p ) );
     }
-    LateDrawLine( l, color );
+    LateDrawLine( _lineBuf, color );
 }
 
 public static void LateDrawLine( float ax, float ay, float bx, float by, Color? color = null ) {
@@ -623,13 +700,16 @@ public static void LateDrawLine( float ax, float ay, float bx, float by, Color? 
 }
 
 public static void LateDrawLine( Vector2 a, Vector2 b, Color? color = null ) {
-    LateDrawLine( new [] { a, b }, color );
+    _linePair[0] = a;
+    _linePair[1] = b;
+    LateDrawLine( _linePair, color );
 }
 
 public static void LateDrawLineLoop( IList<Vector2> line, Color? color = null ) {
-    List<Vector2> loop = new List<Vector2>( line );
-    loop.Add( line[0] );
-    LateDrawLine( loop, color );
+    _lineBuf.Clear();
+    _lineBuf.AddRange( line );
+    _lineBuf.Add( line[0] );
+    LateDrawLine( _lineBuf, color );
 }
 
 public static void LateDrawLineRect( float x, float y, float w, float h, Color? color = null ) {
@@ -644,19 +724,31 @@ public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
     if ( ! _flushed )
         return;
 
-    var l = new List<Vector2>( line );
-    for ( int i = 0; i < l.Count; i++ ) {
-        float y = _invertedY ? ScreenHeight - l[i].y : l[i].y;
-        l[i] = new Vector2( l[i].x, y );
-    }
-
     var ln = new LateLine {
         context = _context,
-        line = l,
         color = color == null ? Color.white : color.Value,
     };
 
+    ln.line.Clear();
+    ln.line.AddRange( line );
+
+    if ( _invertedY ) {
+        for ( int i = 0; i < ln.line.Count; i++ ) {
+            ln.line[i] = new Vector2( ln.line[i].x, ScreenHeight - ln.line[i].y );
+        }
+    }
+
     _lates.Add( ln );
+
+    var lnGen = NewLate( LateType.Line, _context, color );
+    lnGen.line.Clear();
+    lnGen.line.AddRange( line );
+    if ( _invertedY ) {
+        for ( int i = 0; i < lnGen.line.Count; i++ ) {
+            ln.line[i] = new Vector2( ln.line[i].x, ScreenHeight - ln.line[i].y );
+        }
+    }
+
 }
 
 public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
@@ -861,6 +953,12 @@ static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? co
     };
 
     _lates.Add( txt );
+
+    var txtGen = NewLate( LateType.Text, _context, color );
+    txtGen.x = Mathf.Round( x - ( int )sz.x / 2 );
+    txtGen.y = Mathf.Round( y - ( int )sz.y / 2 );
+    txtGen.scale = scale;
+    txtGen.str = str;
 }
 
 static void AddText( string str, float x, float y, Color? color = null, float scale = 1 ) {
@@ -877,6 +975,12 @@ static void AddText( string str, float x, float y, Color? color = null, float sc
     };
 
     _lates.Add( txt );
+
+    var txtGen = NewLate( LateType.Text, _context, color );
+    txtGen.x = ( int )x;
+    txtGen.y = ( int )y;
+    txtGen.scale = scale;
+    txtGen.str = str;
 }
 
 static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
