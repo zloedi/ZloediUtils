@@ -950,8 +950,11 @@ quit:
             }
             if ( _mode == QUADS ) {
                 //SDL_SetRenderDrawColor( Application.renderer, 255, 255, 255, 255 );
-                //SDL_SetRenderDrawBlendMode( Application.renderer, SDL_BLENDMODE_BLEND );
                 //SDL_SetTextureAlphaMod( texture.sdlTex, 0xff );
+
+                // so null sdlTex still gets alpha values
+                SDL_SetRenderDrawBlendMode( Application.renderer, SDL_BLENDMODE_BLEND );
+
                 SDL_SetTextureBlendMode( texture.sdlTex, SDL_BLENDMODE_BLEND );
                 SDL_RenderGeometry( Application.renderer, texture.sdlTex, _vertices, _numVertices,
                                                                             _indices, _numIndices );
@@ -973,13 +976,21 @@ quit:
             _color = new SDL_Color { r = color.r, g = color.g, b = color.b, a = color.a, };
         }
 
-        public static void TexCoord( Vector3 uv ) {
-            var p = new SDL_FPoint { x = uv.x, y = uv.y };
+        public static void TexCoord3( float x, float y, float z ) {
+            var p = new SDL_FPoint { x = x, y = y };
             _vertices[_numVertices & ( MAX_VERTS - 1 )].tex_coord = p;
         }
 
+        public static void TexCoord( Vector3 uv ) {
+            TexCoord3( uv.x, uv.y, uv.z );
+        }
+
         public static void Vertex( Vector3 v ) {
-            var p = new SDL_FPoint { x = v.x, y = v.y };
+            Vertex3( v.x, v.y, v.z );
+        }
+
+        public static void Vertex3( float x, float y, float z ) {
+            var p = new SDL_FPoint { x = x, y = y };
             int nv = _numVertices & ( MAX_VERTS - 1 );
 
             _vertices[nv].position = p;
