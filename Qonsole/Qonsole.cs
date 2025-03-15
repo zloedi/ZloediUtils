@@ -139,7 +139,6 @@ static int QonOverlayPercent_kvar = 0;
 static bool QonPrintToSystemLog_kvar = true;
 [Description( "Console character size." )]
 static float QonScale_kvar = 1;
-static float QonScale => Mathf.Clamp( QonScale_kvar, 1, 100 );
 [Description( "Show the Qonsole in the editor: 0 -- no, 1 -- yes, 2 -- editor only." )]
 public static int QonShowInEditor_kvar = 1;
 [Description( "Alpha blend value of the Qonsole background." )]
@@ -217,8 +216,8 @@ static void DrawCharColorPop() {
 }
 
 static Vector2 QoncheToScreen( int x, int y ) {
-    float screenX = x * _textDx * QonScale;
-    float screenY = ( y - _drawCharStartY ) * _textDy * QonScale;
+    float screenX = x * _textDx * QonScale_kvar;
+    float screenY = ( y - _drawCharStartY ) * _textDy * QonScale_kvar;
     return new Vector2( screenX, screenY );
 }
 
@@ -493,7 +492,7 @@ public static void RenderGL( bool skip = false ) {
 
     void drawChar( int c, int x, int y, bool isCursor, object param ) { 
         if ( DrawCharBegin( ref c, x, y, isCursor, out Color color, out Vector2 screenPos ) ) {
-            QGL.DrawScreenCharWithOutline( c, screenPos.x, screenPos.y, color, QonScale );
+            QGL.DrawScreenCharWithOutline( c, screenPos.x, screenPos.y, color, QonScale_kvar );
         }
     }
 }
@@ -1028,13 +1027,13 @@ public static void OneShotCmd( string fillCommandLine ) {
 }
 
 public static float LineHeight() {
-    return _textDy * QonScale;
+    return _textDy * QonScale_kvar;
 }
 
 public static void GetSize( out int conW, out int conH ) {
     int maxH = ( int )QGL.ScreenHeight;
-    int cW = ( int )( _textDx * QonScale );
-    int cH = ( int )( _textDy * QonScale );
+    int cW = ( int )( _textDx * QonScale_kvar );
+    int cH = ( int )( _textDy * QonScale_kvar );
     conW = Screen.width / cW;
     conH = maxH / cH;
 }
