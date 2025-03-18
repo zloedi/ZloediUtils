@@ -118,21 +118,23 @@ static Camera _camera;
 static List<Color> _colStack = new List<Color>();
 // these are postponed and drawn after all geometry in scene
 static List<Late> _lates = new List<Late>();
-static LateGen [] _lateGens = new LateGen[8 * 1024];
-static int _numLateGens;
+static LateGen [] _lateGens = new LateGen[2 * 1024];
+static int _lateHead, _lateTail;
 static int NewLate( LateType type, int context, Color? color ) {
-    int n = _numLateGens & ( _lateGens.Length - 1);
-    _numLateGens++;
-    _lateGens[n].type = type;
-    _lateGens[n].context = context;
-    _lateGens[n].color = color ?? Color.green;
-    return n;
+    int idx = _lateTail & ( _lateGens.Length - 1);
+    _lateTail++;
+    _lateGens[idx].type = type;
+    _lateGens[idx].context = context;
+    _lateGens[idx].color = color ?? Color.green;
+    return idx;
 }
 static void DeleteLate( int idx ) {
+    idx &= _lateGens.Length - 1;
     _lateGens[idx].context = 0;
     _lateGens[idx].type = 0;
 }
 static bool IsValidLate( int idx ) {
+    idx &= _lateGens.Length - 1;
     return _lateGens[idx].type != 0;
 }
 static Material _material;
@@ -820,7 +822,7 @@ public static void End( bool skipLateFlush = false ) {
 
 public static void ClearLates() {
     _lates.Clear();
-    _numLateGens = 0;
+    _lateHead = _lateTail;
 }
 
 public static void FlushLates() {
@@ -834,26 +836,36 @@ public static void FlushLates() {
 }
 
 static void FlushLatesB() {
-    int n = Mathf.Min(_lateGens.Length - 1, _numLateGens);
+    int n = _lateGens.Length - 1;
 
-    for ( int li = 0; li < n; ) {
+    // leave one empty delimiter
+    if ( _lateTail - _lateHead > n ) {
+        Error( "Out of lates.");
+        _lateTail = _lateHead + n;
+    }
+
+    LateGen late(int i) {
+        return _lateGens[i & n];
+    }
+
+    for ( int li = _lateHead; li < _lateTail; ) {
 
         // skip  lates from other contexts
-        for ( ; li < n && _lateGens[li].context != _context; li++ )
+        for ( ; late( li ).context == 0 || late( li ).context != _context; li++ )
         {}
 
         int start;
 
         // == skip to texts ==
 
-        for ( start = li; li < n && _lateGens[li].type == LateType.Text; li++ )
+        for ( start = li; late( li ).type == LateType.Text; li++ )
         {}
 
         if ( start < li ) {
             SetFontTexture();
             GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
-                var lt = _lateGens[i];
+                var lt = late( i );
                 DrawTextWithOutline( lt.str, lt.x, lt.y, lt.color, lt.scale );
                 DeleteLate( i );
             }
@@ -862,14 +874,14 @@ static void FlushLatesB() {
 
         // == skip to nokia texts ==
 
-        for ( start = li; li < n && _lateGens[li].type == LateType.NokiaText; li++ )
+        for ( start = li; late( li ).type == LateType.NokiaText; li++ )
         {}
 
         if ( start < li ) {
             SetTexture( NokiaFont.GetTexture() );
             GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
-                var lt = _lateGens[i];
+                var lt = late( i );
                 DrawTextNokia( lt.str, lt.x, lt.y, lt.color, lt.scale );
                 DeleteLate( i );
             }
@@ -878,16 +890,16 @@ static void FlushLatesB() {
 
         // == skip to images ==
 
-        for ( start = li; li < n && _lateGens[li].type == LateType.Image; li++ )
+        for ( start = li; late( li ).type == LateType.Image; li++ )
         {}
 
         if ( start < li ) {
-            Texture tex = _lateGens[start].texture;
+            Texture tex = late( start ).texture;
             tex = tex != null ? tex : _texWhite;
             SetTexture( tex );
             GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
-                var lt = _lateGens[i];
+                var lt = late( i );
                 if ( tex != lt.texture ) {
                     GL.End();
                     tex = lt.texture != null ? lt.texture : _texWhite;
@@ -908,14 +920,14 @@ static void FlushLatesB() {
 
         // == skip to lines ==
 
-        for ( start = li; li < n && _lateGens[li].type == LateType.Line; li++ )
+        for ( start = li; late( li ).type == LateType.Line; li++ )
         {}
 
         if ( start < li ) {
             SetWhiteTexture();
             GL.Begin( GL.LINES );
             for ( int i = start; i < li; i++ ) {
-                var lt = _lateGens[i];
+                var lt = late( i );
                 GL.Color( lt.color );
                 for ( int j = 0; j < lt.line.Count - 1; j++ ) {
                     GL.Vertex( lt.line[j + 0] );
@@ -927,14 +939,15 @@ static void FlushLatesB() {
         }
     }
 
-    for ( int i = 0; i < n; i++ ) {
+    for ( int i = _lateHead; i < _lateTail; i++ ) {
         if ( IsValidLate( i ) ) {
             _flushed = false;
             return;
         }
+        _lateHead++;
     }
 
-    _numLateGens = 0;
+    ClearLates();
     _flushed = true;
 }
 
