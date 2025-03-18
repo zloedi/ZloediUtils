@@ -128,6 +128,13 @@ static int NewLate( LateType type, int context, Color? color ) {
     _lateGens[n].color = color ?? Color.green;
     return n;
 }
+static void DeleteLate( int idx ) {
+    _lateGens[idx].context = 0;
+    _lateGens[idx].type = 0;
+}
+static bool IsValidLate( int idx ) {
+    return _lateGens[idx].type != 0;
+}
 static Material _material;
 static Texture _mainTex;
 static Texture2D _texWhite = Texture2D.whiteTexture;
@@ -847,8 +854,8 @@ static void FlushLatesB() {
             GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
                 var lt = _lateGens[i];
-                _lateGens[i].context = 0;
                 DrawTextWithOutline( lt.str, lt.x, lt.y, lt.color, lt.scale );
+                DeleteLate( i );
             }
             GL.End();
         }
@@ -863,8 +870,8 @@ static void FlushLatesB() {
             GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
                 var lt = _lateGens[i];
-                _lateGens[i].context = 0;
                 DrawTextNokia( lt.str, lt.x, lt.y, lt.color, lt.scale );
+                DeleteLate( i );
             }
             GL.End();
         }
@@ -881,7 +888,6 @@ static void FlushLatesB() {
             GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
                 var lt = _lateGens[i];
-                _lateGens[i].context = 0;
                 if ( tex != lt.texture ) {
                     GL.End();
                     tex = lt.texture != null ? lt.texture : _texWhite;
@@ -895,6 +901,7 @@ static void FlushLatesB() {
                 Vector2 dir = new Vector2( lt.ox, lt.oy );
                 ImageQuad( lt.texture.width, lt.texture.height, srcPos, srcSize,
                                                             dstPos, dstSize, dir, lt.color );
+                DeleteLate( i );
             }
             GL.End();
         }
@@ -909,19 +916,19 @@ static void FlushLatesB() {
             GL.Begin( GL.LINES );
             for ( int i = start; i < li; i++ ) {
                 var lt = _lateGens[i];
-                _lateGens[i].context = 0;
                 GL.Color( lt.color );
                 for ( int j = 0; j < lt.line.Count - 1; j++ ) {
                     GL.Vertex( lt.line[j + 0] );
                     GL.Vertex( lt.line[j + 1] );
                 }
+                DeleteLate( i );
             }
             GL.End();
         }
     }
 
     for ( int i = 0; i < n; i++ ) {
-        if ( _lateGens[i].context != 0 ) {
+        if ( IsValidLate( i ) ) {
             _flushed = false;
             return;
         }
@@ -1083,7 +1090,7 @@ static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? co
     _lateGens[i].x = Mathf.Round( x - ( int )sz.x / 2 );
     _lateGens[i].y = Mathf.Round( y - ( int )sz.y / 2 );
     _lateGens[i].scale = scale;
-    _lateGens[i].str = str;
+    _lateGens[i].str = str + _context;
 }
 
 static void AddText( string str, float x, float y, Color? color = null, float scale = 1 ) {
