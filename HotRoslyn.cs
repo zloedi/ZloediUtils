@@ -46,6 +46,7 @@ public static Action<Assembly> OnCompile = a => {};
 public static string ScriptsRoot = "";
 public static string [] ScriptFiles = {};
 public static string [] Defines = {};
+public static string [] ExtraDefines = {};
 
 static List<MetadataReference> _domainReferences = new List<MetadataReference>();
 
@@ -283,7 +284,9 @@ static bool CompileSyntaxTrees( SyntaxTree [] trees, out byte [] imageAssembly,
 static SyntaxTree Parse( string code, string path ) {
     var stringText = SourceText.From( code, Encoding.UTF8 );
     var options = CSharpParseOptions.Default;
-    options = options.WithPreprocessorSymbols( Defines );
+    var defines = new List<string>( Defines );
+    defines.AddRange( ExtraDefines );
+    options = options.WithPreprocessorSymbols( defines );
     options = options.WithLanguageVersion( LanguageVersion.CSharp9 );
     return SyntaxFactory.ParseSyntaxTree( stringText, options: options, path: path );
 }
