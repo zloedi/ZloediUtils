@@ -26,11 +26,11 @@ public enum LateType {
     Image,
 }
 
-struct LateGen {
+struct Late {
     public LateType type;
 
     public int context;
-    public Color32 color;
+    public Color color;
 
     public List<Vector2> line;
 
@@ -40,39 +40,6 @@ struct LateGen {
 
     // dest rect
     public float w, h;
-    // src rect
-    public float sx, sy, sw, sh;
-    // orientation
-    public float ox, oy;
-
-    public Texture texture;
-    public Material material;
-}
-
-class Late {
-    public int context;
-    public Color32 color;
-}
-
-class LateLine : Late {
-    public List<Vector2> line = new();
-}
-
-class LateText : Late {
-    public float x, y;
-    public float scale;
-    public string str;
-}
-
-class LateTextNokia : Late {
-    public float x, y;
-    public float scale;
-    public string str;
-}
-
-class LateImage : Late {
-    // dest rect
-    public float x, y, w, h;
     // src rect
     public float sx, sy, sw, sh;
     // orientation
@@ -113,29 +80,27 @@ static int Font_cvar = 0;
 static int ShowFontTexture_cvar = 0;
 
 static Camera _camera;
-// FIXME: use Color32 for the stack
 // used with Cellophane color tags
 static List<Color> _colStack = new List<Color>();
 // these are postponed and drawn after all geometry in scene
-static List<Late> _lates = new List<Late>();
-static LateGen [] _lateGens = new LateGen[2 * 1024];
+static Late [] _lates = new Late[2 * 1024];
 static int _lateHead, _lateTail;
 static int NewLate( LateType type, int context, Color? color ) {
-    int idx = _lateTail & ( _lateGens.Length - 1);
+    int idx = _lateTail & ( _lates.Length - 1);
     _lateTail++;
-    _lateGens[idx].type = type;
-    _lateGens[idx].context = context;
-    _lateGens[idx].color = color ?? Color.green;
+    _lates[idx].type = type;
+    _lates[idx].context = context;
+    _lates[idx].color = color ?? Color.green;
     return idx;
 }
 static void DeleteLate( int idx ) {
-    idx &= _lateGens.Length - 1;
-    _lateGens[idx].context = 0;
-    _lateGens[idx].type = 0;
+    idx &= _lates.Length - 1;
+    _lates[idx].context = 0;
+    _lates[idx].type = 0;
 }
 static bool IsValidLate( int idx ) {
-    idx &= _lateGens.Length - 1;
-    return _lateGens[idx].type != 0;
+    idx &= _lates.Length - 1;
+    return _lates[idx].type != 0;
 }
 static Material _material;
 static Texture _mainTex;
@@ -158,8 +123,8 @@ static Dictionary<int,CharInfo> _ciMap = new Dictionary<int,CharInfo>();
 static CharInfo [] _ciCache = new CharInfo[256];
 
 static QGL() {
-    for ( int i = 0; i < _lateGens.Length; i++ ) {
-        _lateGens[i].line = new();
+    for ( int i = 0; i < _lates.Length; i++ ) {
+        _lates[i].line = new();
     }
 
     _ciCache[0].uv = new Vector2[4];
@@ -560,10 +525,10 @@ public static void LatePrintNokia( string str, float x, float y, Color? color = 
 #endif
 
     int i = NewLate( LateType.NokiaText, _context, color );
-    _lateGens[i].x = Mathf.Round( x - ( int )sz.x / 2 );
-    _lateGens[i].y = Mathf.Round( y - ( int )sz.y / 2 );
-    _lateGens[i].scale = scale;
-    _lateGens[i].str = str;
+    _lates[i].x = Mathf.Round( x - ( int )sz.x / 2 );
+    _lates[i].y = Mathf.Round( y - ( int )sz.y / 2 );
+    _lates[i].scale = scale;
+    _lates[i].str = str;
 }
 
 public static void LatePrintNokia_tl( string str, float x, float y, Color? color = null,
@@ -584,11 +549,11 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
 #endif
 
     int i = NewLate( LateType.NokiaText, _context, color );
-    _lateGens[i].context = _context;
-    _lateGens[i].x = ( int )x;
-    _lateGens[i].y = ( int )y;
-    _lateGens[i].scale = scale;
-    _lateGens[i].str = str;
+    _lates[i].context = _context;
+    _lates[i].x = ( int )x;
+    _lates[i].y = ( int )y;
+    _lates[i].scale = scale;
+    _lates[i].str = str;
 }
 
 public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h,
@@ -673,18 +638,18 @@ public static void LateBlitComplete( Texture tex, float x, float y,
 #endif
 
     int i = NewLate( LateType.Image, _context, color );
-    _lateGens[i].x = x;
-    _lateGens[i].y = y;
-    _lateGens[i].w = w != float.MaxValue ? w : tex.width;
-    _lateGens[i].h = h != float.MaxValue ? h : tex.height;
-    _lateGens[i].sx = sx;
-    _lateGens[i].sy = sy;
-    _lateGens[i].sw = sw > 0 ? sw : tex.width;
-    _lateGens[i].sh = sh > 0 ? sh : tex.height;
-    _lateGens[i].ox = ox;
-    _lateGens[i].oy = oy;
-    _lateGens[i].texture = tex;
-    _lateGens[i].material = mat;
+    _lates[i].x = x;
+    _lates[i].y = y;
+    _lates[i].w = w != float.MaxValue ? w : tex.width;
+    _lates[i].h = h != float.MaxValue ? h : tex.height;
+    _lates[i].sx = sx;
+    _lates[i].sy = sy;
+    _lates[i].sw = sw > 0 ? sw : tex.width;
+    _lates[i].sh = sh > 0 ? sh : tex.height;
+    _lates[i].ox = ox;
+    _lates[i].oy = oy;
+    _lates[i].texture = tex;
+    _lates[i].material = mat;
 }
 
 public static void LateDrawLineLoopWorld( IList<Vector3> worldLine, Color? color = null ) {
@@ -757,7 +722,7 @@ public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
 
     {
         int i = NewLate( LateType.Line, _context, color );
-        var lateLine = _lateGens[i].line;
+        var lateLine = _lates[i].line;
         lateLine.Clear();
         lateLine.AddRange( line );
         if ( _invertedY ) {
@@ -821,7 +786,6 @@ public static void End( bool skipLateFlush = false ) {
 }
 
 public static void ClearLates() {
-    _lates.Clear();
     _lateHead = _lateTail;
 }
 
@@ -836,7 +800,7 @@ public static void FlushLates() {
 }
 
 static void FlushLatesB() {
-    int n = _lateGens.Length - 1;
+    int n = _lates.Length - 1;
 
     // leave one empty delimiter
     if ( _lateTail - _lateHead > n ) {
@@ -844,8 +808,8 @@ static void FlushLatesB() {
         _lateTail = _lateHead + n;
     }
 
-    LateGen late(int i) {
-        return _lateGens[i & n];
+    Late late(int i) {
+        return _lates[i & n];
     }
 
     for ( int li = _lateHead; li < _lateTail; ) {
@@ -951,106 +915,10 @@ static void FlushLatesB() {
     _flushed = true;
 }
 
-static void FlushLatesA() {
-    for ( int li = 0; li < _lates.Count; ) {
-
-        for ( ; li < _lates.Count && _lates[li].context != _context; li++ )
-        {}
-
-        int start;
-
-        // == texts ==
-
-        for ( start = li; li < _lates.Count && _lates[li] is LateText; li++ )
-        {}
-
-        if ( start < li ) {
-            SetFontTexture();
-            GL.Begin( GL.QUADS );
-            for ( int i = start; i < li; i++ ) {
-                var lt = ( LateText )_lates[i];
-                DrawTextWithOutline( lt.str, lt.x, lt.y, lt.color, lt.scale );
-            }
-            GL.End();
-        }
-
-        // == nokia texts ==
-
-        for ( start = li; li < _lates.Count && _lates[li] is LateTextNokia; li++ )
-        {}
-
-        if ( start < li ) {
-            SetTexture( NokiaFont.GetTexture() );
-            GL.Begin( GL.QUADS );
-            for ( int i = start; i < li; i++ ) {
-                var ltn = ( LateTextNokia )_lates[i];
-                DrawTextNokia( ltn.str, ltn.x, ltn.y, ltn.color, ltn.scale );
-            }
-            GL.End();
-        }
-
-        // == images ==
-
-        for ( start = li; li < _lates.Count && _lates[li] is LateImage; li++ )
-        {}
-
-        if ( start < li ) {
-            Texture tex = ( ( LateImage )_lates[start] ).texture;
-            tex = tex != null ? tex : _texWhite;
-            SetTexture( tex );
-            GL.Begin( GL.QUADS );
-            for ( int i = start; i < li; i++ ) {
-                var img = ( LateImage )_lates[i];
-                if ( tex != img.texture ) {
-                    GL.End();
-                    tex = img.texture != null ? img.texture : _texWhite;
-                    SetTexture( tex );
-                    GL.Begin( GL.QUADS );
-                }
-                Vector2 srcPos = new Vector2( img.sx, img.sy );
-                Vector2 srcSize = new Vector2( img.sw, img.sh );
-                Vector2 dstPos = new Vector2( img.x, img.y );
-                Vector2 dstSize = new Vector2( img.w, img.h );
-                Vector2 dir = new Vector2( img.ox, img.oy );
-                ImageQuad( img.texture.width, img.texture.height, srcPos, srcSize,
-                                                            dstPos, dstSize, dir, img.color );
-            }
-            GL.End();
-        }
-
-        // == lines ==
-
-        for ( start = li; li < _lates.Count && _lates[li] is LateLine; li++ )
-        {}
-
-        if ( start < li ) {
-            SetWhiteTexture();
-            GL.Begin( GL.LINES );
-            for ( int i = start; i < li; i++ ) {
-                var l = ( LateLine )_lates[i];
-                GL.Color( l.color );
-                for ( int j = 0; j < l.line.Count - 1; j++ ) {
-                    GL.Vertex( l.line[j + 0] );
-                    GL.Vertex( l.line[j + 1] );
-                }
-            }
-            GL.End();
-        }
-    }
-
-    for ( int li = _lates.Count - 1; li >= 0; li-- ) {
-        if ( _lates[li].context == _context ) {
-            _lates.RemoveAt( li );
-        }
-    }
-
-    _flushed = _lates.Count == 0;
-}
-
 #if HAS_UNITY
 // this will flush the lates and will invoke GL only if there are lates to flush
 public static void OnGUIFull( bool invertedY = false ) {
-    if ( _lates.Count == 0 ) {
+    if ( _lateHead == _lateTail ) {
         _flushed = true;
         return;
     }
@@ -1100,10 +968,10 @@ static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? co
 #endif
 
     int i = NewLate( LateType.Text, _context, color );
-    _lateGens[i].x = Mathf.Round( x - ( int )sz.x / 2 );
-    _lateGens[i].y = Mathf.Round( y - ( int )sz.y / 2 );
-    _lateGens[i].scale = scale;
-    _lateGens[i].str = str;
+    _lates[i].x = Mathf.Round( x - ( int )sz.x / 2 );
+    _lates[i].y = Mathf.Round( y - ( int )sz.y / 2 );
+    _lates[i].scale = scale;
+    _lates[i].str = str;
 }
 
 static void AddText( string str, float x, float y, Color? color = null, float scale = 1 ) {
@@ -1123,10 +991,10 @@ static void AddText( string str, float x, float y, Color? color = null, float sc
 #endif
 
     int i = NewLate( LateType.Text, _context, color );
-    _lateGens[i].x = ( int )x;
-    _lateGens[i].y = ( int )y;
-    _lateGens[i].scale = scale;
-    _lateGens[i].str = str;
+    _lates[i].x = ( int )x;
+    _lates[i].y = ( int )y;
+    _lates[i].scale = scale;
+    _lates[i].str = str;
 }
 
 static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
