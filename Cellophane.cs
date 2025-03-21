@@ -194,6 +194,14 @@ static Command CmdCreate( Type type, MethodInfo mi ) {
         name = MethodNameToCmdName( type, mi ),
         rawName = type.Name + "." + mi.Name,
     };
+
+    foreach ( var ca in mi.GetCustomAttributes() ) {
+        DescriptionAttribute da = ca as DescriptionAttribute;
+        if ( da != null ) {
+            cmd.description = da.Description;
+        }
+    }
+
     CmdCallbackUpdate( cmd, mi );
     return cmd;
 }
@@ -440,20 +448,7 @@ static void CollectItems( List<Command> cmds, List<Variable> vars ) {
                 continue;
             }
 
-            Variable cvar = new Variable {
-                fieldInfo = fi,
-                name = FieldNameToVarName( type, fi ),
-                rawName = type.Name + "." + fi.Name,
-            };
-
-            foreach ( var ca in fi.GetCustomAttributes() ) {
-                DescriptionAttribute da = ca as DescriptionAttribute;
-                if ( da != null ) {
-                    cvar.description = da.Description;
-                }
-            }
-
-            VarSetValueUpdate( cvar );
+            Variable cvar = VarCreate( type, fi );
 
             vars.Add( cvar );
         }
