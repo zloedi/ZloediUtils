@@ -1,3 +1,4 @@
+// FIXME: right now, the lates are doubled if one of the context doesn't flush (i.e. its window was not OnGUI rendered)
 #if UNITY_STANDALONE || UNITY_2021_1_OR_NEWER
 #define HAS_UNITY
 #endif
@@ -47,6 +48,8 @@ struct Late {
 
     public Texture texture;
     public Material material;
+
+    public int timestamp;
 }
 
 class FontInfo {
@@ -91,6 +94,7 @@ static int NewLate( LateType type, int context, Color? color ) {
     _lates[idx].type = type;
     _lates[idx].context = context;
     _lates[idx].color = color ?? Color.green;
+    _lates[idx].timestamp = Time.frameCount;
     return idx;
 }
 static void DeleteLate( int idx ) {
@@ -100,6 +104,10 @@ static void DeleteLate( int idx ) {
 }
 static bool IsValidLate( int idx ) {
     idx &= _lates.Length - 1;
+
+    if ( Time.frameCount != _lates[idx].timestamp )
+        return false;
+
     return _lates[idx].type != 0;
 }
 static Material _material;
@@ -108,7 +116,6 @@ static Texture2D _texWhite = Texture2D.whiteTexture;
 static Vector2 [] _linePair = new Vector2[2];
 static Vector2 [] _lineRect = new Vector2[4];
 static List<Vector2> _lineBuf = new();
-static bool _flushed;
 static bool _invertedY;
 static int _context;
 static FontInfo [] _allFonts;
@@ -507,9 +514,6 @@ public static void LatePrintNokia( string str, Vector2Int xy, Color? color = nul
 
 public static void LatePrintNokia( string str, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
-    if ( ! _flushed )
-        return;
-
     Vector2 sz = MeasureStringNokia( str, scale );
 
 #if false
@@ -533,9 +537,6 @@ public static void LatePrintNokia( string str, float x, float y, Color? color = 
 
 public static void LatePrintNokia_tl( string str, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
-    if ( ! _flushed )
-        return;
-
 #if false
     var txt = new LateTextNokia {
         context = _context,
@@ -608,9 +609,6 @@ public static void LateBlitComplete( Texture tex, float x, float y,
                                             float sx = 0, float sy = 0, float sw = 0, float sh = 0,
                                             float ox = float.MaxValue, float oy = float.MaxValue,
                                             Color? color = null, Material mat = null ) {
-    if ( ! _flushed )
-        return;
-
     tex = tex != null ? tex : _texWhite;
 
 #if false
@@ -702,9 +700,6 @@ public static void LateDrawLineRect( float x, float y, float w, float h, Color? 
 }
 
 public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
-    if ( ! _flushed )
-        return;
-
 #if false
     var ln = new LateLine {
         context = _context,
@@ -790,37 +785,31 @@ public static void ClearLates() {
 }
 
 public static void FlushLates() {
-    //if (slapme_kvar)
-        FlushLatesB();
-    //else
-    //{
-    //    _numLateGens = 0;
-    //    FlushLatesA();
-    //}
-}
-
-static void FlushLatesB() {
-    int n = _lates.Length - 1;
-
-    // leave one empty delimiter
-    if ( _lateTail - _lateHead > n ) {
+    if ( _lateTail - _lateHead >= _lates.Length ) {
         Error( "Out of lates.");
-        _lateTail = _lateHead + n;
+        ClearLates();
+        return;
     }
+
+    int n = _lates.Length - 1;
+    Late dummy = new();
 
     Late late(int i) {
-        return _lates[i & n];
+        var result = _lates[i & n];
+        return ( i < _lateTail && result.context == _context ) ? result : dummy;
     }
 
-    for ( int li = _lateHead; li < _lateTail; ) {
-
-        // skip  lates from other contexts
-        for ( ; late( li ).context == 0 || late( li ).context != _context; li++ )
-        {}
-
+    int li = _lateHead;
+    while ( true ) {
         int start;
 
-        // == skip to texts ==
+        for ( ; late( li ).type == LateType.None; li++ ) {
+            if ( li == _lateTail ) {
+                goto done;
+            }
+        }
+
+        // === gather texts ===
 
         for ( start = li; late( li ).type == LateType.Text; li++ )
         {}
@@ -836,7 +825,7 @@ static void FlushLatesB() {
             GL.End();
         }
 
-        // == skip to nokia texts ==
+        // === gather nokia texts ===
 
         for ( start = li; late( li ).type == LateType.NokiaText; li++ )
         {}
@@ -852,7 +841,7 @@ static void FlushLatesB() {
             GL.End();
         }
 
-        // == skip to images ==
+        // === gather images ===
 
         for ( start = li; late( li ).type == LateType.Image; li++ )
         {}
@@ -882,7 +871,7 @@ static void FlushLatesB() {
             GL.End();
         }
 
-        // == skip to lines ==
+        // === gather lines ===
 
         for ( start = li; late( li ).type == LateType.Line; li++ )
         {}
@@ -903,23 +892,22 @@ static void FlushLatesB() {
         }
     }
 
+done:
+
     for ( int i = _lateHead; i < _lateTail; i++ ) {
         if ( IsValidLate( i ) ) {
-            _flushed = false;
             return;
         }
         _lateHead++;
     }
 
     ClearLates();
-    _flushed = true;
 }
 
 #if HAS_UNITY
 // this will flush the lates and will invoke GL only if there are lates to flush
 public static void OnGUIFull( bool invertedY = false ) {
     if ( _lateHead == _lateTail ) {
-        _flushed = true;
         return;
     }
 
@@ -928,11 +916,11 @@ public static void OnGUIFull( bool invertedY = false ) {
     }
 
     if ( !_material ) {
-        QGL.Start( invertedY );
+        Start( invertedY );
     }
 
-    QGL.Begin();
-    QGL.End();
+    Begin();
+    End();
 }
 #endif
 
@@ -951,10 +939,6 @@ static void UpdateScreenSize() {
 
 static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
-    if ( ! _flushed ) {
-        return;
-    }
-
 #if false
     var txt = new LateText {
         context = _context,
@@ -975,9 +959,6 @@ static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? co
 }
 
 static void AddText( string str, float x, float y, Color? color = null, float scale = 1 ) {
-    if ( ! _flushed )
-        return;
-
 #if false
     var txt = new LateText {
         context = _context,
