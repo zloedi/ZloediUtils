@@ -135,6 +135,8 @@ public const string featuresDescription = @"Features:
 
 [Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
 static int QonOverlayPercent_kvar = 0;
+[Description( "Part of the screen height occupied by the Qonsole." )]
+static int QonScreenPercent_kvar = 0;
 [Description( "Show the Qonsole output to the system (unity) log too." )]
 static bool QonPrintToSystemLog_kvar = true;
 [Description( "Console character size." )]
@@ -466,7 +468,10 @@ public static void RenderGL( bool skip = false ) {
             QGL.SetWhiteTexture();
             GL.Begin( GL.QUADS );
             GL.Color( new Color( 0, 0, 0, QonAlpha_kvar ) );
-            QGL.DrawSolidQuad( new Vector2( 0, 0 ), new Vector2( Screen.width, QGL.ScreenHeight ) );
+            Vector2 bgr = QoncheToScreen( conW, conH );
+            bgr.x = QGL.ScreenWidth;
+            bgr.y = (QGL.ScreenHeight - bgr.y) < _textDy * 2 ? QGL.ScreenHeight : bgr.y;
+            QGL.DrawSolidQuad( Vector2.zero, bgr );
             GL.End();
         } else {
             int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
@@ -1031,7 +1036,8 @@ public static float LineHeight() {
 }
 
 public static void GetSize( out int conW, out int conH ) {
-    int maxH = ( int )QGL.ScreenHeight;
+    int perc = Mathf.Clamp(QonScreenPercent_kvar <= 0 ? 100 : QonScreenPercent_kvar, 10, 100);
+    int maxH = ( int )QGL.ScreenHeight * perc / 100;
     int cW = ( int )( _textDx * QonScale_kvar );
     int cH = ( int )( _textDy * QonScale_kvar );
     conW = Screen.width / cW;

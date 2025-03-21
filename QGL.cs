@@ -88,7 +88,12 @@ static List<Color> _colStack = new List<Color>();
 // these are postponed and drawn after all geometry in scene
 static Late [] _lates = new Late[2 * 1024];
 static int _lateHead, _lateTail;
+static int _frameCount;
 static int NewLate( LateType type, int context, Color? color ) {
+    if ( _frameCount != Time.frameCount ) {
+        ClearLates();
+        _frameCount = Time.frameCount;
+    }
     int idx = _lateTail & ( _lates.Length - 1);
     _lateTail++;
     _lates[idx].type = type;
@@ -104,10 +109,6 @@ static void DeleteLate( int idx ) {
 }
 static bool IsValidLate( int idx ) {
     idx &= _lates.Length - 1;
-
-    if ( Time.frameCount != _lates[idx].timestamp )
-        return false;
-
     return _lates[idx].type != 0;
 }
 static Material _material;
