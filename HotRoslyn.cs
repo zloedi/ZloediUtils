@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Emit;
@@ -106,7 +107,12 @@ public static void Update() {
             _roslynAssembly = null;
         }
 
-        OnCompile( asm );
+        try {
+            OnCompile( asm );
+        } catch ( Exception e) {
+            Error( e );
+        }
+
     }
 }
 
@@ -204,7 +210,6 @@ static void OnFileWatcherChange( object sender, FileSystemEventArgs e ) {
     Log( "...compile successful." );
 
     try {
-
         Log( "Try loading assembly..." );
         var assembly = Assembly.Load( imageAssembly, imagePDB );
         Log( "...done" );
@@ -223,7 +228,16 @@ static void OnFileWatcherError( object sender, ErrorEventArgs e ) {
 
 static bool ParseFile( string path, bool dll, out SyntaxTree tree ) {
     try {
-        tree = Parse( File.ReadAllText( path ), path );
+        string code = null;
+        for ( int i = 0; code == null && i < 10; i++) {
+            try {
+                code = File.ReadAllText( path );
+            } catch {
+                code = null;
+                Thread.Sleep( 10 );
+            }
+        }
+        tree = Parse( code, path );
         return true;
     } catch ( Exception ex ) {
         tree = null;
