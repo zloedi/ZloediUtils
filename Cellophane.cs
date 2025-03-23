@@ -40,6 +40,9 @@ public class Variable : Named {
         if ( fieldInfo.FieldType == typeof( float ) ) {
             return FtoA( ( float )fieldInfo.GetValue( null ) ); 
         }
+        if ( fieldInfo.FieldType == typeof( string ) ) {
+            return ( string )fieldInfo.GetValue( null );
+        }
         return fieldInfo.GetValue( null ).ToString();
     }
 
@@ -913,15 +916,21 @@ public static void ReadConfig( string val, bool skipVersionCheck = false ) {
 }
 
 public static string StoreConfig() {
-    string val = "";
+    string cfg = "";
     foreach ( var v in _variables ) {
+        string val = v.GetValue();
+
+        if ( v.fieldInfo.FieldType == typeof( string ) ) {
+            val = $"\"{val}\"";
+        }
+
         if ( v.description.Length > 0 ) {
-            val += $"{v.name} {v.GetValue()}  // {v.description}\n";
+            cfg += $"{v.name} {val}  // {v.description}\n";
         } else {
-            val += $"{v.name} {v.GetValue()}\n";
+            cfg += $"{v.name} {val}\n";
         }
     }
-    return val;
+    return cfg;
 }
 
 public static void ReadHistory( string val ) {

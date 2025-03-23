@@ -175,12 +175,7 @@ public static Action onGUI_f = () => {};
 // we hope it is the main thread?
 public static readonly int ThreadID = System.Threading.Thread.CurrentThread.ManagedThreadId;
 static bool _isEditor => Application.isEditor;
-static string _dataPath =>
-#if HAS_UNITY
-    Application.persistentDataPath;
-#else
-    System.IO.Path.GetDirectoryName( System.Reflection.Assembly.GetEntryAssembly().Location );
-#endif
+static string _dataPath => Application.persistentDataPath;
 static float _textDx => QGL.TextDx;
 static float _textDy => QGL.TextDy;
 static int _cursorChar => QGL.CursorChar;

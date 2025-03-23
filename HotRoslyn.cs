@@ -64,7 +64,7 @@ public static bool TryInit() {
     }
 
     try {
-        Log( $"Setting up File Watcher to {ScriptsRoot}" );
+        Log( $"Setting up File Watcher to '{ScriptsRoot}'" );
 
         _watcher = new FileSystemWatcher( ScriptsRoot );
         _watcher.Filter = "*.cs";
@@ -93,6 +93,7 @@ public static void Done() {
     _roslynAssembly = null;
     _initialized = false;
     _initializedCompiler = false;
+    _numReloads = 0;
     Log( "Compiler Done." );
 }
 

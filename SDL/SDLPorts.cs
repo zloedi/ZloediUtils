@@ -1,8 +1,10 @@
 #if ! UNITY_STANDALONE
 
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Reflection;
 using GalliumMath;
 
 using static SDL2.SDL;
@@ -361,7 +363,9 @@ namespace SDLPorts {
         public static bool isFocused = true;
         public static bool isPlaying = true;
         public static bool isEditor = false;
-        public static string persistentDataPath = "./";
+        public static string persistentDataPath = Path.GetDirectoryName(
+                                                            Assembly.GetEntryAssembly().Location );
+        public static string dataPath => "./";
 
         public static IntPtr renderer;
         public static IntPtr window;
