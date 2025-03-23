@@ -970,7 +970,7 @@ public static void Print( string s, QObject o = null ) {
             int min = (int)time / 60;
             int sec = (int)time % 60;
             int ms = (int)(time * 1000) % 1000;
-            prefix = $"{min.ToString( "D2" )}:{sec.ToString( "D2" )}:{ms.ToString( "D4" )}";
+            prefix = $"{min.ToString( "D2" )}:{sec.ToString( "D2" )}:{ms.ToString( "D3" )}";
         }
         s = prefix + ": " + s;
     }

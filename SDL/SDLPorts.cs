@@ -506,15 +506,17 @@ quit:
 
     public static class Time {
         public static float deltaTime;
-        public static float realtimeSinceStartup;
+        public static float realtimeSinceStartup => ( float )_timeSinceStartDouble;
         public static float unscaledTime;
         public static float time;
+        public static int frameCount;
 
         static ulong _beginTime;
         static ulong _last;
         static ulong _now;
         static double _deltaTimeDouble = 0;
-        static double _timeSinceStartDouble = 0;
+        static double _timeSinceStartDouble => (double)((SDL_GetPerformanceCounter() - _beginTime)
+                                                    / (double)SDL_GetPerformanceFrequency());
 
         public static void Tick() {
             if ( _beginTime == 0 ) {
@@ -523,12 +525,10 @@ quit:
 
             _last = _now;
             _now = SDL_GetPerformanceCounter();
-
             _deltaTimeDouble = (double)((_now - _last) / (double)SDL_GetPerformanceFrequency() );
-            _timeSinceStartDouble = (double)((_now - _beginTime) / (double)SDL_GetPerformanceFrequency() );
-
             deltaTime = ( float )_deltaTimeDouble;
-            time = unscaledTime = realtimeSinceStartup = ( float )_timeSinceStartDouble;
+            time = unscaledTime = ( float )_timeSinceStartDouble;
+            frameCount++;
         }
     }
 
