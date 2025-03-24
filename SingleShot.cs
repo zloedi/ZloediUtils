@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 public static class SingleShot {
 
@@ -13,6 +14,7 @@ class ActionItem {
 }
 
 private static List<ActionItem> _list = new List<ActionItem>();
+private static HashSet<int> _uniques = new HashSet<int>();
 
 public static void Clear() {
     _list.Clear();
@@ -68,6 +70,31 @@ public static void AddConditionalMs( Func<int,bool> tick = null,
     } );
 }
 
+public static void AddUnique( Action<float> tick = null, 
+                                int handle = 0,
+                                // duration in seconds
+                                float duration = 0.00001f,
+                                // optional on callback on finish
+                                Action done = null, 
+                                // optional postpone in seconds
+                                float postpone = 0,
+                                [CallerLineNumber] int lineNumber = 0,
+                                [CallerMemberName] string caller = null ) {
+    const int sh = 20;
+    const int mask0 = ( 1 << ( 32 - sh ) ) - 1;
+    const int mask1 = ( 1 << sh ) - 1;
+    int h0 = ( lineNumber & mask0 ) << sh;
+    int h1 = caller.GetHashCode() & mask1;
+    int key = ( h0 | h1 ) ^ ( handle * 689287499 );
+
+    if ( _uniques.Contains( key ) )
+        return;
+
+    _uniques.Add( key );
+
+    Add( tick, duration, done, postpone );
+}
+
 public static void TickSeconds( float deltaTime ) {
     TickMs( ( int )( deltaTime * 1000f ) );
 }
@@ -97,7 +124,8 @@ public static void TickMs( int deltaTime ) {
             Done( i );
         }
     }
-}
 
+    _uniques.Clear();
+}
 
 }
