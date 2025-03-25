@@ -651,56 +651,101 @@ public static void LateBlitComplete( Texture tex, float x, float y,
     _lates[i].material = mat;
 }
 
+// FIXME: LateDraw... is obsolete
+
 public static void LateDrawLineLoopWorld( IList<Vector3> worldLine, Color? color = null ) {
-    _lineBuf.Clear();
-    foreach ( var p in worldLine ) {
-        _lineBuf.Add( WorldToScreenPos( p ) );
-    }
-    LateDrawLineLoop( _lineBuf, color );
+    LateLineLoopWorld( worldLine, color );
 }
 
 public static void LateDrawRayWorld( Vector3 origin, Vector3 dir, Color? color = null ) {
-    LateDrawLineWorld( origin, origin + dir, color );
+    LateRayWorld( origin, dir, color );
+}
+
+public static void LateDrawLineLoop( IList<Vector2> line, Color? color = null ) {
+    LateLineLoop( line, color );
 }
 
 public static void LateDrawLineWorld( Vector3 a, Vector3 b, Color? color = null ) {
-    LateDrawLineWorld( new [] { a, b }, color );
+    LateLineWorld( a, b, color );
 }
 
 public static void LateDrawLineWorld( IList<Vector3> worldLine, Color? color = null ) {
+    LateLineWorld( worldLine, color );
+}
+
+public static void LateDrawLine( Vector2 a, Vector2 b, Color? color = null ) {
+    LateLine( a, b, color );
+}
+
+public static void LateLineLoopWorld( IList<Vector3> worldLine, Color? color = null ) {
     _lineBuf.Clear();
     foreach ( var p in worldLine ) {
         _lineBuf.Add( WorldToScreenPos( p ) );
     }
-    LateDrawLine( _lineBuf, color );
+    _lineBuf.Add( _lineBuf[0] );
+    LateLine( _lineBuf, color );
 }
 
-public static void LateDrawLine( float ax, float ay, float bx, float by, Color? color = null ) {
-    LateDrawLine( new Vector2( ax, ay ), new Vector2( bx, by ), color );
+public static void LateRayWorld( Vector3 origin, Vector3 dir, Color? color = null ) {
+    LateLineWorld( origin, origin + dir, color );
 }
 
-public static void LateDrawLine( Vector2 a, Vector2 b, Color? color = null ) {
+public static void LateLineWorld( Vector3 a, Vector3 b, Color? color = null ) {
+    LateLineWorld( new [] { a, b }, color );
+}
+
+public static void LateCircleWorld( Vector2 center, float radius, Color? color = null ) {
+    _lineBuf.Clear();
+
+    Vector2 d = WorldToScreenPos( Vector2.zero ) - WorldToScreenPos( Vector2.one );
+    float numIterations = Mathf.Floor( 0.15f * radius * Mathf.Abs( d.x ) );
+    numIterations = Mathf.Max( 4, numIterations );
+    float step = Mathf.PI * 2 / numIterations;
+    for (float i = 0; i < numIterations; i++)
+    {
+        float a = i * step;
+        Vector2 sc = new Vector2(Mathf.Sin(a), Mathf.Cos(a));
+        Vector2 p = WorldToScreenPos( center + sc * radius );
+        _lineBuf.Add( p );
+    }
+    _lineBuf.Add( _lineBuf[0] );
+    LateLine( _lineBuf, color );
+}
+
+public static void LateLineWorld( IList<Vector3> worldLine, Color? color = null ) {
+    _lineBuf.Clear();
+    foreach ( var p in worldLine ) {
+        _lineBuf.Add( WorldToScreenPos( p ) );
+    }
+    LateLine( _lineBuf, color );
+}
+
+public static void LateLine( float ax, float ay, float bx, float by, Color? color = null ) {
+    LateLine( new Vector2( ax, ay ), new Vector2( bx, by ), color );
+}
+
+public static void LateLine( Vector2 a, Vector2 b, Color? color = null ) {
     _linePair[0] = a;
     _linePair[1] = b;
-    LateDrawLine( _linePair, color );
+    LateLine( _linePair, color );
 }
 
-public static void LateDrawLineLoop( IList<Vector2> line, Color? color = null ) {
+public static void LateLineLoop( IList<Vector2> line, Color? color = null ) {
     _lineBuf.Clear();
     _lineBuf.AddRange( line );
     _lineBuf.Add( line[0] );
-    LateDrawLine( _lineBuf, color );
+    LateLine( _lineBuf, color );
 }
 
-public static void LateDrawLineRect( float x, float y, float w, float h, Color? color = null ) {
+public static void LateLineRect( float x, float y, float w, float h, Color? color = null ) {
     _lineRect[0] = new Vector2( x, y );
     _lineRect[1] = new Vector2( x + w, y );
     _lineRect[2] = new Vector2( x + w, y + h );
     _lineRect[3] = new Vector2( x, y + h );
-    LateDrawLineLoop( _lineRect, color );
+    LateLineLoop( _lineRect, color );
 }
 
-public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
+public static void LateLine( IList<Vector2> line, Color? color = null ) {
 #if false
     var ln = new LateLine {
         context = _context,
