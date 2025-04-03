@@ -448,6 +448,24 @@ static void Exit_kmd( string [] argv ) {
 
 static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
 
+static bool TryTimeStamps( out string prefix ) {
+    if ( QonShowTimestamps_kvar != 0 ) {
+        float time = Application.isPlaying ? Time.time : Time.realtimeSinceStartup;
+        if ( QonShowTimestamps_kvar == 1 ) {
+            prefix = ( (int)( time * 1000 ) ).ToString( "D6" );
+        } else {
+            int min = (int)time / 60;
+            int sec = (int)time % 60;
+            int ms = (int)(time * 1000) % 1000;
+            prefix = $"{min.ToString( "D2" )}:{sec.ToString( "D2" )}:{ms.ToString( "D3" )}";
+        }
+        prefix += ": ";
+        return true;
+    }
+    prefix = null;
+    return false;
+}
+
 public static void RenderGL( bool skip = false ) {
     _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
 
@@ -900,7 +918,12 @@ public static void Error( object o ) {
 }
 
 public static void Error( string s, QObject o ) {
-    string serr = "ERROR: " + s;
+    string serr;
+    if ( TryTimeStamps(out string prefix) ) {
+        serr = prefix + "ERROR: " + s;
+    } else {
+        serr = "ERROR: " + s;
+    }
     Action fade = OverlayGetFade();
 
     // lump together colorization and overlay fade
@@ -956,18 +979,8 @@ public static void PrintAndAct( string s, Action<Vector2,float> a ) {
 
 // print (colorized) text
 public static void Print( string s, QObject o = null ) {
-    if ( QonShowTimestamps_kvar != 0 ) {
-        string prefix;
-        float time = Application.isPlaying ? Time.time : Time.realtimeSinceStartup;
-        if ( QonShowTimestamps_kvar == 1 ) {
-            prefix = ( (int)( time * 1000 ) ).ToString( "D6" );
-        } else {
-            int min = (int)time / 60;
-            int sec = (int)time % 60;
-            int ms = (int)(time * 1000) % 1000;
-            prefix = $"{min.ToString( "D2" )}:{sec.ToString( "D2" )}:{ms.ToString( "D3" )}";
-        }
-        s = prefix + ": " + s;
+    if ( TryTimeStamps(out string prefix) ) {
+        s = prefix + s;
     }
     string sysString = "";
     bool skipFade = false;
