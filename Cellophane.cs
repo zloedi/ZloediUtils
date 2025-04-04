@@ -40,6 +40,9 @@ public class Variable : Named {
         if ( fieldInfo.FieldType == typeof( float ) ) {
             return FtoA( ( float )fieldInfo.GetValue( null ) ); 
         }
+        if ( fieldInfo.FieldType == typeof( string ) ) {
+            return ( string )fieldInfo.GetValue( null );
+        }
         return fieldInfo.GetValue( null ).ToString();
     }
 
