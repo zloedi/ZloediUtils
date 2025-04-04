@@ -181,6 +181,7 @@ static float _textDy => QGL.TextDy;
 static int _cursorChar => QGL.CursorChar;
 
 static int _totalTime;
+static int _totalGameTime;
 static string _historyPath;
 static string _configPath;
 static int _drawCharStartY;
@@ -450,13 +451,14 @@ static void Quit_kmd( string [] argv ) { Exit_kmd( argv ); }
 
 static bool TryTimeStamps( out string prefix ) {
     if ( QonShowTimestamps_kvar != 0 ) {
-        float time = Application.isPlaying ? Time.time : Time.realtimeSinceStartup;
+        int ms = _totalGameTime;
+        int sec = ms / 1000;
         if ( QonShowTimestamps_kvar == 1 ) {
-            prefix = ( (int)( time * 1000 ) ).ToString( "D6" );
+            prefix = ms.ToString( "D6" );
         } else {
-            int min = (int)time / 60;
-            int sec = (int)time % 60;
-            int ms = (int)(time * 1000) % 1000;
+            int min = sec / 60;
+            sec = sec % 60;
+            ms = ms % 1000;
             prefix = $"{min.ToString( "D2" )}:{sec.ToString( "D2" )}:{ms.ToString( "D3" )}";
         }
         prefix += ": ";
@@ -468,6 +470,7 @@ static bool TryTimeStamps( out string prefix ) {
 
 public static void RenderGL( bool skip = false ) {
     _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
+    _totalGameTime = ( int )( Time.time * 1000.0f );
 
     QGL.Begin();
 
