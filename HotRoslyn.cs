@@ -228,17 +228,28 @@ static void OnFileWatcherError( object sender, ErrorEventArgs e ) {
 
 static bool ParseFile( string path, bool dll, out SyntaxTree tree ) {
     try {
+#if false
+        tree = Parse( File.ReadAllText( path ), path );
+        return true;
+#else
         string code = null;
         for ( int i = 0; code == null && i < 10; i++) {
             try {
                 code = File.ReadAllText( path );
             } catch {
                 code = null;
-                Thread.Sleep( 10 );
+                Thread.Sleep( 33 );
             }
         }
-        tree = Parse( code, path );
-        return true;
+        if ( code != null)
+        {
+            tree = Parse( code, path );
+            return true;
+        }
+        tree = null;
+        Error( $"Failed to read '{path}'" );
+        return false;
+#endif
     } catch ( Exception ex ) {
         tree = null;
         Error( ex );
