@@ -1,3 +1,4 @@
+// FIXME: right now, the lates are doubled if one of the context doesn't flush (i.e. its window was not OnGUI rendered)
 #if UNITY_STANDALONE || UNITY_2021_1_OR_NEWER
 #define HAS_UNITY
 #endif
@@ -18,30 +19,28 @@ using UnityEngine;
 
 public static class QGL {
 
-class Late {
+public enum LateType {
+    None,
+    Line,
+    Text,
+    NokiaText,
+    Image,
+}
+
+struct Late {
+    public LateType type;
+
     public int context;
-    public Color32 color;
-}
+    public Color color;
 
-class LateLine : Late {
     public List<Vector2> line;
-}
 
-class LateText : Late {
     public float x, y;
     public float scale;
     public string str;
-}
 
-class LateTextNokia : Late {
-    public float x, y;
-    public float scale;
-    public string str;
-}
-
-class LateImage : Late {
     // dest rect
-    public float x, y, w, h;
+    public float w, h;
     // src rect
     public float sx, sy, sw, sh;
     // orientation
@@ -49,6 +48,8 @@ class LateImage : Late {
 
     public Texture texture;
     public Material material;
+
+    public int timestamp;
 }
 
 class FontInfo {
@@ -82,16 +83,40 @@ static int Font_cvar = 0;
 static int ShowFontTexture_cvar = 0;
 
 static Camera _camera;
-// FIXME: use Color32 for the stack
 // used with Cellophane color tags
 static List<Color> _colStack = new List<Color>();
 // these are postponed and drawn after all geometry in scene
-static List<Late> _lates = new List<Late>();
+static Late [] _lates = new Late[2 * 1024];
+static int _lateHead, _lateTail;
+static int _frameCount;
+static int NewLate( LateType type, int context, Color? color ) {
+    if ( _frameCount != Time.frameCount ) {
+        ClearLates();
+        _frameCount = Time.frameCount;
+    }
+    int idx = _lateTail & ( _lates.Length - 1);
+    _lateTail++;
+    _lates[idx].type = type;
+    _lates[idx].context = context;
+    _lates[idx].color = color ?? Color.green;
+    _lates[idx].timestamp = Time.frameCount;
+    return idx;
+}
+static void DeleteLate( int idx ) {
+    idx &= _lates.Length - 1;
+    _lates[idx].context = 0;
+    _lates[idx].type = 0;
+}
+static bool IsValidLate( int idx ) {
+    idx &= _lates.Length - 1;
+    return _lates[idx].type != 0;
+}
 static Material _material;
 static Texture _mainTex;
 static Texture2D _texWhite = Texture2D.whiteTexture;
+static Vector2 [] _linePair = new Vector2[2];
 static Vector2 [] _lineRect = new Vector2[4];
-static bool _flushed;
+static List<Vector2> _lineBuf = new();
 static bool _invertedY;
 static int _context;
 static FontInfo [] _allFonts;
@@ -105,8 +130,11 @@ static int _fontNumRows    => _currentFontInfo.numRows;
 static Dictionary<int,CharInfo> _ciMap = new Dictionary<int,CharInfo>();
 static CharInfo [] _ciCache = new CharInfo[256];
 
-static QGL()
-{
+static QGL() {
+    for ( int i = 0; i < _lates.Length; i++ ) {
+        _lates[i].line = new();
+    }
+
     _ciCache[0].uv = new Vector2[4];
     _ciCache[0].verts = new Vector2[4];
 }
@@ -132,7 +160,7 @@ public static bool Start( bool invertedY = false ) {
     if ( shader ) {
         _material = new Material( shader );
         _material.hideFlags = HideFlags.HideAndDontSave;
-        _lates.Clear();
+        ClearLates();
         SetContext( null, invertedY: invertedY );
         Log( $"GL started, using shader {shader.name}" );
         return true;
@@ -487,11 +515,9 @@ public static void LatePrintNokia( string str, Vector2Int xy, Color? color = nul
 
 public static void LatePrintNokia( string str, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
-    if ( ! _flushed )
-        return;
-
     Vector2 sz = MeasureStringNokia( str, scale );
 
+#if false
     var txt = new LateTextNokia {
         context = _context,
         x = Mathf.Round( x - ( int )sz.x / 2 ),
@@ -500,15 +526,19 @@ public static void LatePrintNokia( string str, float x, float y, Color? color = 
         str = str,
         color = color == null ? Color.green : color.Value,
     };
-
     _lates.Add( txt );
+#endif
+
+    int i = NewLate( LateType.NokiaText, _context, color );
+    _lates[i].x = Mathf.Round( x - ( int )sz.x / 2 );
+    _lates[i].y = Mathf.Round( y - ( int )sz.y / 2 );
+    _lates[i].scale = scale;
+    _lates[i].str = str;
 }
 
 public static void LatePrintNokia_tl( string str, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
-    if ( ! _flushed )
-        return;
-
+#if false
     var txt = new LateTextNokia {
         context = _context,
         x = ( int )x,
@@ -517,8 +547,15 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
         str = str,
         color = color == null ? Color.green : color.Value,
     };
-
     _lates.Add( txt );
+#endif
+
+    int i = NewLate( LateType.NokiaText, _context, color );
+    _lates[i].context = _context;
+    _lates[i].x = ( int )x;
+    _lates[i].y = ( int )y;
+    _lates[i].scale = scale;
+    _lates[i].str = str;
 }
 
 public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h,
@@ -573,10 +610,9 @@ public static void LateBlitComplete( Texture tex, float x, float y,
                                             float sx = 0, float sy = 0, float sw = 0, float sh = 0,
                                             float ox = float.MaxValue, float oy = float.MaxValue,
                                             Color? color = null, Material mat = null ) {
-    if ( ! _flushed )
-        return;
-
     tex = tex != null ? tex : _texWhite;
+
+#if false
     var img = new LateImage {
         context = _context,
 
@@ -597,73 +633,145 @@ public static void LateBlitComplete( Texture tex, float x, float y,
         texture = tex,
         material = mat,
     };
-    
     _lates.Add( img );
+#endif
+
+    int i = NewLate( LateType.Image, _context, color );
+    _lates[i].x = x;
+    _lates[i].y = y;
+    _lates[i].w = w != float.MaxValue ? w : tex.width;
+    _lates[i].h = h != float.MaxValue ? h : tex.height;
+    _lates[i].sx = sx;
+    _lates[i].sy = sy;
+    _lates[i].sw = sw > 0 ? sw : tex.width;
+    _lates[i].sh = sh > 0 ? sh : tex.height;
+    _lates[i].ox = ox;
+    _lates[i].oy = oy;
+    _lates[i].texture = tex;
+    _lates[i].material = mat;
 }
 
+// FIXME: LateDraw... is obsolete
+
 public static void LateDrawLineLoopWorld( IList<Vector3> worldLine, Color? color = null ) {
-    List<Vector2> l = new List<Vector2>();
-    foreach ( var p in worldLine ) {
-        l.Add( WorldToScreenPos( p ) );
-    }
-    LateDrawLineLoop( l, color );
+    LateLineLoopWorld( worldLine, color );
 }
 
 public static void LateDrawRayWorld( Vector3 origin, Vector3 dir, Color? color = null ) {
-    LateDrawLineWorld( origin, origin + dir, color );
-}
-
-public static void LateDrawLineWorld( Vector3 a, Vector3 b, Color? color = null ) {
-    LateDrawLineWorld( new [] { a, b }, color );
-}
-
-public static void LateDrawLineWorld( IList<Vector3> worldLine, Color? color = null ) {
-    List<Vector2> l = new List<Vector2>();
-    foreach ( var p in worldLine ) {
-        l.Add( WorldToScreenPos( p ) );
-    }
-    LateDrawLine( l, color );
-}
-
-public static void LateDrawLine( float ax, float ay, float bx, float by, Color? color = null ) {
-    LateDrawLine( new Vector2( ax, ay ), new Vector2( bx, by ), color );
-}
-
-public static void LateDrawLine( Vector2 a, Vector2 b, Color? color = null ) {
-    LateDrawLine( new [] { a, b }, color );
+    LateRayWorld( origin, dir, color );
 }
 
 public static void LateDrawLineLoop( IList<Vector2> line, Color? color = null ) {
-    List<Vector2> loop = new List<Vector2>( line );
-    loop.Add( line[0] );
-    LateDrawLine( loop, color );
+    LateLineLoop( line, color );
 }
 
-public static void LateDrawLineRect( float x, float y, float w, float h, Color? color = null ) {
+public static void LateDrawLineWorld( Vector3 a, Vector3 b, Color? color = null ) {
+    LateLineWorld( a, b, color );
+}
+
+public static void LateDrawLineWorld( IList<Vector3> worldLine, Color? color = null ) {
+    LateLineWorld( worldLine, color );
+}
+
+public static void LateDrawLine( Vector2 a, Vector2 b, Color? color = null ) {
+    LateLine( a, b, color );
+}
+
+public static void LateLineLoopWorld( IList<Vector3> worldLine, Color? color = null ) {
+    _lineBuf.Clear();
+    foreach ( var p in worldLine ) {
+        _lineBuf.Add( WorldToScreenPos( p ) );
+    }
+    _lineBuf.Add( _lineBuf[0] );
+    LateLine( _lineBuf, color );
+}
+
+public static void LateRayWorld( Vector3 origin, Vector3 dir, Color? color = null ) {
+    LateLineWorld( origin, origin + dir, color );
+}
+
+public static void LateLineWorld( Vector3 a, Vector3 b, Color? color = null ) {
+    LateLineWorld( new [] { a, b }, color );
+}
+
+public static void LateCircleWorld( Vector2 center, float radius, Color? color = null ) {
+    _lineBuf.Clear();
+
+    Vector2 d = WorldToScreenPos( Vector2.zero ) - WorldToScreenPos( Vector2.one );
+    float numIterations = Mathf.Floor( 0.15f * radius * Mathf.Abs( d.x ) );
+    numIterations = Mathf.Max( 4, numIterations );
+    float step = Mathf.PI * 2 / numIterations;
+    for (float i = 0; i < numIterations; i++)
+    {
+        float a = i * step;
+        Vector2 sc = new Vector2(Mathf.Sin(a), Mathf.Cos(a));
+        Vector2 p = WorldToScreenPos( center + sc * radius );
+        _lineBuf.Add( p );
+    }
+    _lineBuf.Add( _lineBuf[0] );
+    LateLine( _lineBuf, color );
+}
+
+public static void LateLineWorld( IList<Vector3> worldLine, Color? color = null ) {
+    _lineBuf.Clear();
+    foreach ( var p in worldLine ) {
+        _lineBuf.Add( WorldToScreenPos( p ) );
+    }
+    LateLine( _lineBuf, color );
+}
+
+public static void LateLine( float ax, float ay, float bx, float by, Color? color = null ) {
+    LateLine( new Vector2( ax, ay ), new Vector2( bx, by ), color );
+}
+
+public static void LateLine( Vector2 a, Vector2 b, Color? color = null ) {
+    _linePair[0] = a;
+    _linePair[1] = b;
+    LateLine( _linePair, color );
+}
+
+public static void LateLineLoop( IList<Vector2> line, Color? color = null ) {
+    _lineBuf.Clear();
+    _lineBuf.AddRange( line );
+    _lineBuf.Add( line[0] );
+    LateLine( _lineBuf, color );
+}
+
+public static void LateLineRect( float x, float y, float w, float h, Color? color = null ) {
     _lineRect[0] = new Vector2( x, y );
     _lineRect[1] = new Vector2( x + w, y );
     _lineRect[2] = new Vector2( x + w, y + h );
     _lineRect[3] = new Vector2( x, y + h );
-    LateDrawLineLoop( _lineRect, color );
+    LateLineLoop( _lineRect, color );
 }
 
-public static void LateDrawLine( IList<Vector2> line, Color? color = null ) {
-    if ( ! _flushed )
-        return;
-
-    var l = new List<Vector2>( line );
-    for ( int i = 0; i < l.Count; i++ ) {
-        float y = _invertedY ? ScreenHeight - l[i].y : l[i].y;
-        l[i] = new Vector2( l[i].x, y );
-    }
-
+public static void LateLine( IList<Vector2> line, Color? color = null ) {
+#if false
     var ln = new LateLine {
         context = _context,
-        line = l,
         color = color == null ? Color.white : color.Value,
     };
-
+    ln.line.Clear();
+    ln.line.AddRange( line );
+    if ( _invertedY ) {
+        for ( int i = 0; i < ln.line.Count; i++ ) {
+            ln.line[i] = new Vector2( ln.line[i].x, ScreenHeight - ln.line[i].y );
+        }
+    }
     _lates.Add( ln );
+#endif
+
+    {
+        int i = NewLate( LateType.Line, _context, color );
+        var lateLine = _lates[i].line;
+        lateLine.Clear();
+        lateLine.AddRange( line );
+        if ( _invertedY ) {
+            for ( int j = 0; j < lateLine.Count; j++ ) {
+                lateLine[j] = new Vector2( lateLine[j].x, ScreenHeight - lateLine[j].y );
+            }
+        }
+    }
 }
 
 public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
@@ -688,7 +796,7 @@ public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
 // Lates after this call will be marked 'of this context'
 public static void SetContext( Camera camera, float pixelsPerPoint = 1, bool invertedY = false ) {
     _camera = camera ?? Camera.main;
-    _context = _camera ? _camera.GetHashCode() : 0;
+    _context = _camera ? _camera.GetHashCode() : -1;
     _invertedY = invertedY;
     PixelsPerPoint = pixelsPerPoint;
     UpdateScreenSize();
@@ -719,110 +827,133 @@ public static void End( bool skipLateFlush = false ) {
 }
 
 public static void ClearLates() {
-    _lates.Clear();
+    _lateHead = _lateTail;
 }
 
 public static void FlushLates() {
-    for ( int li = 0; li < _lates.Count; ) {
+    if ( _lateTail - _lateHead >= _lates.Length ) {
+        Error( "Out of lates.");
+        ClearLates();
+        return;
+    }
 
-        for ( ; li < _lates.Count && _lates[li].context != _context; li++ )
-        {}
+    int n = _lates.Length - 1;
+    Late dummy = new();
 
+    Late late(int i) {
+        var result = _lates[i & n];
+        return ( i < _lateTail && result.context == _context ) ? result : dummy;
+    }
+
+    int li = _lateHead;
+    while ( true ) {
         int start;
 
-        // == texts ==
+        for ( ; late( li ).type == LateType.None; li++ ) {
+            if ( li == _lateTail ) {
+                goto done;
+            }
+        }
 
-        for ( start = li; li < _lates.Count && _lates[li] is LateText; li++ )
+        // === gather texts ===
+
+        for ( start = li; late( li ).type == LateType.Text; li++ )
         {}
 
         if ( start < li ) {
             SetFontTexture();
             GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
-                var lt = ( LateText )_lates[i];
+                var lt = late( i );
                 DrawTextWithOutline( lt.str, lt.x, lt.y, lt.color, lt.scale );
+                DeleteLate( i );
             }
             GL.End();
         }
 
-        // == nokia texts ==
+        // === gather nokia texts ===
 
-        for ( start = li; li < _lates.Count && _lates[li] is LateTextNokia; li++ )
+        for ( start = li; late( li ).type == LateType.NokiaText; li++ )
         {}
 
         if ( start < li ) {
             SetTexture( NokiaFont.GetTexture() );
             GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
-                var ltn = ( LateTextNokia )_lates[i];
-                DrawTextNokia( ltn.str, ltn.x, ltn.y, ltn.color, ltn.scale );
+                var lt = late( i );
+                DrawTextNokia( lt.str, lt.x, lt.y, lt.color, lt.scale );
+                DeleteLate( i );
             }
             GL.End();
         }
 
-        // == images ==
+        // === gather images ===
 
-        for ( start = li; li < _lates.Count && _lates[li] is LateImage; li++ )
+        for ( start = li; late( li ).type == LateType.Image; li++ )
         {}
 
         if ( start < li ) {
-            Texture tex = ( ( LateImage )_lates[start] ).texture;
+            Texture tex = late( start ).texture;
             tex = tex != null ? tex : _texWhite;
             SetTexture( tex );
             GL.Begin( GL.QUADS );
             for ( int i = start; i < li; i++ ) {
-                var img = ( LateImage )_lates[i];
-                if ( tex != img.texture ) {
+                var lt = late( i );
+                if ( tex != lt.texture ) {
                     GL.End();
-                    tex = img.texture != null ? img.texture : _texWhite;
+                    tex = lt.texture != null ? lt.texture : _texWhite;
                     SetTexture( tex );
                     GL.Begin( GL.QUADS );
                 }
-                Vector2 srcPos = new Vector2( img.sx, img.sy );
-                Vector2 srcSize = new Vector2( img.sw, img.sh );
-                Vector2 dstPos = new Vector2( img.x, img.y );
-                Vector2 dstSize = new Vector2( img.w, img.h );
-                Vector2 dir = new Vector2( img.ox, img.oy );
-                ImageQuad( img.texture.width, img.texture.height, srcPos, srcSize,
-                                                            dstPos, dstSize, dir, img.color );
+                Vector2 srcPos = new Vector2( lt.sx, lt.sy );
+                Vector2 srcSize = new Vector2( lt.sw, lt.sh );
+                Vector2 dstPos = new Vector2( lt.x, lt.y );
+                Vector2 dstSize = new Vector2( lt.w, lt.h );
+                Vector2 dir = new Vector2( lt.ox, lt.oy );
+                ImageQuad( lt.texture.width, lt.texture.height, srcPos, srcSize,
+                                                            dstPos, dstSize, dir, lt.color );
+                DeleteLate( i );
             }
             GL.End();
         }
 
-        // == lines ==
+        // === gather lines ===
 
-        for ( start = li; li < _lates.Count && _lates[li] is LateLine; li++ )
+        for ( start = li; late( li ).type == LateType.Line; li++ )
         {}
 
         if ( start < li ) {
             SetWhiteTexture();
             GL.Begin( GL.LINES );
             for ( int i = start; i < li; i++ ) {
-                var l = ( LateLine )_lates[i];
-                GL.Color( l.color );
-                for ( int j = 0; j < l.line.Count - 1; j++ ) {
-                    GL.Vertex( l.line[j + 0] );
-                    GL.Vertex( l.line[j + 1] );
+                var lt = late( i );
+                GL.Color( lt.color );
+                for ( int j = 0; j < lt.line.Count - 1; j++ ) {
+                    GL.Vertex( lt.line[j + 0] );
+                    GL.Vertex( lt.line[j + 1] );
                 }
+                DeleteLate( i );
             }
             GL.End();
         }
     }
 
-    for ( int li = _lates.Count - 1; li >= 0; li-- ) {
-        if ( _lates[li].context == _context ) {
-            _lates.RemoveAt( li );
+done:
+
+    for ( int i = _lateHead; i < _lateTail; i++ ) {
+        if ( IsValidLate( i ) ) {
+            return;
         }
+        _lateHead++;
     }
 
-    _flushed = _lates.Count == 0;
+    ClearLates();
 }
 
 #if HAS_UNITY
 // this will flush the lates and will invoke GL only if there are lates to flush
 public static void OnGUIFull( bool invertedY = false ) {
-    if ( _lates.Count == 0 ) {
-        _flushed = true;
+    if ( _lateHead == _lateTail ) {
         return;
     }
 
@@ -831,11 +962,11 @@ public static void OnGUIFull( bool invertedY = false ) {
     }
 
     if ( !_material ) {
-        QGL.Start( invertedY );
+        Start( invertedY );
     }
 
-    QGL.Begin();
-    QGL.End();
+    Begin();
+    End();
 }
 #endif
 
@@ -854,10 +985,7 @@ static void UpdateScreenSize() {
 
 static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? color = null,
                                                                                 float scale = 1 ) {
-    if ( ! _flushed ) {
-        return;
-    }
-
+#if false
     var txt = new LateText {
         context = _context,
         x = Mathf.Round( x - ( int )sz.x / 2 ),
@@ -866,14 +994,18 @@ static void AddCenteredText( string str, Vector2 sz, float x, float y, Color? co
         str = str,
         color = color == null ? Color.green : color.Value,
     };
-
     _lates.Add( txt );
+#endif
+
+    int i = NewLate( LateType.Text, _context, color );
+    _lates[i].x = Mathf.Round( x - ( int )sz.x / 2 );
+    _lates[i].y = Mathf.Round( y - ( int )sz.y / 2 );
+    _lates[i].scale = scale;
+    _lates[i].str = str;
 }
 
 static void AddText( string str, float x, float y, Color? color = null, float scale = 1 ) {
-    if ( ! _flushed )
-        return;
-
+#if false
     var txt = new LateText {
         context = _context,
         x = ( int )x,
@@ -882,8 +1014,14 @@ static void AddText( string str, float x, float y, Color? color = null, float sc
         str = str,
         color = color == null ? Color.green : color.Value,
     };
-
     _lates.Add( txt );
+#endif
+
+    int i = NewLate( LateType.Text, _context, color );
+    _lates[i].x = ( int )x;
+    _lates[i].y = ( int )y;
+    _lates[i].scale = scale;
+    _lates[i].str = str;
 }
 
 static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
