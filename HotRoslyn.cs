@@ -112,7 +112,6 @@ public static void Update() {
         } catch ( Exception e) {
             Error( e );
         }
-
     }
 }
 
@@ -228,10 +227,6 @@ static void OnFileWatcherError( object sender, ErrorEventArgs e ) {
 
 static bool ParseFile( string path, bool dll, out SyntaxTree tree ) {
     try {
-#if false
-        tree = Parse( File.ReadAllText( path ), path );
-        return true;
-#else
         string code = null;
         for ( int i = 0; code == null && i < 10; i++) {
             try {
@@ -241,15 +236,16 @@ static bool ParseFile( string path, bool dll, out SyntaxTree tree ) {
                 Thread.Sleep( 33 );
             }
         }
+
         if ( code != null)
         {
             tree = Parse( code, path );
             return true;
         }
+
         tree = null;
         Error( $"Failed to read '{path}'" );
         return false;
-#endif
     } catch ( Exception ex ) {
         tree = null;
         Error( ex );
