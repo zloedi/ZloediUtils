@@ -1,8 +1,10 @@
 #if ! UNITY_STANDALONE
 
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Reflection;
 using GalliumMath;
 
 using static SDL2.SDL;
@@ -361,7 +363,9 @@ namespace SDLPorts {
         public static bool isFocused = true;
         public static bool isPlaying = true;
         public static bool isEditor = false;
-        public static string persistentDataPath = "./";
+        public static string persistentDataPath = Path.GetDirectoryName(
+                                                            Assembly.GetEntryAssembly().Location );
+        public static string dataPath => "./";
 
         public static IntPtr renderer;
         public static IntPtr window;
@@ -506,15 +510,17 @@ quit:
 
     public static class Time {
         public static float deltaTime;
-        public static float realtimeSinceStartup;
+        public static float realtimeSinceStartup => ( float )_timeSinceStartDouble;
         public static float unscaledTime;
         public static float time;
+        public static int frameCount;
 
         static ulong _beginTime;
         static ulong _last;
         static ulong _now;
         static double _deltaTimeDouble = 0;
-        static double _timeSinceStartDouble = 0;
+        static double _timeSinceStartDouble => (double)((SDL_GetPerformanceCounter() - _beginTime)
+                                                    / (double)SDL_GetPerformanceFrequency());
 
         public static void Tick() {
             if ( _beginTime == 0 ) {
@@ -523,12 +529,10 @@ quit:
 
             _last = _now;
             _now = SDL_GetPerformanceCounter();
-
             _deltaTimeDouble = (double)((_now - _last) / (double)SDL_GetPerformanceFrequency() );
-            _timeSinceStartDouble = (double)((_now - _beginTime) / (double)SDL_GetPerformanceFrequency() );
-
             deltaTime = ( float )_deltaTimeDouble;
-            time = unscaledTime = realtimeSinceStartup = ( float )_timeSinceStartDouble;
+            time = unscaledTime = ( float )_timeSinceStartDouble;
+            frameCount++;
         }
     }
 
