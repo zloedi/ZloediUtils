@@ -26,6 +26,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Emit;
@@ -64,7 +65,7 @@ public static bool TryInit() {
     }
 
     try {
-        Log( $"Setting up File Watcher to {ScriptsRoot}" );
+        Log( $"Setting up File Watcher to '{ScriptsRoot}'" );
 
         _watcher = new FileSystemWatcher( ScriptsRoot );
         _watcher.Filter = "*.cs";
@@ -93,6 +94,7 @@ public static void Done() {
     _roslynAssembly = null;
     _initialized = false;
     _initializedCompiler = false;
+    _numReloads = 0;
     Log( "Compiler Done." );
 }
 
@@ -105,7 +107,11 @@ public static void Update() {
             _roslynAssembly = null;
         }
 
-        OnCompile( asm );
+        try {
+            OnCompile( asm );
+        } catch ( Exception e) {
+            Error( e );
+        }
     }
 }
 
@@ -203,7 +209,6 @@ static void OnFileWatcherChange( object sender, FileSystemEventArgs e ) {
     Log( "...compile successful." );
 
     try {
-
         Log( "Try loading assembly..." );
         var assembly = Assembly.Load( imageAssembly, imagePDB );
         Log( "...done" );
@@ -222,8 +227,25 @@ static void OnFileWatcherError( object sender, ErrorEventArgs e ) {
 
 static bool ParseFile( string path, bool dll, out SyntaxTree tree ) {
     try {
-        tree = Parse( File.ReadAllText( path ), path );
-        return true;
+        string code = null;
+        for ( int i = 0; code == null && i < 10; i++) {
+            try {
+                code = File.ReadAllText( path );
+            } catch {
+                code = null;
+                Thread.Sleep( 33 );
+            }
+        }
+
+        if ( code != null)
+        {
+            tree = Parse( code, path );
+            return true;
+        }
+
+        tree = null;
+        Error( $"Failed to read '{path}'" );
+        return false;
     } catch ( Exception ex ) {
         tree = null;
         Error( ex );
