@@ -451,6 +451,11 @@ static void CollectItems( List<Command> cmds, List<Variable> vars ) {
                 continue;
             }
 
+            // ignore const
+            if ( fi.IsLiteral && ! fi.IsInitOnly ) {
+                continue;
+            }
+
             Variable cvar = VarCreate( type, fi );
 
             vars.Add( cvar );
