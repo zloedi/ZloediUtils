@@ -694,6 +694,16 @@ public static void LateLineWorld( Vector3 a, Vector3 b, Color? color = null ) {
     LateLineWorld( new [] { a, b }, color );
 }
 
+public static void LatePointWorld( Vector3 pt, float size = 9, Color? color = null ) {
+    Vector2 d = WorldToScreenPos( pt );
+    Vector2 x = new Vector2( size, 0 );
+    Vector2 y = new Vector2( 0, size );
+    Vector2 ptx = d - x / 2;
+    Vector2 pty = d - y / 2;
+    LateLine( ptx, ptx + x, color );
+    LateLine( pty, pty + y, color );
+}
+
 public static void LateCircleWorld( Vector2 center, float radius, Color? color = null ) {
     _lineBuf.Clear();
 
