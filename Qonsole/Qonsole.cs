@@ -7,7 +7,53 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 
-#if SDL || HAS_UNITY
+
+#if QONSOLE_STUBS
+
+
+// == Just stubs API ==
+
+#if HAS_UNITY
+using UnityEngine;
+using QObject = UnityEngine.Object;
+#elif SDL
+using SDLPorts;
+using QObject = System.Object;
+#endif
+
+public class QonsoleBootstrap { public static void TrySetupQonsole() {} }
+
+public static class Qonsole {
+public static readonly int ThreadID = 0;
+public static bool Active = false;
+public static bool Started = false;
+public static bool Initialized = false;
+public static void Init( int configVersion = -1, List<Cellophane.Command> cmds = null,
+                                                        List<Cellophane.Variable> vars = null ) {}
+public static void Start() {}
+public static void Update() {}
+public static void OnGUI() {}
+public static void Toggle() {}
+public static void OnApplicationQuit() {}
+public static void FlushConfig() {}
+public static bool TryExecute( string cmdLine, object context = null, bool silent = false,
+                                                            bool keepJsonTags = false ) => false;
+public static void Print( string s ) {}
+public static void Log( string s ) {}
+public static void Log( string s, QObject o ) {}
+public static void Log( object o ) {}
+public static void Log( object o, QObject unityObj ) {}
+public static void Error( object o ) {}
+public static void Break( object o ) {}
+public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPerPoint = 1,
+                                                                Action<Camera> onRepaint = null ) {}
+}
+
+
+#elif SDL || HAS_UNITY
+
+
+// == Full Graphical Qonsole API ==
 
 //#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
 //#define QONSOLE_BOOTSTRAP_EDITOR // if this is defined, the console will try to bootstrap itself in the editor
@@ -77,6 +123,7 @@ public class QonsoleBootstrap : MonoBehaviour {
 }
 #endif
 
+
 public static class Qonsole {
 
 
@@ -98,7 +145,7 @@ public static void CreateBootstrapObject() {
     }
 }
 
-#endif // HAS_UNITY
+#endif
 
 public static bool Active;
 public static bool Started;
@@ -146,11 +193,11 @@ static bool QonPrintToSystemLog_kvar = true;
 [Description( "Console character size." )]
 static float QonScale_kvar = 1;
 [Description( "Show the Qonsole in the editor: 0 -- no, 1 -- yes, 2 -- editor only." )]
-public static int QonShowInEditor_kvar = 1;
+static int QonShowInEditor_kvar = 1;
 [Description( "Alpha blend value of the Qonsole background." )]
-public static float QonAlpha_kvar = 0.65f;
+static float QonAlpha_kvar = 0.65f;
 [Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
-public static bool QonInvertPlayY_kvar = false;
+static bool QonInvertPlayY_kvar = false;
 [Description( "Prefix messages with a time stamp. 1 -- milliseconds, 2 -- min:sec:ms" )]
 static int QonShowTimestamps_kvar = 0;
 #if QONSOLE_INVERTED_PLAY_Y
