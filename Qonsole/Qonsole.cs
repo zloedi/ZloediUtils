@@ -7,7 +7,53 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
 
-#if SDL || HAS_UNITY
+
+#if QONSOLE_STUBS
+
+
+// == Just stubs API ==
+
+#if HAS_UNITY
+using UnityEngine;
+using QObject = UnityEngine.Object;
+#elif SDL
+using SDLPorts;
+using QObject = System.Object;
+#endif
+
+public class QonsoleBootstrap { public static void TrySetupQonsole() {} }
+
+public static class Qonsole {
+public static readonly int ThreadID = 0;
+public static bool Active = false;
+public static bool Started = false;
+public static bool Initialized = false;
+public static void Init( int configVersion = -1, List<Cellophane.Command> cmds = null,
+                                                        List<Cellophane.Variable> vars = null ) {}
+public static void Start() {}
+public static void Update() {}
+public static void OnGUI() {}
+public static void Toggle() {}
+public static void OnApplicationQuit() {}
+public static void FlushConfig() {}
+public static bool TryExecute( string cmdLine, object context = null, bool silent = false,
+                                                            bool keepJsonTags = false ) => false;
+public static void Print( string s ) {}
+public static void Log( string s ) {}
+public static void Log( string s, QObject o ) {}
+public static void Log( object o ) {}
+public static void Log( object o, QObject unityObj ) {}
+public static void Error( object o ) {}
+public static void Break( object o ) {}
+public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPerPoint = 1,
+                                                                Action<Camera> onRepaint = null ) {}
+}
+
+
+#elif SDL || HAS_UNITY
+
+
+// == Full Graphical Qonsole API ==
 
 //#define QONSOLE_BOOTSTRAP // if this is defined, the console will try to bootstrap itself
 //#define QONSOLE_BOOTSTRAP_EDITOR // if this is defined, the console will try to bootstrap itself in the editor
@@ -77,6 +123,7 @@ public class QonsoleBootstrap : MonoBehaviour {
 }
 #endif
 
+
 public static class Qonsole {
 
 
@@ -98,7 +145,7 @@ public static void CreateBootstrapObject() {
     }
 }
 
-#endif // HAS_UNITY
+#endif
 
 public static bool Active;
 public static bool Started;
@@ -135,6 +182,10 @@ public const string featuresDescription = @"Features:
 
 [Description( "Part of the screen height occupied by the 'overlay' fading-out lines. If set to zero, Qonsole won't show anything unless Active" )]
 static int QonOverlayPercent_kvar = 0;
+[Description( "Time the overlay text stays solid in seconds." )]
+static float QonOverlayTimeSolid_kvar = 4f;
+[Description( "Time the overlay text fades out in seconds." )]
+static float QonOverlayTimeFadeout_kvar = 4f;
 [Description( "Part of the screen height occupied by the Qonsole." )]
 static int QonScreenPercent_kvar = 0;
 [Description( "Show the Qonsole output to the system (unity) log too." )]
@@ -142,11 +193,11 @@ static bool QonPrintToSystemLog_kvar = true;
 [Description( "Console character size." )]
 static float QonScale_kvar = 1;
 [Description( "Show the Qonsole in the editor: 0 -- no, 1 -- yes, 2 -- editor only." )]
-public static int QonShowInEditor_kvar = 1;
+static int QonShowInEditor_kvar = 1;
 [Description( "Alpha blend value of the Qonsole background." )]
-public static float QonAlpha_kvar = 0.65f;
+static float QonAlpha_kvar = 0.65f;
 [Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
-public static bool QonInvertPlayY_kvar = false;
+static bool QonInvertPlayY_kvar = false;
 [Description( "Prefix messages with a time stamp. 1 -- milliseconds, 2 -- min:sec:ms" )]
 static int QonShowTimestamps_kvar = 0;
 #if QONSOLE_INVERTED_PLAY_Y
@@ -183,15 +234,18 @@ static int _cursorChar => QGL.CursorChar;
 static int _totalTime;
 static int _totalGameTime;
 static string _historyPath;
+static string [] _history;
+static int _historyItem;
 static string _configPath;
 static int _drawCharStartY;
 // how much currently drawn char is faded out in the 'overlay' controlled by QonOverlayPercent_kvar
 static float _overlayAlpha = 1;
+static float _overlayAlphaMax;
+static int _lastPrintTimestamp;
+static Action _overlayAlphaUpdate = () => {};
 // the colorization stack for nested tags
 static List<Color> _drawCharColorStack = new List<Color>(){ Color.white };
 static bool _oneShot;
-static string [] _history;
-static int _historyItem;
 
 #if QONSOLE_QUI
 static Vector2 _mousePosition;
@@ -219,14 +273,16 @@ static Vector2 QoncheToScreen( int x, int y ) {
     return new Vector2( screenX, screenY );
 }
 
-// FIXME: remove the allocations here
-static Action OverlayGetFade() {
-    int timestamp = _totalTime;
-    return () => {
-        const float solidTime = 4.0f;
-        float t = ( _totalTime - timestamp ) / 1000f;
-        float ts = 2f * ( solidTime - t );
-        _overlayAlpha = t < solidTime ? 1 : Mathf.Max( 0, 1 - ts * ts );
+static void UpdateOverlayAlphaCallback()
+{
+    float timestamp = _totalTime;
+    _overlayAlphaUpdate = () => {
+        float solidTime = QonOverlayTimeSolid_kvar;
+        float fadeoutTime = QonOverlayTimeFadeout_kvar;
+        float totalTime = solidTime + fadeoutTime;
+        float passed = ( _totalTime - timestamp ) / 1000f;
+        float remain = totalTime - passed;
+        _overlayAlpha = passed < solidTime ? 1 : Mathf.Max( 0, remain / fadeoutTime );
     };
 }
 
@@ -472,15 +528,17 @@ public static void RenderGL( bool skip = false ) {
     _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
     _totalGameTime = ( int )( Time.time * 1000.0f );
 
+    UpdateOverlayAlphaCallback();
+
     QGL.Begin();
 
     // lates come first, the console on top
     QGL.FlushLates();
 
     if ( ! skip ) {
-        GetSize( out int conW, out int conH );
-
+        int conW, conH;
         if ( Active ) {
+            GetSize( out conW, out conH );
             QGL.SetWhiteTexture();
             GL.Begin( GL.QUADS );
             GL.Color( new Color( 0, 0, 0, QonAlpha_kvar ) );
@@ -490,8 +548,16 @@ public static void RenderGL( bool skip = false ) {
             QGL.DrawSolidQuad( Vector2.zero, bgr );
             GL.End();
         } else {
-            int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
-            conH = conH * percent / 100;
+            int timeSinceLastPrint = _totalTime - _lastPrintTimestamp;
+            int totalTime = ( int )
+                            ( ( QonOverlayTimeSolid_kvar + QonOverlayTimeFadeout_kvar ) * 1000 );
+            if ( timeSinceLastPrint < totalTime ) {
+                GetSize( out conW, out conH );
+                int percent = Mathf.Clamp( QonOverlayPercent_kvar, 0, 100 );
+                conH = conH * percent / 100;
+            } else {
+                conW = conH = 0;
+            }
         }
 
         // do nothing if entirely offscreen
@@ -506,7 +572,6 @@ public static void RenderGL( bool skip = false ) {
 
     QGL.End( skipLateFlush: true );
 
-    _overlayAlpha = 1;
     _drawCharStartY = 0;
     _drawCharColorStack.Clear();
     _drawCharColorStack.Add( Color.white );
@@ -614,6 +679,8 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
     //QUI.whiteTexture = ...
     //QUI.defaultFont = ...
 #endif
+
+    UpdateOverlayAlphaCallback();
 
     float time = Time.realtimeSinceStartup - startTime;
     Log( $"Init took {time} seconds." );
@@ -804,6 +871,9 @@ public static void OnGUI() {
 }
 
 static void PrintToSystemLog( string s, QObject o ) {
+    _overlayAlphaMax = float.MinValue;
+    _lastPrintTimestamp = _totalTime;
+
     if ( ! QonPrintToSystemLog_kvar ) {
         return;
     }
@@ -858,6 +928,9 @@ public static void Update() {
 #if QONSOLE_QUI
     QUI.End();
 #endif
+    if ( _overlayAlphaMax == 0 ) {
+        Log( "overlay alpha: " + _overlayAlphaMax );
+    }
 }
 
 public static void FlushConfig() {
@@ -927,9 +1000,10 @@ public static void Error( string s, QObject o ) {
     } else {
         serr = "ERROR: " + s;
     }
-    Action fade = OverlayGetFade();
+
 
     // lump together colorization and overlay fade
+    Action fade = _overlayAlphaUpdate;
     QON_PrintAndAct( serr, (x,y) => {
         DrawCharColorPush( Color.red );
         fade();
@@ -943,7 +1017,7 @@ public static void Error( string s, QObject o ) {
 
 // this will ignore color tags
 public static void PrintRaw( string s ) {
-    Action fade = OverlayGetFade();
+    Action fade = _overlayAlphaUpdate;
     QON_PrintAndAct( s, (x,y)=>fade() );
 }
 
@@ -989,7 +1063,8 @@ public static void Print( string s, QObject o = null ) {
     bool skipFade = false;
     for ( int i = 0; i < s.Length; i++ ) {
 
-        // handle nested colorization tags by lumping their logic into a single pager Action
+        // eat up all adjacent leading/closing color tags
+        // lump their logic into a single pager Action
         string tag;
         List<Action> actions = new List<Action>();
         while ( true ) {
@@ -1007,7 +1082,7 @@ public static void Print( string s, QObject o = null ) {
 
         // add the overlay fade just once per string
         if ( ! skipFade ) {
-            actions.Add( OverlayGetFade() );
+            actions.Add( _overlayAlphaUpdate );
             skipFade = true;
         }
 
