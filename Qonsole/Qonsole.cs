@@ -39,6 +39,8 @@ public static void FlushConfig() {}
 public static bool TryExecute( string cmdLine, object context = null, bool silent = false,
                                                             bool keepJsonTags = false ) => false;
 public static void Print( string s ) {}
+public static void PrintAndAct( string s, Action<Vector2,float> a ) {}
+public static float LineHeight() => 0;
 public static void Log( string s ) {}
 public static void Log( string s, QObject o ) {}
 public static void Log( object o ) {}
