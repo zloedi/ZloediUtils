@@ -937,7 +937,13 @@ public static void Update() {
 
 public static void FlushConfig() {
     File.WriteAllText( _historyPath, Cellophane.StoreHistory() );
-    File.WriteAllText( _configPath, Cellophane.StoreConfig() + onStoreCfg_f() );
+
+    string config = Cellophane.StoreConfig() + onStoreCfg_f();
+    List<string> extraStrings = new();
+    InternalCommand( "qonsole_store_cfg", extraStrings );
+    foreach (var s in extraStrings)
+        config += '\n' + s;
+    File.WriteAllText( _configPath, config );
 }
 
 public static void OnApplicationQuit() {
