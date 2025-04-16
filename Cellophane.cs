@@ -1013,8 +1013,20 @@ public static string ColorTagStripAll( string s ) {
     return result;
 }
 
-static Dictionary<string,Variable> _changeStash = new Dictionary<string,Variable>();
+static Dictionary<(string,Type),Variable> _changeStash = new Dictionary<(string,Type),Variable>();
 public static bool VarChanged( string name, Type type = null ) {
+    bool result;
+    Variable v;
+    var key = (name,type);
+
+    if ( _changeStash.TryGetValue( key, out v ) ) {
+        return v.Changed_f();
+    }
+
+    if ( _variables.Length == 0 ) {
+        return false;
+    }
+
     if ( name.EndsWith( "_cvar" ) ) {
         if ( type == null ) {
             Error( "Need to supply type for VarChanged for '_cvar'" );
@@ -1023,24 +1035,18 @@ public static bool VarChanged( string name, Type type = null ) {
         name = type.Name + "_" + name;
     }
 
-    bool result;
-    Variable v;
-    if ( _changeStash.TryGetValue( name, out v ) ) {
-        result = v.Changed_f();
-    } else {
-        string normName = NormalizeNameVar( name );
-        if ( TryFindVariable( normName, out v ) ) {
-            if ( v.Changed_f == null ) {
-                v.SetupChanged();
-            }
-            result = v.Changed_f();
-            _changeStash[name] = v;
-        } else {
-            Error( "Can't find variable '" + normName + "'" );
-            //v.Changed_f = () => false;
-            result = false;
+    string normName = NormalizeNameVar( name );
+    if ( TryFindVariable( normName, out v ) ) {
+        if ( v.Changed_f == null ) {
+            v.SetupChanged();
         }
+        result = v.Changed_f();
+        _changeStash[key] = v;
+    } else {
+        Error( "Can't find variable '" + normName + "'" );
+        result = false;
     }
+
     return result;
 }
 
