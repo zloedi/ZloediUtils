@@ -939,9 +939,9 @@ public static void FlushConfig() {
     File.WriteAllText( _historyPath, Cellophane.StoreHistory() );
 
     string config = Cellophane.StoreConfig() + onStoreCfg_f();
-    List<string> additionalStrings = new();
-    InternalCommand( "qonsole_store_cfg", additionalStrings );
-    foreach (var s in additionalStrings)
+    List<string> extraStrings = new();
+    InternalCommand( "qonsole_store_cfg", extraStrings );
+    foreach (var s in extraStrings)
         config += '\n' + s;
     File.WriteAllText( _configPath, config );
 }
