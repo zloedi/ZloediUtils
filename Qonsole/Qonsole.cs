@@ -39,6 +39,8 @@ public static void FlushConfig() {}
 public static bool TryExecute( string cmdLine, object context = null, bool silent = false,
                                                             bool keepJsonTags = false ) => false;
 public static void Print( string s ) {}
+public static void PrintAndAct( string s, Action<Vector2,float> a ) {}
+public static float LineHeight() => 0;
 public static void Log( string s ) {}
 public static void Log( string s, QObject o ) {}
 public static void Log( object o ) {}
@@ -236,7 +238,6 @@ static int _totalGameTime;
 static string _historyPath;
 static string [] _history;
 static int _historyItem;
-static bool _historyNeedFlush;
 static string _configPath;
 static int _drawCharStartY;
 // how much currently drawn char is faded out in the 'overlay' controlled by QonOverlayPercent_kvar
@@ -286,17 +287,6 @@ static void UpdateOverlayAlphaCallback()
         _overlayAlpha = passed < solidTime ? 1 : Mathf.Max( 0, remain / fadeoutTime );
     };
 }
-
-// FIXME: remove the allocations here
-//static Action OverlayGetFade() {
-//    int timestamp = _totalTime;
-//    return () => {
-//        const float solidTime = 4.0f;
-//        float t = ( _totalTime - timestamp ) / 1000f;
-//        float ts = 2f * ( solidTime - t );
-//        _overlayAlpha = t < solidTime ? 1 : Mathf.Max( 0, 1 - ts * ts );
-//    };
-//}
 
 static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color color,
                                                                         out Vector2 screenPos ) {
@@ -367,7 +357,6 @@ static void Autocomplete() {
 
 static void HandleEnter() {
     _history = null;
-    _historyNeedFlush = true;
     string cmdClean, cmdRaw;
     QON_GetCommandEx( out cmdClean, out cmdRaw );
     EraseCommand();
@@ -379,6 +368,7 @@ static void HandleEnter() {
     } else {
         TryExecute( cmdClean );
     }
+    FlushConfig();
 }
 
 static void HandleBackQuote() {
@@ -540,27 +530,7 @@ public static void RenderGL( bool skip = false ) {
     _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
     _totalGameTime = ( int )( Time.time * 1000.0f );
 
-    if ( _historyNeedFlush ) {
-        FlushConfig();
-        _historyNeedFlush = false;
-    }
-
-    //if ( ! Active ) {
-    //    //_overlayAlphaUpdate = () => {};
-    //} else {
-        //_overlayAlpha = 1;
-
     UpdateOverlayAlphaCallback();
-
-    //    int timestamp = _totalTime;
-    //    _overlayAlphaUpdate = () => {
-    //        const float solidTime = 4.0f;
-    //        float t = ( _totalTime - timestamp ) / 1000f;
-    //        float ts = 2f * ( solidTime - t );
-    //        _overlayAlpha = t < solidTime ? 1 : Mathf.Max( 0, 1 - ts * ts );
-    //        _overlayAlphaMax = Mathf.Max( _overlayAlphaMax, _overlayAlpha );
-    //    };
-    //}
 
     QGL.Begin();
 
