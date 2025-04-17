@@ -360,9 +360,37 @@ public static void BindClearAll_kmd( string [] argv ) {
     Log( "Cleared all Key Bindings." );
 }
 
-public static void Bind_kmd( string [] argv ) {
+static void Unbind_kmd( string [] argv ) {
+    if ( argv.Length < 2 ) {
+        Log( $"Usage: {argv[0]} <KeyCode> [context]" );
+        return;
+    }
+
+    string context = "";
+    if ( argv.Length > 2 ) {
+        context = argv[2];
+    }
+
+    if ( ! _bindContext.TryGetValue( context, out string [] ctxCommands ) ) {
+        Error( $"Can't find context '{context}'" );
+        return;
+    }
+
+    if ( Enum.TryParse( argv[1], out KeyCode code ) ) {
+        int idx;
+        if ( _keyToIndex.TryGetValue( code, out idx ) ) {
+            ctxCommands[idx] = "";
+        } else {
+            Error( $"Unsupported key code [ff9000]{code}[-]" );
+        }
+        Log( $"Unbound key [ff9000]{code}[-], context: '{context}'" );
+    } else {
+        Error( $"Couldn't find [ff9000]{argv[1]}[-] in valid keys." );
+    }
+}
+
+static void Bind_kmd( string [] argv ) {
     if ( argv.Length < 3 ) {
-        Log( "Usage: bind <KeyCode> <command> [context]" );
         foreach ( var kv in _bindContext ) {
             string context = kv.Key;
             string [] ctxCommands = kv.Value;
@@ -370,10 +398,15 @@ public static void Bind_kmd( string [] argv ) {
                 KeyCode key = keys[i];
                 string cmd = ctxCommands[i];
                 if ( cmd.Length > 0 ) {
-                    Log( $"{key}: [ff9000]{cmd}[-] {context}" );
+                    if ( ! string.IsNullOrEmpty( context ) ) {
+                        Log( $"{key}: [ff9000]{cmd}[-] context: {context}" );
+                    } else {
+                        Log( $"{key}: [ff9000]{cmd}[-]" );
+                    }
                 }
             }
         }
+        Log( "Usage: bind <KeyCode> <command> [context]" );
         return;
     }
 
@@ -398,11 +431,11 @@ public static void Bind_kmd( string [] argv ) {
         if ( _keyToIndex.TryGetValue( code, out idx ) ) {
             ctxCommands[idx] = argv[2];
         } else {
-            Error( "Unsupported key code " + code );
+            Error( $"Unsupported key code {code}" );
         }
-        Log( "Bound command " + argv[2] + " to key " + code );
+        Log( $"Bound command [ff9000]{argv[2]}[-] to key [ff9000]{code}[-], context: '{context}'" );
     } else {
-        Error( "Couldn't find " + argv[1] + " in valid keys." );
+        Error( $"Couldn't find {argv[1]} in valid keys." );
     }
 
     }

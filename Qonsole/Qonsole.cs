@@ -592,6 +592,12 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
         return;
     }
 
+    _totalTime = ( int )( Time.realtimeSinceStartup * 1000.0f );
+    _totalGameTime = ( int )( Time.time * 1000.0f );
+
+    // make sure all prints have proper 'overlay fading'
+    UpdateOverlayAlphaCallback();
+
     Qonsole.onEditorRepaint_f = c => {};
 
     float startTime = Time.realtimeSinceStartup;
@@ -681,8 +687,6 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
     //QUI.whiteTexture = ...
     //QUI.defaultFont = ...
 #endif
-
-    UpdateOverlayAlphaCallback();
 
     float time = Time.realtimeSinceStartup - startTime;
     Log( $"Init took {time} seconds." );
