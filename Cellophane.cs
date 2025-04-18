@@ -236,8 +236,17 @@ static void CmdCallbackUpdate( Command cmd, MethodInfo mi ) {
 }
 
 static string FieldNameToVarName( Type type, FieldInfo fi ) {
-    string name = fi.Name.EndsWith( "_kvar" ) ? fi.Name : type.Name + "_" + fi.Name;
-    return NormalizeNameVar( name );
+    string name, prefix;
+    // keep 'transitional' as prefix
+    if ( fi.Name.StartsWith( "t_" ) ) {
+        prefix = "t_";
+        name = fi.Name.Substring( 2 );
+    } else {
+        prefix = "";
+        name = fi.Name;
+    }
+    name = name.EndsWith( "_kvar" ) ? name : type.Name + "_" + name;
+    return NormalizeNameVar( prefix + name );
 }
 
 static string MethodNameToCmdName( Type type, MethodInfo mi ) {
@@ -924,6 +933,11 @@ public static string StoreConfig() {
     string cfg = "";
     foreach ( var v in _variables ) {
         string val = v.GetValue();
+
+        // ignore transitional vars
+        if ( v.name.StartsWith( "t_" ) ) {
+            continue;
+        }
 
         if ( v.fieldInfo.FieldType == typeof( string ) ) {
             val = $"\"{val}\"";
