@@ -1038,6 +1038,9 @@ public static void Log( string s ) {
 }
 
 public static void Log( string s, QObject o ) {
+    if ( TryTimeStamps(out string prefix) ) {
+        s = prefix + s;
+    }
     Print( s + "\n", o );
 }
 
@@ -1068,9 +1071,7 @@ public static void PrintAndAct( string s, Action<Vector2,float> a ) {
 
 // print (colorized) text
 public static void Print( string s, QObject o = null ) {
-    if ( TryTimeStamps(out string prefix) ) {
-        s = prefix + s;
-    }
+    // don't do timestamps here because we may not emit new-line characters at all
     string sysString = "";
     bool skipFade = false;
     for ( int i = 0; i < s.Length; i++ ) {
