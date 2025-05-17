@@ -244,7 +244,6 @@ static string _configPath;
 static int _drawCharStartY;
 // how much currently drawn char is faded out in the 'overlay' controlled by QonOverlayPercent_kvar
 static float _overlayAlpha = 1;
-static float _overlayAlphaMax = 0;
 static int _lastPrintTimestamp = 0;
 static Action _overlayAlphaUpdate = () => {};
 // the colorization stack for nested tags
@@ -879,8 +878,7 @@ public static void OnGUI() {
 }
 
 static void PrintToSystemLog( string s, QObject o ) {
-    _overlayAlphaMax = float.MinValue;
-    _lastPrintTimestamp = _totalTime;
+    OnPrintToSystemLog();
 
     if ( ! QonPrintToSystemLog_kvar ) {
         return;
@@ -903,15 +901,21 @@ static void PrintToSystemLog( string s, QObject o ) {
     Application.SetStackTraceLogType( LogType.Log, oldType );
 }
 
-#else // HAS_UNITY
+#else // not HAS_UNITY
 
 static void PrintToSystemLog( string s, QObject o ) {
+    OnPrintToSystemLog();
+
     if ( QonPrintToSystemLog_kvar ) {
         System.Console.Write( Cellophane.ColorTagStripAll( s ) );
     }
 }
 
 #endif // HAS_UNITY
+
+static void OnPrintToSystemLog() {
+    _lastPrintTimestamp = _totalTime;
+}
 
 static void EraseCommand() {
     QON_EraseCommand();
@@ -936,9 +940,6 @@ public static void Update() {
 #if QONSOLE_QUI
     QUI.End();
 #endif
-    if ( _overlayAlphaMax == 0 ) {
-        Log( "overlay alpha: " + _overlayAlphaMax );
-    }
 }
 
 public static void FlushConfig() {
