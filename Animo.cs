@@ -40,6 +40,7 @@ public static int RegisterAnimationSource( GameObject go ) {
     }
     var src = new Source();
     foreach ( var c in rac.animationClips ) {
+        // assumes states are named after clips
         int hash = Animator.StringToHash( c.name );
         if ( ! src.state.Contains( hash ) ) {
             src.state.Add( hash );
