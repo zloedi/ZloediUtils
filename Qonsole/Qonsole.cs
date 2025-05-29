@@ -194,8 +194,6 @@ static int QonScreenPercent_kvar = 0;
 static bool QonPrintToSystemLog_kvar = true;
 [Description( "Console character size." )]
 static float QonScale_kvar = 1;
-[Description( "Show the Qonsole in the editor: 0 -- no, 1 -- yes, 2 -- editor only." )]
-static int QonShowInEditor_kvar = 1;
 [Description( "Alpha blend value of the Qonsole background." )]
 static float QonAlpha_kvar = 0.65f;
 [Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
@@ -209,6 +207,10 @@ public static bool QonInvertPlayY => QonInvertPlayY_kvar;
 #endif
 [Description( "Should the Qonsole be toggled by '~'/'`': 1 -- skip in play mode only, 2 -- skip both in play and edit modes." )]
 public static int QonSkipBackquote_kvar = 0;
+#if HAS_UNITY
+[Description( "Show the Qonsole in the editor: 0 -- no, 1 -- yes, 2 -- editor only." )]
+static int QonShowInEditor_kvar = 1;
+#endif
 
 // OBSOLETE, USE COMMANDS INSTEAD: stuff to be executed before the .cfg file is loaded
 public static Func<string> onPreLoadCfg_f = () => "";
@@ -242,8 +244,7 @@ static string _configPath;
 static int _drawCharStartY;
 // how much currently drawn char is faded out in the 'overlay' controlled by QonOverlayPercent_kvar
 static float _overlayAlpha = 1;
-static float _overlayAlphaMax;
-static int _lastPrintTimestamp;
+static int _lastPrintTimestamp = 0;
 static Action _overlayAlphaUpdate = () => {};
 // the colorization stack for nested tags
 static List<Color> _drawCharColorStack = new List<Color>(){ Color.white };
@@ -877,8 +878,7 @@ public static void OnGUI() {
 }
 
 static void PrintToSystemLog( string s, QObject o ) {
-    _overlayAlphaMax = float.MinValue;
-    _lastPrintTimestamp = _totalTime;
+    OnPrintToSystemLog();
 
     if ( ! QonPrintToSystemLog_kvar ) {
         return;
@@ -901,15 +901,21 @@ static void PrintToSystemLog( string s, QObject o ) {
     Application.SetStackTraceLogType( LogType.Log, oldType );
 }
 
-#else // HAS_UNITY
+#else // not HAS_UNITY
 
 static void PrintToSystemLog( string s, QObject o ) {
+    OnPrintToSystemLog();
+
     if ( QonPrintToSystemLog_kvar ) {
         System.Console.Write( Cellophane.ColorTagStripAll( s ) );
     }
 }
 
 #endif // HAS_UNITY
+
+static void OnPrintToSystemLog() {
+    _lastPrintTimestamp = _totalTime;
+}
 
 static void EraseCommand() {
     QON_EraseCommand();
@@ -934,9 +940,6 @@ public static void Update() {
 #if QONSOLE_QUI
     QUI.End();
 #endif
-    if ( _overlayAlphaMax == 0 ) {
-        Log( "overlay alpha: " + _overlayAlphaMax );
-    }
 }
 
 public static void FlushConfig() {

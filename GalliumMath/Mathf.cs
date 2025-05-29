@@ -87,6 +87,10 @@ public partial struct Mathf {
         return ( float )Math.Round( f );
     }
 
+    public static float Floor( float f ) {
+        return ( float )Math.Floor( f );
+    }
+
     public static int FloorToInt( float f ) {
         return ( int )Math.Floor( f );
     }
