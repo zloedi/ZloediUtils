@@ -1041,8 +1041,20 @@ static void ImageQuad( int texW, int texH, Vector2 srcPos, Vector2 srcSize,
     float th = texH > 0 ? texH : 1;
     float u0 = srcPos.x / tw;
     float u1 = u0 + srcSize.x / tw;
-    float v0 = srcPos.y / th;
-    float v1 = v0 + srcSize.y / th;
+
+    float v0, v1;
+
+    if (_invertedY)
+    {
+        v0 = srcPos.y / th;
+        v1 = srcPos.y / th + srcSize.y / th;
+    }
+    else
+    {
+        // this is the way unity shows images if 'blitted'
+        v0 = srcPos.y / th + srcSize.y / th;
+        v1 = srcPos.y / th;
+    }
 
     GL.Color( color );
     if ( dir.x != float.MaxValue && dir.y != float.MaxValue ) {
