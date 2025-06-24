@@ -95,6 +95,7 @@ public static void Done() {
     _initialized = false;
     _initializedCompiler = false;
     _numReloads = 0;
+    GC.Collect();
     Log( "Compiler Done." );
 }
 
@@ -294,6 +295,9 @@ static bool CompileSyntaxTrees( SyntaxTree [] trees, out byte [] imageAssembly,
             assemblyStream.Seek( 0, SeekOrigin.Begin );
             imageAssembly = assemblyStream.ToArray();
         }
+
+        compilation.RemoveAllSyntaxTrees();
+        compilation.RemoveAllReferences();
 
         return true;
 
