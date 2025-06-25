@@ -88,9 +88,11 @@ public static class QonsoleEditorSetup {
         QonsoleBootstrap.TrySetupQonsole();
 
         void duringSceneGui( SceneView sv ) {
-            Qonsole.OnEditorSceneGUI( sv.camera, EditorApplication.isPaused,
-                                            EditorGUIUtility.pixelsPerPoint,
-                                            onRepaint: Qonsole.onEditorRepaint_f );
+            if ( QonShowInEditor_kvar > 0 ) {
+                Qonsole.OnEditorSceneGUI( sv.camera, EditorApplication.isPaused,
+                                                EditorGUIUtility.pixelsPerPoint,
+                                                onRepaint: Qonsole.onEditorRepaint_f );
+            }
         }
 
         SceneView.duringSceneGui -= duringSceneGui;
@@ -683,7 +685,7 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
     QGL.Error = s => Error( $"[QGL] {s}" );
 
 #if QONSOLE_QUI
-    QUI.DrawLineRect = (x,y,w,h) => QGL.LateDrawLineRect(x,y,w,h,color:Color.magenta);
+    QUI.DrawLineRect = (x,y,w,h) => QGL.LateLineRect(x,y,w,h,color:Color.magenta);
     //QUI.canvas = ...
     //QUI.whiteTexture = ...
     //QUI.defaultFont = ...
@@ -699,10 +701,6 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
 
 public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPerPoint = 1,
                                                                 Action<Camera> onRepaint = null ) {
-    if ( QonShowInEditor_kvar == 0 ) {
-        return;
-    }
-
     onRepaint = onRepaint != null ? onRepaint : c => {};
 
     bool notRunning = ! Application.isPlaying || paused;
@@ -737,10 +735,20 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
 #endif
         ConsumeEditorInputOnce = false;
         onRepaint( camera );
+
+        if ( Started ) {
+            QGL.LatePrint( "qonsole is running", QGL.ScreenWidth - 100, QGL.ScreenHeight - 20 );
+        }
+
+        if (!Started) QGL.Begin();
         InternalCommand( "qonsole_on_editor_repaint", camera );
-        QGL.LatePrint( "qonsole is running", Screen.width - 100, QGL.ScreenHeight - 100 );
+        if (!Started) QGL.End();
     }
-    OnGUIInternal();
+
+    if ( Started ) {
+        OnGUIInternal();
+    }
+
     if ( Event.current.type == EventType.Repaint ) {
         QGL.SetContext( null, invertedY: QonInvertPlayY );
 #if QONSOLE_QUI
@@ -749,6 +757,7 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
         }
 #endif
     }
+
     if ( ( Active || ConsumeEditorInputOnce )
             && Event.current.type != EventType.Repaint
             && Event.current.type != EventType.Layout ) {
