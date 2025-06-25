@@ -803,6 +803,24 @@ public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
     return Vector2.zero;
 }
 
+public static Vector3 ScreenToWorldPos( Vector2 screenPos ) {
+    Camera cam = _camera ?? Camera.main;
+
+#if HAS_UNITY
+    if ( ! _camera ) {
+        Error("No camera, try to find one.");
+        _camera = GameObject.FindObjectOfType<Camera>();
+    }
+#endif
+
+    if ( cam ) {
+        screenPos.y = ScreenHeight - screenPos.y;
+        return cam.ScreenToWorldPoint( screenPos );
+    }
+
+    return Vector2.zero;
+}
+
 // Lates after this call will be marked 'of this context'
 public static void SetContext( Camera camera, float pixelsPerPoint = 1, bool invertedY = false ) {
     _camera = camera ?? Camera.main;
