@@ -48,11 +48,11 @@ public static string ScriptsRoot = "";
 public static string [] ScriptFiles = {};
 public static string [] Defines = {};
 public static string [] ExtraDefines = {};
+public static bool Initialized { get; private set; }
 
 static List<MetadataReference> _domainReferences = new List<MetadataReference>();
 
 static int _numReloads;
-static bool _initialized;
 static bool _initializedCompiler;
 static Assembly _roslynAssembly;
 static FileSystemWatcher _watcher;
@@ -60,7 +60,7 @@ static FileSystemWatcher _watcher;
 static readonly object _assemblyLock = new();
 
 public static bool TryInit() {
-    if ( _initialized ) {
+    if ( Initialized ) {
         return true;
     }
 
@@ -77,12 +77,12 @@ public static bool TryInit() {
         _watcher.IncludeSubdirectories = true;
         _watcher.EnableRaisingEvents = true;
 
-        _initialized = true;
+        Initialized = true;
     } catch ( Exception e ) {
         Error( e );
     }
 
-    return _initialized;
+    return Initialized;
 }
 
 // makes sure we are detached from the Unity editor on play mode off
@@ -92,10 +92,10 @@ public static void Done() {
     _watcher?.Dispose();
     _watcher = null;
     _roslynAssembly = null;
-    _initialized = false;
     _initializedCompiler = false;
     _numReloads = 0;
     GC.Collect();
+    Initialized = false;
     Log( "Compiler Done." );
 }
 
@@ -117,7 +117,7 @@ public static void Update() {
 }
 
 static void TryInitCompiler() {
-    if ( ! _initialized ) {
+    if ( ! Initialized ) {
         Error( "Not initialized" );
         return;
     }
