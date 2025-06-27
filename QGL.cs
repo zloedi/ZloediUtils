@@ -694,6 +694,10 @@ public static void LateLineWorld( Vector3 a, Vector3 b, Color? color = null ) {
     LateLineWorld( new [] { a, b }, color );
 }
 
+public static void LatePointWorld( float x, float y, float size = 9, Color? color = null ) {
+    LatePointWorld( new Vector3( x, y ), size, color );
+}
+
 public static void LatePointWorld( Vector3 pt, float size = 9, Color? color = null ) {
     Vector2 d = WorldToScreenPos( pt );
     Vector2 x = new Vector2( size, 0 );
