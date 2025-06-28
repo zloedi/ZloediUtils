@@ -657,7 +657,7 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
         Cellophane.ConfigVersion_kvar = configVersion;
     }
 
-    Cellophane.UseColor = true;
+    Cellophane.UseColor = false;
     Cellophane.Log = s => Log( s );
     Cellophane.Error = s => Error( s );
     Cellophane.ScanVarsAndCommands( cmds, vars );
@@ -974,6 +974,7 @@ public static void Start() {
     if ( Started ) {
         return;
     }
+    Cellophane.UseColor = true;
     if ( QGL.Start( invertedY: QonInvertPlayY ) ) {
         Started = true;
         Log( "Qonsole Started." );
