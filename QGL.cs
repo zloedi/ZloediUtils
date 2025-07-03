@@ -481,7 +481,12 @@ public static Vector2 LatePrintWorld( string str, Vector3 worldPos, Color? color
     LatePrint( str, pt.x, pt.y, color, scale );
     return pt;
 }
-    
+
+public static Vector2 LatePrintWorld( object o, float x, float y, Color? color = null,
+                                                                                float scale = 1 ) {
+    return LatePrintWorld( o, new Vector3( x, y ), color, scale );
+}
+
 public static void LatePrint( object o, Vector2 xy, Color? color = null, float scale = 1 ) {
     LatePrint( o.ToString(), xy.x, xy.y, color, scale );
 }
