@@ -475,13 +475,18 @@ public static Vector2 LatePrintWorld( object o, Vector3 worldPos, Color? color =
     return LatePrintWorld( o.ToString(), worldPos, color, scale );
 }
 
-public static Vector2 LatePrintWorld( string str, Vector3 worldPos, Color? color = null,
+public static Vector2 LatePrintWorld( string o, Vector3 worldPos, Color? color = null,
                                                                                 float scale = 1 ) {
     Vector2 pt = WorldToScreenPos( worldPos );
-    LatePrint( str, pt.x, pt.y, color, scale );
+    LatePrint( o, pt.x, pt.y, color, scale );
     return pt;
 }
-    
+
+public static Vector2 LatePrintWorld( object o, float x, float y, Color? color = null,
+                                                                                float scale = 1 ) {
+    return LatePrintWorld( o, new Vector2( x, y ), color, scale );
+}
+
 public static void LatePrint( object o, Vector2 xy, Color? color = null, float scale = 1 ) {
     LatePrint( o.ToString(), xy.x, xy.y, color, scale );
 }
@@ -692,6 +697,10 @@ public static void LateRayWorld( Vector3 origin, Vector3 dir, Color? color = nul
 
 public static void LateLineWorld( Vector3 a, Vector3 b, Color? color = null ) {
     LateLineWorld( new [] { a, b }, color );
+}
+
+public static void LatePointWorld( float x, float y, float size = 9, Color? color = null ) {
+    LatePointWorld( new Vector3( x, y ), size, color );
 }
 
 public static void LatePointWorld( Vector3 pt, float size = 9, Color? color = null ) {
