@@ -112,10 +112,12 @@ static bool IsValidLate( int idx ) {
     return _lates[idx].type != 0;
 }
 static Material _material;
-static Texture _mainTex;
+static Texture _texMain;
 static Texture2D _texWhite = Texture2D.whiteTexture;
+static Texture2D _texChecker;
 static Vector2 [] _linePair = new Vector2[2];
 static Vector2 [] _lineRect = new Vector2[4];
+static Vector3 [] _lineRectWorld = new Vector3[4];
 static List<Vector2> _lineBuf = new();
 static bool _invertedY;
 static int _context;
@@ -375,11 +377,11 @@ public static void SetMaterialColor( Color color ) {
 }
 
 public static void SetTexture( Texture tex ) {
-    if (_mainTex == tex)
+    if (_texMain == tex)
         return;
     _material.SetTexture( "_MainTex", tex );
     _material.SetPass( 0 );
-    _mainTex = tex;
+    _texMain = tex;
 }
 
 public static void DrawQuad( Vector2 pos, Vector2 size,
@@ -563,6 +565,26 @@ public static void LatePrintNokia_tl( string str, float x, float y, Color? color
     _lates[i].str = str;
 }
 
+public static void LateChecker( float x0, float y0, float x1, float y1, Color? color = null ) {
+    if ( ! _texChecker ) {
+        //var tex = new Texture2D(2, 2, textureFormat: TextureFormat.Alpha8, 
+        var tex = new Texture2D(2, 2, textureFormat: TextureFormat.RGBA32, 
+                                                                  mipChain: false, linear: false ); 
+        var colors = new Color32[] {
+            Color.clear, Color.white,
+            Color.white, Color.clear,
+        };
+        tex.SetPixels32(colors);
+        tex.Apply();
+        _texChecker = tex;
+    }
+    int x = ( int )x0;
+    int y = ( int )y0;
+    int w = ( int )( x1 - x0 + 1 );
+    int h = ( int )( y1 - y0 + 1 );
+    LateBlitComplete( _texChecker, x, y, w, h, color: color, sw: w, sh: h );
+}
+
 public static Vector2 LateBlitWorld( Texture2D tex, Vector3 worldPos, float w, float h,
                                                                             Color? color = null ) {
     Vector2 pt = WorldToScreenPos( worldPos );
@@ -717,7 +739,7 @@ public static void LateCircleWorld( Vector2 center, float radius, Color? color =
     _lineBuf.Clear();
 
     Vector2 d = WorldToScreenPos( Vector2.zero ) - WorldToScreenPos( Vector2.one );
-    float numIterations = Mathf.Floor( 0.15f * radius * Mathf.Abs( d.x ) );
+    float numIterations = Mathf.Floor( 0.1f * 2 * 3.14f * radius * Mathf.Abs(d.x));
     numIterations = Mathf.Max( 4, numIterations );
     float step = Mathf.PI * 2 / numIterations;
     for (float i = 0; i < numIterations; i++)
@@ -754,6 +776,14 @@ public static void LateLineLoop( IList<Vector2> line, Color? color = null ) {
     _lineBuf.AddRange( line );
     _lineBuf.Add( line[0] );
     LateLine( _lineBuf, color );
+}
+
+public static void LateLineRectWorld( float x, float y, float w, float h, Color? color = null ) {
+    _lineRectWorld[0] = new Vector3( x, y );
+    _lineRectWorld[1] = new Vector3( x + w, y );
+    _lineRectWorld[2] = new Vector3( x + w, y + h );
+    _lineRectWorld[3] = new Vector3( x, y + h );
+    LateLineLoopWorld( _lineRectWorld, color );
 }
 
 public static void LateLineRect( float x, float y, float w, float h, Color? color = null ) {
@@ -844,7 +874,7 @@ public static void Begin() {
         var tex = _currentFontInfo.tex ? _currentFontInfo.tex : Texture2D.whiteTexture;
         LateBlit( null, 0, 0, tex.width * ShowFontTexture_cvar, tex.height * ShowFontTexture_cvar,
                                                                             color: Color.magenta );
-        LateBlit( tex, 0, 0, tex.width  * ShowFontTexture_cvar, tex.height * ShowFontTexture_cvar );
+        LateBlit( tex, 0, 0, tex.width * ShowFontTexture_cvar, tex.height * ShowFontTexture_cvar );
     }
     GL.PushMatrix();
     GL.LoadPixelMatrix();
@@ -859,7 +889,7 @@ public static void End( bool skipLateFlush = false ) {
             Error( "Can't find GL material. Should call QGL.Start()" );
         }
     }
-    _mainTex = null;
+    _texMain = null;
     GL.PopMatrix();
 }
 
