@@ -86,7 +86,7 @@ static Camera _camera;
 // used with Cellophane color tags
 static List<Color> _colStack = new List<Color>();
 // these are postponed and drawn after all geometry in scene
-static Late [] _lates = new Late[2 * 1024];
+static Late [] _lates = new Late[128 * 1024];
 static int _lateHead, _lateTail;
 static int _frameCount;
 static int NewLate( LateType type, int context, Color? color ) {
