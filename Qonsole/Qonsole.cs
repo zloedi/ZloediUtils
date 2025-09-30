@@ -305,7 +305,7 @@ static bool DrawCharBegin( ref int c, int x, int y, bool isCursor, out Color col
     }
 
     if ( isCursor ) {
-        c = Application.isPlaying && ( _totalTime & 256 ) != 0 ? c : _cursorChar;
+        c = ( _totalTime & 256 ) != 0 ? c : _cursorChar;
     }
 
     if ( c == ' ' ) {
