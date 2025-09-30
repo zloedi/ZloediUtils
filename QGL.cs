@@ -76,6 +76,7 @@ public static float PixelsPerPoint { get; private set; } = 1;
 public static int CursorChar => _currentFontInfo.cursorChar;
 public static float TextDx { get; private set; } = 1;
 public static float TextDy { get; private set; } = 1;
+public static int LatesCount => _lateTail - _lateHead;
 
 static int CharSpacingX_cvar = -3;
 static int CharSpacingY_cvar = 3;
