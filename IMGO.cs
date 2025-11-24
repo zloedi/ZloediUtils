@@ -38,6 +38,7 @@ public class ImObject {
 public static class IMGO {
 
 
+// IMGOs root stays under this one
 public static Transform root;
 
 static Dictionary<int,ImObject> _cache = new Dictionary<int,ImObject>();

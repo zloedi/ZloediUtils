@@ -226,10 +226,10 @@ static void CmdCallbackUpdate( Command cmd, MethodInfo mi ) {
                     objs2[1] = context;
                     mi.Invoke( mi, objs2 );
                 } else {
-                    Error( $"cmd.name requires '{pt}' context but got '{context.GetType()}'" );
+                    Error( $"{cmd.name} requires '{pt}' context but got '{context.GetType()}'" );
                 }
             } else {
-                Error( $"cmd.name requires '{pt}' context but got null" );
+                Error( $"{cmd.name} requires '{pt}' context but got null" );
             }
         };
     }

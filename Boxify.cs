@@ -1085,6 +1085,7 @@ public static class Boxify
                         createVisuals: createVisuals, out grid);
     }
 
+#if false
     [MenuItem("Snapshot/Boxify/Boxify Selection")]
     public static void BoxifySelection()
     {
@@ -1109,7 +1110,9 @@ public static class Boxify
     {
         return Selection.activeTransform != null;
     }
-#endif
+#endif // menu items
+
+#endif // UNITY_EDITOR
 }
 
 #endif
