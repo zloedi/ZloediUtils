@@ -840,6 +840,12 @@ public static Vector3 ScreenToWorldPos( Vector2 screenPos ) {
     return Vector2.zero;
 }
 
+public static bool IsVisible(Vector3 worldPoint)
+{
+    Vector2 p = QGL.WorldToScreenPos(worldPoint);
+    return p.x >= 0 && p.x < ScreenWidth && p.y >= 0 && p.y < ScreenHeight;
+}
+
 // Lates after this call will be marked 'of this context'
 public static void SetContext( Camera camera, float pixelsPerPoint = 1, bool invertedY = false ) {
     _camera = camera ?? Camera.main;
