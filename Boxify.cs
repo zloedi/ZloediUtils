@@ -1044,7 +1044,7 @@ public static class Boxify
         return true;
     }
 
-#if UNITY_EDITOR
+#if false //UNITY_EDITOR
     public static MeshRenderer [] GetRenderers()
     {
         return GetRenderers(Selection.activeTransform);
