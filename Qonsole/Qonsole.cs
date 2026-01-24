@@ -699,6 +699,7 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
 
 #if HAS_UNITY
 
+#if UNITY_EDITOR
 public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPerPoint = 1,
                                                                 Action<Camera> onRepaint = null ) {
     onRepaint = onRepaint != null ? onRepaint : c => {};
@@ -764,6 +765,7 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
         Event.current.Use();
     }
 }
+#endif
 
 public static void OnGUIInternal( bool skipRender = false ) {
     if ( ! Started ) {
