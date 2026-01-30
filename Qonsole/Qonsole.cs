@@ -198,13 +198,13 @@ static bool QonPrintToSystemLog_kvar = true;
 static float QonScale_kvar = 1;
 [Description( "Alpha blend value of the Qonsole background." )]
 static float QonAlpha_kvar = 0.65f;
-[Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
-static bool QonInvertPlayY_kvar = false;
 [Description( "Prefix messages with a time stamp. 1 -- milliseconds, 2 -- min:sec:ms" )]
 static int QonShowTimestamps_kvar = 0;
 #if QONSOLE_INVERTED_PLAY_Y
 public static bool QonInvertPlayY = true;
 #else
+[Description( "When not using RP the GL coordinates are inverted (always the case in Editor Scene window). Set this to false to use inverted GL in the Play window." )]
+static bool QonInvertPlayY_kvar = false;
 public static bool QonInvertPlayY => QonInvertPlayY_kvar;
 #endif
 [Description( "Should the Qonsole be toggled by '~'/'`': 1 -- skip in play mode only, 2 -- skip both in play and edit modes." )]
@@ -699,6 +699,7 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
 
 #if HAS_UNITY
 
+#if UNITY_EDITOR
 public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPerPoint = 1,
                                                                 Action<Camera> onRepaint = null ) {
     onRepaint = onRepaint != null ? onRepaint : c => {};
@@ -764,6 +765,7 @@ public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPer
         Event.current.Use();
     }
 }
+#endif
 
 public static void OnGUIInternal( bool skipRender = false ) {
     if ( ! Started ) {

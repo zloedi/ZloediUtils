@@ -48,6 +48,7 @@ public static string ScriptsRoot = "";
 public static string [] ScriptFiles = {};
 public static string [] Defines = {};
 public static string [] ExtraDefines = {};
+public static string [] ExtraAssemblyPaths = {};
 public static bool Initialized { get; private set; }
 
 static List<MetadataReference> _domainReferences = new List<MetadataReference>();
@@ -126,8 +127,10 @@ static void TryInitCompiler() {
         return;
     }
 
-    var domainAssemblies = AppDomain.CurrentDomain.GetAssemblies();
-    foreach ( var a in domainAssemblies ) {
+    List<string> locations = new(ExtraAssemblyPaths);
+
+    Assembly [] domainAssemblies = AppDomain.CurrentDomain.GetAssemblies();
+    foreach ( Assembly a in domainAssemblies ) {
         // will give conflicting Tuple<,>
         if ( a.FullName.Contains( "ExCSS.Unity" ) ) {
             continue;
@@ -135,8 +138,14 @@ static void TryInitCompiler() {
 
         // some assemblies won't let us get their locations, thus -- try/catch
         try {
-            var location = a.Location;
+            locations.Add(a.Location);
+        } catch ( Exception e ) {
+            Log( a.GetName() + ": " + e.Message );
+        }
+    }
 
+    foreach ( string location in locations ) {
+        try {
             AssemblyMetadata md = AssemblyMetadata.CreateFromFile( location );
 
             if ( md == null ) {
@@ -146,14 +155,14 @@ static void TryInitCompiler() {
 
             MetadataReference reference = md.GetReference();
             if ( reference == null ) {
-                Log( $"Can't reference {a.Location}, ref is null" );
+                Log( $"Can't reference {location}, ref is null" );
                 continue;
             }
 
-            //Log( $"Added reference assembly {location}" );
+            Log( $"Added reference assembly {location}" );
             _domainReferences.Add( reference );
         } catch ( Exception e ) {
-            Log( a.GetName() + ": " + e.Message );
+            Log( location + ": " + e.Message );
         }
     }
 
