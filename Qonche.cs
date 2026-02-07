@@ -212,7 +212,7 @@ public static int QON_SetCommand( string str ) {
 public static string QON_GetCommand() {
     int cmdBufLen;
     byte [] outBuf = QON_GetCommandBuf( out cmdBufLen );
-    return System.Text.Encoding.UTF8.GetString( outBuf, 0, outBuf.Length );
+    return Encoding.UTF8.GetString( outBuf, 0, outBuf.Length );
 }
 
 public static string QON_GetCommand( out int cursor ) {
@@ -223,8 +223,8 @@ public static string QON_GetCommand( out int cursor ) {
 public static void QON_GetCommandEx( out string cmdClean, out string cmdRaw ) {
     int cmdBufLen;
     byte [] outBuf = QON_GetCommandBuf( out cmdBufLen );
-    cmdClean = System.Text.Encoding.UTF8.GetString( outBuf, 0, outBuf.Length );
-    cmdRaw = System.Text.Encoding.UTF8.GetString( qon_cmdBuf, 0, cmdBufLen );
+    cmdClean = Encoding.UTF8.GetString( outBuf, 0, outBuf.Length );
+    cmdRaw = Encoding.UTF8.GetString( qon_cmdBuf, 0, cmdBufLen );
 }
 
 public static string QON_EmitCommand() {
