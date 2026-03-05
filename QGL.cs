@@ -854,6 +854,7 @@ public static Vector3 ScreenToWorldPos( Vector2 screenPos ) {
 #endif
 
     if ( cam ) {
+        screenPos *= PixelsPerPoint;
         screenPos.y = ScreenHeight - screenPos.y;
         return cam.ScreenToWorldPoint( screenPos );
     }
