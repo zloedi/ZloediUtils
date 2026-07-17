@@ -279,7 +279,8 @@ public static bool FloodQuadMap( int origin, int maxRange, int navMapPitch,
 
 // call this to get a path between two nodes
 // origin is already stored in context by Flood
-public static bool TraceQuadPath( int target, int floodMapPitch, Context ctx, List<int> ioResult ) { 
+public static bool TraceQuadPath( int target, int floodMapPitch, Context ctx, List<int> ioResult,
+                                                                            int [] prims = null) { 
     ioResult.Clear();
     target = Clamp( target, 0, ctx.floodMap.Length - 1 );
     if ( ctx.floodMap[target] == BLOC 
@@ -289,7 +290,7 @@ public static bool TraceQuadPath( int target, int floodMapPitch, Context ctx, Li
     }
 
     // keep them ordered
-    int [] prims = { -1, -floodMapPitch, 1, floodMapPitch };
+    prims = prims ?? new [] { -1, -floodMapPitch, 1, floodMapPitch };
 
     // explictly push target, then start at 1
     ioResult.Add( target );
