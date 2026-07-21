@@ -73,11 +73,17 @@ static int QON_GetPagerChar( int i ) {
 }
 
 static bool QON_IsLineInc( int idx, int x, int conWidth, int c ) {
+    if ( x == conWidth - 1 )
+        return true;
+
+    if ( c == 0 )
+        return true;
+
+    if ( c == '\n' )
+        return true;
+
     // handle the case where the last character in the buffer is not a new line
-    return ( idx == qon_pagerHead - 1 && c != '\n' ) 
-                || x == conWidth - 1 
-                || c == 0 
-                || c == '\n';
+    return idx == qon_pagerHead - 1;
 }
 
 static int QON_PrintAndActClamp( byte [] str, int n, Action<int,int> act ) {
