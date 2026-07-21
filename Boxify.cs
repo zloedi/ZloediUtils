@@ -1085,13 +1085,14 @@ public static class Boxify
                         createVisuals: createVisuals, out grid);
     }
 
-    [MenuItem("Snapshot/Boxify/Boxify Selection")]
+#if false
+    [MenuItem("Boxify/Boxify Selection")]
     public static void BoxifySelection()
     {
         BoxifySelection(fill: true, createVisuals: true);
     }
 
-    [MenuItem("Snapshot/Boxify/Boxify Selection Shell")]
+    [MenuItem("Boxify/Boxify Selection Shell")]
     public static void BoxifySelectionShell()
     {
         BoxifySelection(fill: false, createVisuals: true);
@@ -1109,7 +1110,9 @@ public static class Boxify
     {
         return Selection.activeTransform != null;
     }
-#endif
+#endif // menu items
+
+#endif // UNITY_EDITOR
 }
 
 #endif
