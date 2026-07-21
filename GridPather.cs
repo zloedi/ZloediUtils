@@ -106,7 +106,20 @@ public static Context CreateContext( int navMapSize ) {
 }
 
 // keep them ordered
-public static int [] QuadPrims(int pitch) => new [] { -1, -pitch, 1, pitch };
+public static int [] QuadPrims(int pitch)
+{
+    var a = new int [4];
+    QuadPrims(a, pitch);
+    return a;
+}
+
+public static void QuadPrims(int [] a, int pitch)
+{
+    a[0] = -1;
+    a[1] = -pitch;
+    a[2] = 1;
+    a[3] = pitch;
+}
 
 // before being able to trace paths, you need to flood the map
 // reuse the context for tracing multiple paths
@@ -279,7 +292,8 @@ public static bool FloodQuadMap( int origin, int maxRange, int navMapPitch,
 
 // call this to get a path between two nodes
 // origin is already stored in context by Flood
-public static bool TraceQuadPath( int target, int floodMapPitch, Context ctx, List<int> ioResult ) { 
+public static bool TraceQuadPath( int target, int floodMapPitch, Context ctx, List<int> ioResult,
+                                                                            int [] prims = null) { 
     ioResult.Clear();
     target = Clamp( target, 0, ctx.floodMap.Length - 1 );
     if ( ctx.floodMap[target] == BLOC 
@@ -289,7 +303,7 @@ public static bool TraceQuadPath( int target, int floodMapPitch, Context ctx, Li
     }
 
     // keep them ordered
-    int [] prims = { -1, -floodMapPitch, 1, floodMapPitch };
+    prims = prims ?? new [] { -1, -floodMapPitch, 1, floodMapPitch };
 
     // explictly push target, then start at 1
     ioResult.Add( target );
