@@ -697,7 +697,7 @@ public static void Init( int configVersion = -1, List<Cellophane.Command> cmds =
     Initialized = true;
 }
 
-#if HAS_UNITY
+#if HAS_UNITY // this is not UNITY_EDITOR routine
 
 public static void OnEditorSceneGUI( Camera camera, bool paused, float pixelsPerPoint = 1,
                                                                 Action<Camera> onRepaint = null ) {
