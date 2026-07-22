@@ -1086,13 +1086,13 @@ public static class Boxify
     }
 
 #if false
-    [MenuItem("Snapshot/Boxify/Boxify Selection")]
+    [MenuItem("Boxify/Boxify Selection")]
     public static void BoxifySelection()
     {
         BoxifySelection(fill: true, createVisuals: true);
     }
 
-    [MenuItem("Snapshot/Boxify/Boxify Selection Shell")]
+    [MenuItem("Boxify/Boxify Selection Shell")]
     public static void BoxifySelectionShell()
     {
         BoxifySelection(fill: false, createVisuals: true);
