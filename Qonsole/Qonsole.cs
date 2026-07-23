@@ -369,9 +369,10 @@ static void HandleEnter() {
     if ( Cellophane.TryFindCommand( "qonsole_on_command_line", out action ) ) {
         action( null, cmdClean );
     } else {
-        TryExecute( cmdClean );
+        if ( TryExecute( cmdClean ) ) {
+            FlushConfig();
+        }
     }
-    FlushConfig();
 }
 
 static void HandleBackQuote() {
