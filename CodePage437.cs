@@ -38,11 +38,12 @@ public static class CodePage437 {
 
     public static Texture2D GetTexture() {
         if ( ! _texture ) {
-            _texture = new  Texture2D(FontTexSide, FontTexSide, 
+            _texture = new Texture2D(FontTexSide, FontTexSide, 
                                             textureFormat: TextureFormat.RGBA32, 
                                             mipChain: false, 
                                             linear: false); 
             _texture.filterMode = FilterMode.Point;
+            _texture.hideFlags = HideFlags.HideAndDontSave;
             for ( int y = 0, i = 0; y < FontTexSide; y++ ) {
                 for ( int x = 0; x < FontTexSide; x += 8, i++ ) {
                     _texture.SetPixel( x + 0, y, new Color32(0xff, 0xff, 0xff, ( Bitmap[i] & ( 1 << 7 ) ) == 0 ? (byte)0x00 : (byte)0xff));
