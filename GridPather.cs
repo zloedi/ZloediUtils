@@ -240,15 +240,13 @@ public static bool TraceHexPath( int target, int floodMapPitch, Context ctx, Lis
     return target == ctx.origin;
 }
 
-public static bool FloodQuadMap( int origin, int maxRange, int navMapPitch,
-                                                byte [] navMap, int navMapLength, Context ctx ) {
+
+public static bool FloodQuadMap( int origin, int maxRange, int navMapPitch, byte [] navMap,
+                                                                int navMapLength, Context ctx ) {
     origin = Clamp( origin, 0, navMapLength - 1 );
     if ( navMap[origin] != 0 ) {
         return false;
     }
-
-    // keep them ordered
-    int [] prims = { -1, -navMapPitch, 1, navMapPitch };
 
     // clear the flood map, or more precisely, copy the nav there
     for ( int i = 0; i < navMapLength; i++ ) {
@@ -266,8 +264,15 @@ public static bool FloodQuadMap( int origin, int maxRange, int navMapPitch,
         ctx.floodMap[i] = BLOC;
     }
 #endif
+    return FloodQuadMap( origin, maxRange, navMapPitch, ctx );
+}
+
+public static bool FloodQuadMap( int origin, int maxRange, int navMapPitch, Context ctx ) {
+    // keep them ordered
+    int [] prims = { -1, -navMapPitch, 1, navMapPitch };
 
     int max = ctx.floodMap.Length - 1;
+
     ctx.floodMap[origin] = 0;
     Reset( ctx, origin );
     int [] nbrs = new int [4];
