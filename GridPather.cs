@@ -298,7 +298,7 @@ public static bool FloodQuadMap( int origin, int maxRange, int navMapPitch, Cont
 // call this to get a path between two nodes
 // origin is already stored in context by Flood
 public static bool TraceQuadPath( int target, int floodMapPitch, Context ctx, List<int> ioResult,
-                                                                            int [] prims = null) { 
+                                                        int [] prims = null, int noise = 0) { 
     ioResult.Clear();
     target = Clamp( target, 0, ctx.floodMap.Length - 1 );
     if ( ctx.floodMap[target] == BLOC 
@@ -307,38 +307,45 @@ public static bool TraceQuadPath( int target, int floodMapPitch, Context ctx, Li
         return false;
     }
 
-    // keep them ordered
     prims = prims ?? new [] { -1, -floodMapPitch, 1, floodMapPitch };
 
     // explictly push target, then start at 1
     ioResult.Add( target );
     int max = ctx.floodMap.Length - 1;
+
+    int [] neighbours = new int[4];
+    int [] floods = new int[4];
+    int [] scores = new int[4];
+
+    noise *= 1664525;
+
     while ( true ) {
-        int [] neighbours = {
-            Clamp( target + prims[0], 0, max ),
-            Clamp( target + prims[1], 0, max ),
-            Clamp( target + prims[2], 0, max ),
-            Clamp( target + prims[3], 0, max ),
-        };
-        int [] floods = {
-            ctx.floodMap[neighbours[0]],
-            ctx.floodMap[neighbours[1]],
-            ctx.floodMap[neighbours[2]],
-            ctx.floodMap[neighbours[3]],
-        };
-        int [] scores = {
-            ( int )( floods[0] & BLOC ) | ( ( floods[0] & 0x0fffffff ) << 2 ) | 0,
-            ( int )( floods[1] & BLOC ) | ( ( floods[1] & 0x0fffffff ) << 2 ) | 1,
-            ( int )( floods[2] & BLOC ) | ( ( floods[2] & 0x0fffffff ) << 2 ) | 2,
-            ( int )( floods[3] & BLOC ) | ( ( floods[3] & 0x0fffffff ) << 2 ) | 3,
-        };
+        int n = (((ioResult.Count + 1) * noise) >> 16) & 3;
+
+        neighbours[0] = Clamp( target + prims[(n + 0) & 3], 0, max );
+        neighbours[1] = Clamp( target + prims[(n + 1) & 3], 0, max );
+        neighbours[2] = Clamp( target + prims[(n + 2) & 3], 0, max );
+        neighbours[3] = Clamp( target + prims[(n + 3) & 3], 0, max );
+
+        floods[0] = ctx.floodMap[neighbours[0]];
+        floods[1] = ctx.floodMap[neighbours[1]];
+        floods[2] = ctx.floodMap[neighbours[2]];
+        floods[3] = ctx.floodMap[neighbours[3]];
+
+        scores[0] = ( int )( floods[0] & BLOC ) | ( ( floods[0] & 0x0fffffff ) << 2 ) | 0;
+        scores[1] = ( int )( floods[1] & BLOC ) | ( ( floods[1] & 0x0fffffff ) << 2 ) | 1;
+        scores[2] = ( int )( floods[2] & BLOC ) | ( ( floods[2] & 0x0fffffff ) << 2 ) | 2;
+        scores[3] = ( int )( floods[3] & BLOC ) | ( ( floods[3] & 0x0fffffff ) << 2 ) | 3;
+
         int min = Math.Min( scores[3],
                                 Math.Min( scores[2],
                                     Math.Min( scores[1],
                                                 scores[0] ) ) );
+
         if ( ( min >> 2 ) >= ctx.floodMap[target] ) {
             break;
         }
+
         target = neighbours[min & 3];
         ioResult.Add( target );
     }
