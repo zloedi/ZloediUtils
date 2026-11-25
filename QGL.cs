@@ -715,8 +715,11 @@ public static void LatePointWorld( Vector3 pt, float size = 9, Color? color = nu
     LateLine( pty, pty + y, color );
 }
 
-public static void LateCircleWorld( Vector2 center, float radius, Color? color = null ) {
+public static void LateCircleWorld( Vector2 center, float radius, Vector2? scale = null,
+                                                                        Color? color = null ) {
     _lineBuf.Clear();
+
+    Vector2 s = scale ?? Vector2.one;
 
     Vector2 d = WorldToScreenPos( Vector2.zero ) - WorldToScreenPos( Vector2.one );
     float numIterations = Mathf.Floor( 0.1f * 2 * 3.14f * radius * Mathf.Abs(d.x));
@@ -725,7 +728,7 @@ public static void LateCircleWorld( Vector2 center, float radius, Color? color =
     for (float i = 0; i < numIterations; i++)
     {
         float a = i * step;
-        Vector2 sc = new Vector2(Mathf.Sin(a), Mathf.Cos(a));
+        Vector2 sc = Vector2.Scale(new Vector2(Mathf.Sin(a), Mathf.Cos(a)), s);
         Vector2 p = WorldToScreenPos( center + sc * radius );
         _lineBuf.Add( p );
     }
@@ -808,8 +811,9 @@ public static Vector2 WorldToScreenPos( Vector3 worldPos ) {
 
 #if HAS_UNITY
     if ( ! _camera ) {
-        Error("No camera, try to find one.");
-        _camera = GameObject.FindObjectOfType<Camera>();
+        Log( "No camera, try to find one." );
+        cam = GameObject.FindObjectOfType<Camera>();
+        SetContext( cam );
     }
 #endif
 
