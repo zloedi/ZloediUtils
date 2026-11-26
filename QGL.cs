@@ -723,13 +723,15 @@ public static void LateCircleWorld( Vector2 center, float radius, Vector2? scale
 
     Vector2 d = WorldToScreenPos( Vector2.zero ) - WorldToScreenPos( Vector2.one );
     float numIterations = Mathf.Floor( 0.1f * 2 * 3.14f * radius * Mathf.Max( s.x, s.y ) * Mathf.Abs( d.x ));
-    numIterations = Mathf.Max( 4, numIterations );
+    numIterations = Mathf.Clamp( numIterations, 6, 128 );
     float step = Mathf.PI * 2 / numIterations;
     for (float i = 0; i < numIterations; i++)
     {
         float a = i * step;
         Vector2 sc = Vector2.Scale(new Vector2(Mathf.Sin(a), Mathf.Cos(a)), s);
-        Vector2 p = WorldToScreenPos( center + sc * radius );
+        Vector2 wp = center + sc * radius;
+        //QGL.LatePointWorld(wp);
+        Vector2 p = WorldToScreenPos( wp );
         _lineBuf.Add( p );
     }
     _lineBuf.Add( _lineBuf[0] );
