@@ -5,11 +5,11 @@ using System.Collections.Generic;
 public static class Qonche {
 
 
-const int QON_MAX_CMD = 512;
-const int QON_MAX_PAGER = 256 * 1024;
-const int QON_MAX_PAGER_MASK = QON_MAX_PAGER - 1;
-const string QON_PROMPT = "] ";
-const string QON_TRAILING_SPACE = " ";
+public const int QON_MAX_CMD = 512;
+public const int QON_MAX_PAGER = 256 * 1024;
+public const int QON_MAX_PAGER_MASK = QON_MAX_PAGER - 1;
+public const string QON_PROMPT = "] ";
+public const string QON_TRAILING_SPACE = " ";
 
 // how many lines to scan up offscreen for line breaks
 const int QON_MAX_OFFSCREEN_LOOKUP = 256;
@@ -17,8 +17,8 @@ const int QON_MAX_OFFSCREEN_LOOKUP = 256;
 static int qon_prevPage = QON_MAX_PAGER;
 static int qon_nextPage = QON_MAX_PAGER;
 static int qon_currPage = QON_MAX_PAGER;
-static int qon_pagerHead = QON_MAX_PAGER;
-static byte [] qon_pager = new byte [QON_MAX_PAGER];
+public static int qon_pagerHead = QON_MAX_PAGER;
+public static byte [] qon_pager = new byte [QON_MAX_PAGER];
 static Action<int,int> [] qon_pagerActions = new Action<int,int>[QON_MAX_PAGER];
 static int qon_cursor = QON_PROMPT.Length;
 static byte [] qon_cmdBuf = new byte[QON_MAX_CMD];
